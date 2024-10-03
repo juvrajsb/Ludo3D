@@ -1,6 +1,6 @@
-package src.ludo;
+package ludo;
 
-import src.ludo.server.LudoGame;
+import ludo.server.LudoGame;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;

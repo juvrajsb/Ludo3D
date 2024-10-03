@@ -1,4 +1,4 @@
-package src.ludo.server;
+package ludo.server;
 
 import java.io.IOException;
 import java.net.ServerSocket;
@@ -8,18 +8,19 @@ import java.util.List;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.CopyOnWriteArrayList;
 
 public class LudoServer {
     private static final int PORT = 5000;
     private static final int TOTAL_PLAYERS = 4;
     private static final int BOT_DELAY_MS = 2000; // 2 seconds delay for bot moves
-    private List<ClientHandler> clients = new ArrayList<>();
+    private List<ClientHandler> clients = new CopyOnWriteArrayList<>();
     private LudoGame game;
     private List<Player> players = new ArrayList<>();
     private int currentPlayerIndex;
+    private boolean gameStarted = false;
 
     public void start() {
-        game = new LudoGame();
         try (ServerSocket serverSocket = new ServerSocket(PORT)) {
             System.out.println("Ludo Server started on port " + PORT);
             while (true) {
@@ -29,7 +30,7 @@ public class LudoServer {
                 clients.add(clientHandler);
                 new Thread(clientHandler).start();
 
-                if (clients.size() == 4) {
+                if (clients.size() == TOTAL_PLAYERS && !isGameStarted()) {
                     startGame();
                 }
             }
@@ -39,8 +40,10 @@ public class LudoServer {
     }
 
     private void startGame() {
-        ludoGame = new LudoGame(players);
+        game = new LudoGame();
+        game.initializeGame(players);
         currentPlayerIndex = 0;
+        gameStarted = true;
 
         // Notify all players that the game has started
         broadcastMessage("GAME_STARTED");
@@ -53,7 +56,7 @@ public class LudoServer {
     }
 
     private void broadcastGameState() {
-        String gameState = ludoGame.getSerializedGameState();
+        String gameState = game.getSerializedGameState();
         broadcastMessage("GAME_STATE " + gameState);
     }
 
@@ -64,7 +67,7 @@ public class LudoServer {
         if (currentPlayer instanceof BotPlayer) {
             handleBotTurn((BotPlayer) currentPlayer);
         } else {
-            setTurnTimer();
+            setTurnTimer(currentPlayer);
         }
     }
 
@@ -72,11 +75,11 @@ public class LudoServer {
         new Thread(() -> {
             try {
                 Thread.sleep(BOT_DELAY_MS); // Add a delay to make bot moves feel more natural
-                int diceRoll = ludoGame.rollDice();
+                int diceRoll = game.rollDice();
                 broadcastMessage("DICE " + botPlayer.getColor() + " " + diceRoll);
 
                 Thread.sleep(BOT_DELAY_MS); // Add another delay before the bot moves
-                String move = botPlayer.makeMove(ludoGame.getBoard(), diceRoll);
+                String move = botPlayer.makeMove(game.getBoard(), diceRoll);
                 processMove(botPlayer, move);
 
                 // No need to call endTurn() here as it's called in processMove()
@@ -86,7 +89,7 @@ public class LudoServer {
         }).start();
     }
 
-    private void setTurnTimer() {
+    private void setTurnTimer(Player currentPlayer) {
         ScheduledExecutorService executor = Executors.newSingleThreadScheduledExecutor();
         executor.schedule(() -> {
             if (players.get(currentPlayerIndex) == currentPlayer) {
@@ -99,8 +102,8 @@ public class LudoServer {
     }
 
     private void endTurn() {
-        if (ludoGame.isGameOver()) {
-            broadcastMessage("GAME_OVER " + ludoGame.getWinner().getColor());
+        if (game.isGameOver()) {
+            broadcastMessage("GAME_OVER " + game.getWinner().getColor());
             // Clean up and reset the game
             return;
         }
@@ -112,9 +115,9 @@ public class LudoServer {
     public void addPlayer(Player player) {
         if (players.size() < TOTAL_PLAYERS) {
             players.add(player);
-            broadcastToAll("PLAYER_JOINED " + player.getColor());
+            broadcastMessage("PLAYER_JOINED " + player.getColor());
             broadcastLobbyUpdate();
-            
+
             if (players.size() == TOTAL_PLAYERS) {
                 startGame();
             } else if (players.size() >= 2 && !isGameStarted()) {
@@ -137,15 +140,15 @@ public class LudoServer {
         if (players.size() < TOTAL_PLAYERS) {
             BotPlayer botPlayer = new BotPlayer("Bot" + (players.size() + 1), getNextAvailableColor());
             players.add(botPlayer);
-            broadcastToAll("PLAYER_JOINED " + botPlayer.getColor() + " (Bot)");
-            
+            broadcastMessage("PLAYER_JOINED " + botPlayer.getColor() + " (Bot)");
+
             if (players.size() == TOTAL_PLAYERS) {
                 startGame();
             }
         }
     }
 
-    private String getNextAvailableColor() {
+    String getNextAvailableColor() {
         String[] colors = {"RED", "BLUE", "GREEN", "YELLOW"};
         for (String color : colors) {
             if (players.stream().noneMatch(p -> p.getColor().equals(color))) {
@@ -156,7 +159,7 @@ public class LudoServer {
     }
 
     public boolean canAddPlayer() {
-        return players.size() < 4 && ludoGame == null;
+        return players.size() < 4 && !isGameStarted();
     }
 
     public boolean isCurrentPlayer(Player player) {
@@ -165,7 +168,7 @@ public class LudoServer {
 
     public void processMove(Player player, String move) {
         try {
-            if (ludoGame.makeMove(player, move)) {
+            if (game.makeMove(player, move)) {
                 broadcastMessage("MOVE " + player.getColor() + " " + move);
                 broadcastGameState();
                 endTurn();
@@ -182,7 +185,9 @@ public class LudoServer {
     }
 
     public void broadcastMessage(String message) {
-        broadcastToAll(message);
+        for (ClientHandler client : clients) {
+            client.sendMessage(message);
+        }
     }
 
     public LudoGame getGame() {
@@ -202,6 +207,7 @@ public class LudoServer {
             } else {
                 broadcastMessage("PLAYER_LEFT " + disconnectedPlayer.getColor());
             }
+            broadcastLobbyUpdate();
         }
     }
 
@@ -222,5 +228,15 @@ public class LudoServer {
 
     public static void main(String[] args) {
         new LudoServer().start();
+    }
+
+    public void removePlayer(Player player) {
+        players.remove(player);
+        broadcastMessage("PLAYER_LEFT " + player.getColor());
+        broadcastLobbyUpdate();
+    }
+
+    private boolean isGameStarted() {
+        return gameStarted;
     }
 }

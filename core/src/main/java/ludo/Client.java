@@ -1,4 +1,4 @@
-package src.ludo;
+package ludo;
 
 import com.badlogic.gdx.ApplicationAdapter;
 import com.badlogic.gdx.Gdx;
@@ -13,14 +13,19 @@ import com.badlogic.gdx.graphics.g3d.utils.ModelBuilder;
 import com.badlogic.gdx.graphics.PerspectiveCamera;
 import com.badlogic.gdx.graphics.VertexAttributes;
 import com.badlogic.gdx.math.Quaternion;
-import com.badlogic.gdx.math.Ray;
 import com.badlogic.gdx.math.Vector3;
+import com.badlogic.gdx.math.collision.Ray;
 import com.badlogic.gdx.scenes.scene2d.Stage;
 import com.badlogic.gdx.scenes.scene2d.ui.*;
 import com.badlogic.gdx.utils.UBJsonReader;
 import com.badlogic.gdx.utils.viewport.ScreenViewport;
+import com.badlogic.gdx.graphics.Color;
 
+import java.io.BufferedReader;
 import java.io.IOException;
+import java.io.InputStreamReader;
+import java.io.PrintWriter;
+import java.net.Socket;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -35,7 +40,7 @@ public class Client extends ApplicationAdapter {
     private PerspectiveCamera camera;
     private ModelBatch modelBatch;
     private Environment environment;
-    
+
     private Model boardModel;
     private Model pawnModel;
     private Model diceModel;
@@ -52,9 +57,11 @@ public class Client extends ApplicationAdapter {
     private boolean waitingForMove = false;
     private int lastDiceRoll = 0;
 
-    private Lobby lobby;
+    Lobby lobby;
     private Label turnIndicator;
     private Label gameStatusLabel;
+
+    private List<Pawn> pawns;
 
     @Override
     public void create() {
@@ -63,14 +70,23 @@ public class Client extends ApplicationAdapter {
         gameManager = new GameManager(this);
         lobby = new Lobby(this);
         createGameUI();
+
+        pawns = new ArrayList<>();
+        // Create 4 pawns for each color
+        for (String color : new String[]{"RED", "BLUE", "GREEN", "YELLOW"}) {
+            for (int i = 0; i < 4; i++) {
+                pawns.add(new Pawn(color));
+            }
+        }
     }
+
 
     private void connectToServer() {
         try {
             socket = new Socket(SERVER_ADDRESS, SERVER_PORT);
             out = new PrintWriter(socket.getOutputStream(), true);
             in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
-            
+
             // Start a new thread to handle server messages
             new Thread(this::handleServerMessages).start();
         } catch (IOException e) {
@@ -99,10 +115,10 @@ public class Client extends ApplicationAdapter {
         // Load board texture
         Texture boardTexture = new Texture(Gdx.files.internal("board.png"));
         Material boardMaterial = new Material(TextureAttribute.createDiffuse(boardTexture));
-        
+
         // Create board model
         ModelBuilder modelBuilder = new ModelBuilder();
-        boardModel = modelBuilder.createBox(10f, 0.1f, 10f, boardMaterial, 
+        boardModel = modelBuilder.createBox(10f, 0.1f, 10f, boardMaterial,
                                             VertexAttributes.Usage.Position | VertexAttributes.Usage.Normal | VertexAttributes.Usage.TextureCoordinates);
         ModelInstance boardInstance = new ModelInstance(boardModel);
         modelInstances.add(boardInstance);
@@ -194,13 +210,17 @@ public class Client extends ApplicationAdapter {
         }
     }
 
-    private void handleErrorMessage(String errorMessage) {
+    private void updateDiceDisplay(int[] results) {
+
+    }
+
+    void handleErrorMessage(String errorMessage) {
         // Display error message to the user
         System.out.println("Error: " + errorMessage);
         // You might want to update the UI to show this error message
     }
 
-    private void handleTurnTimeout(String playerColor) {
+    void handleTurnTimeout(String playerColor) {
         // Handle turn timeout
         System.out.println("Player " + playerColor + " turn timed out");
     }
@@ -210,12 +230,12 @@ public class Client extends ApplicationAdapter {
         updateTurnIndicator(gameManager.isCurrentPlayerTurn());
     }
 
-    private void handleGameOver(String winnerColor) {
+    void handleGameOver(String winnerColor) {
         // Display game over message and winner
         // Disable game controls
     }
 
-    private void updateGameState(String stateString) {
+    void updateGameState(String stateString) {
         String[] playerStates = stateString.split(";");
         for (String playerState : playerStates) {
             String[] playerData = playerState.split(":");
@@ -247,6 +267,7 @@ public class Client extends ApplicationAdapter {
     private int getPlayerIndexFromColor(String color) {
         // Implement this method to return the player index based on color
         // For example: RED = 0, BLUE = 1, GREEN = 2, YELLOW = 3
+        return 0;
     }
 
     private Vector3 calculateBoardPosition(int position) {
@@ -276,12 +297,12 @@ public class Client extends ApplicationAdapter {
             diceRollTime += delta;
             if (diceRollTime < DICE_ROLL_DURATION) {
                 // Animate dice rolling
-                for (ModelInstance diceInstance : diceInstances) {
-                    Quaternion rotation = new Quaternion(Vector3.Y, 360f * (diceRollTime / DICE_ROLL_DURATION));
-                    rotation.mul(new Quaternion(Vector3.X, 360f * (diceRollTime / DICE_ROLL_DURATION)));
-                    diceInstance.transform.setToRotation(rotation);
-                    diceInstance.transform.translate(0f, 1f + 0.5f * (float)Math.sin(diceRollTime * Math.PI * 2), 0f);
-                }
+//                for (ModelInstance diceInstance : diceInstances) {
+//                    Quaternion rotation = new Quaternion(Vector3.Y, 360f * (diceRollTime / DICE_ROLL_DURATION));
+//                    rotation.mul(new Quaternion(Vector3.X, 360f * (diceRollTime / DICE_ROLL_DURATION)));
+//                    diceInstance.transform.setToRotation(rotation);
+//                    diceInstance.transform.translate(0f, 1f + 0.5f * (float)Math.sin(diceRollTime * Math.PI * 2), 0f);
+//                }
             } else {
                 isRollingDice = false;
                 // Set final dice positions based on the rolled values
@@ -316,8 +337,8 @@ public class Client extends ApplicationAdapter {
             // ... existing 3D rendering code ...
 
             // Render UI
-            uiStage.act(Gdx.graphics.getDeltaTime());
-            uiStage.draw();
+//            uiStage.act(Gdx.graphics.getDeltaTime());
+//            uiStage.draw();
         } else {
             // Render lobby
             lobby.render();
@@ -426,5 +447,19 @@ public class Client extends ApplicationAdapter {
 
     public void sendToServer(String message) {
         out.println(message);
+    }
+
+    public void showInvalidMoveMessage() {
+
+    }
+
+    private Color getColorFromString(String colorString) {
+        switch (colorString) {
+            case "RED": return Color.RED;
+            case "GREEN": return Color.GREEN;
+            case "BLUE": return Color.BLUE;
+            case "YELLOW": return Color.YELLOW;
+            default: throw new IllegalArgumentException("Invalid color: " + colorString);
+        }
     }
 }

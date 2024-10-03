@@ -1,4 +1,6 @@
-package src.ludo.server;
+package ludo.server;
+
+import ludo.Pawn;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -14,26 +16,26 @@ public class LudoGame {
     private int currentPlayerIndex;
     private Random random;
     private int[] diceRolls;
+    private Board board;
 
     public LudoGame() {
-        players = new ArrayList<>();
         random = new Random();
         diceRolls = new int[2];
+        board = new Board();
     }
 
-    public void initializeGame() {
-        String[] colour = {"red", "green", "blue", "yellow"};
-        players.clear();
-        for (int i = 0; i < NUM_PLAYERS; i++) {
-            players.add(new Player("Player " + (i + 1), colour[i]));
-        }
+    public void initializeGame(List<Player> players) {
+        this.players = new ArrayList<>(players);
         currentPlayerIndex = 0;
+        
+        // Initialize pawns for each player
+        for (Player player : this.players) {
+            player.initializePawns();
+        }
     }
 
-    public int[] rollDice() {
-        diceRolls[0] = random.nextInt(6) + 1;
-        diceRolls[1] = random.nextInt(6) + 1;
-        return diceRolls;
+    public int rollDice() {
+        return random.nextInt(6) + 1;
     }
 
     public boolean movePawn(int playerIndex, int pawnIndex, int steps) {
@@ -207,69 +209,6 @@ public class LudoGame {
         return null;
     }
 
-    private static class Player {
-        private int id;
-        private int[] pawnPositions;
-        private boolean useSingleDie;
-        private int startPosition;
-
-        public Player(int id) {
-            this.id = id;
-            this.pawnPositions = new int[PAWNS_PER_PLAYER];
-            for (int i = 0; i < PAWNS_PER_PLAYER; i++) {
-                pawnPositions[i] = -1; // -1 indicates the pawn is in the starting area
-            }
-            this.useSingleDie = false;
-            this.startPosition = id * (BOARD_SIZE / NUM_PLAYERS);
-        }
-
-        public int getPawnPosition(int pawnIndex) {
-            return pawnPositions[pawnIndex];
-        }
-
-        public void setPawnPosition(int pawnIndex, int position) {
-            pawnPositions[pawnIndex] = position;
-        }
-
-        public int getPawnsInHome() {
-            int count = 0;
-            for (int position : pawnPositions) {
-                if (position >= BOARD_SIZE) {
-                    count++;
-                }
-            }
-            return count;
-        }
-
-        public boolean isInHomeColumn(int pawnIndex) {
-            int position = pawnPositions[pawnIndex];
-            return position >= BOARD_SIZE - HOME_COLUMN_SIZE && position < BOARD_SIZE;
-        }
-
-        public void setUseSingleDie(boolean useSingleDie) {
-            this.useSingleDie = useSingleDie;
-        }
-
-        public boolean isUseSingleDie() {
-            return useSingleDie;
-        }
-
-        public int getStartPosition() {
-            return startPosition;
-        }
-
-        @Override
-        public String toString() {
-            StringBuilder sb = new StringBuilder();
-            sb.append(id).append(":");
-            for (int position : pawnPositions) {
-                sb.append(position).append(",");
-            }
-            sb.append(useSingleDie ? "1" : "0");
-            return sb.toString();
-        }
-    }
-
     public String getSerializedGameState() {
         StringBuilder sb = new StringBuilder();
         for (Player player : players) {
@@ -282,5 +221,9 @@ public class LudoGame {
         }
         sb.setLength(sb.length() - 1); // Remove last semicolon
         return sb.toString();
+    }
+
+    public Board getBoard() {
+        return board;
     }
 }

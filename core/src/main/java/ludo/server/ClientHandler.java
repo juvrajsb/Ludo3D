@@ -1,10 +1,12 @@
-package src.ludo.server;
+package ludo.server;
 
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.PrintWriter;
 import java.net.Socket;
+import java.util.Arrays;
+import java.util.stream.Stream;
 
 public class ClientHandler implements Runnable {
     private Socket socket;
@@ -29,17 +31,12 @@ public class ClientHandler implements Runnable {
         try {
             String inputLine;
             while ((inputLine = in.readLine()) != null) {
-                // Process client messages and update game state
                 processMessage(inputLine);
             }
         } catch (IOException e) {
-            e.printStackTrace();
+            System.err.println("Error handling client: " + e.getMessage());
         } finally {
-            try {
-                socket.close();
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
+            disconnect();
         }
     }
 
@@ -67,9 +64,15 @@ public class ClientHandler implements Runnable {
 
     private void handleJoinRequest(String playerName) {
         if (server.canAddPlayer()) {
-            player = new Player(playerName, this);
-            server.addPlayer(player);
-            sendMessage("JOINED " + player.getColor());
+            String color = server.getNextAvailableColor();
+            if (color != null) {
+                player = new Player(playerName, color);
+                player.setClientHandler(this);
+                server.addPlayer(player);
+                sendMessage("JOINED " + player.getColor());
+            } else {
+                sendMessage("ERROR No available colors");
+            }
         } else {
             sendMessage("ERROR Game is full or already started");
         }
@@ -77,8 +80,12 @@ public class ClientHandler implements Runnable {
 
     private void handleDiceRoll() {
         if (server.isCurrentPlayer(player)) {
-            int roll = server.getGame().rollDice();
-            server.broadcastMessage("DICE " + player.getColor() + " " + roll);
+            int[] rolls = new int[]{server.getGame().rollDice()};
+            String rollString = Arrays.stream(rolls)
+                                      .mapToObj(String::valueOf)
+                                      .reduce((a, b) -> a + " " + b)
+                                      .orElse("");
+            server.broadcastMessage("DICE " + player.getColor() + " " + rollString);
         } else {
             sendMessage("ERROR Not your turn");
         }
@@ -98,5 +105,20 @@ public class ClientHandler implements Runnable {
 
     public void sendMessage(String message) {
         out.println(message);
+    }
+
+    private void disconnect() {
+        try {
+            if (player != null) {
+                server.removePlayer(player);
+            }
+            socket.close();
+        } catch (IOException e) {
+            System.err.println("Error closing client connection: " + e.getMessage());
+        }
+    }
+
+    public Player getPlayer() {
+        return player;
     }
 }

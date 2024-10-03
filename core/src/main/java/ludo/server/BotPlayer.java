@@ -1,6 +1,9 @@
-package src.ludo.server;
+package ludo.server;
+
+import ludo.Pawn;
 
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Random;
 import java.util.stream.Collectors;
@@ -12,14 +15,14 @@ public class BotPlayer extends Player {
 
     public String makeMove(Board board, int diceRoll) {
         List<Pawn> movablePawns = getMovablePawns(board, diceRoll);
-        
+
         if (movablePawns.isEmpty()) {
             return "SKIP";
         }
 
         Pawn bestPawn = chooseBestPawn(movablePawns, board, diceRoll);
         int pawnIndex = getPawnIndex(bestPawn);
-        
+
         return "MOVE " + pawnIndex;
     }
 
@@ -32,6 +35,7 @@ public class BotPlayer extends Player {
     private boolean canMovePawn(Pawn pawn, Board board, int diceRoll) {
         // Implement logic to check if the pawn can move based on the game rules
         // This should consider if the pawn is in the home, on the board, or in the final stretch
+        return true;
     }
 
     private Pawn chooseBestPawn(List<Pawn> movablePawns, Board board, int diceRoll) {
@@ -45,7 +49,7 @@ public class BotPlayer extends Player {
         int newPosition = (pawn.getPosition() + diceRoll) % board.getTotalSpaces();
 
         // Prioritize moving pawns out of home
-        if (pawn.isInHome() && diceRoll == 6) {
+        if (pawn.isHome() && diceRoll == 6) {
             score += 100;
         }
 
@@ -72,6 +76,7 @@ public class BotPlayer extends Player {
 
     private boolean canCapturePawn(Board board, int position) {
         // Implement logic to check if moving to this position would capture an opponent's pawn
+        return false;
     }
 
     private int getPawnIndex(Pawn pawn) {
