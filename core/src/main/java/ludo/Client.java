@@ -2,6 +2,7 @@ package ludo;
 
 import com.badlogic.gdx.ApplicationAdapter;
 import com.badlogic.gdx.Gdx;
+import com.badlogic.gdx.files.FileHandle;
 import com.badlogic.gdx.graphics.GL20;
 import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.g3d.*;
@@ -113,7 +114,7 @@ public class Client extends ApplicationAdapter {
 
     private void loadAssets() {
         // Load board texture
-        Texture boardTexture = new Texture(Gdx.files.internal("board.png"));
+        Texture boardTexture = new Texture(Gdx.files.internal("images/board.png"));
         Material boardMaterial = new Material(TextureAttribute.createDiffuse(boardTexture));
 
         // Create board model
@@ -124,7 +125,7 @@ public class Client extends ApplicationAdapter {
         modelInstances.add(boardInstance);
 
         // Load pawn model
-        pawnModel = new G3dModelLoader(new UBJsonReader()).loadModel(Gdx.files.internal("pawn.g3db"));
+        pawnModel = new G3dModelLoader(new UBJsonReader()).loadModel(Gdx.files.internal("models/pawn.g3db"));
         // Add pawn instances (adjust positions as needed)
         for (int i = 0; i < 16; i++) {
             ModelInstance pawnInstance = new ModelInstance(pawnModel);
@@ -133,7 +134,7 @@ public class Client extends ApplicationAdapter {
         }
 
         // Load dice model
-        diceModel = new G3dModelLoader(new UBJsonReader()).loadModel(Gdx.files.internal("dice.g3db"));
+        diceModel = new G3dModelLoader(new UBJsonReader()).loadModel(Gdx.files.internal("models/dice.g3db"));
         diceInstances = new ModelInstance[2];
         diceInstances[0] = new ModelInstance(diceModel);
         diceInstances[1] = new ModelInstance(diceModel);

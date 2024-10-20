@@ -11,7 +11,7 @@ allprojects {
 
 subprojects {
     apply plugin: 'java-library'
-    
+
     ext {
         gdxVersion = '1.11.0'
     }
@@ -39,7 +39,7 @@ project(":lwjgl3") {
     }
 
     application {
-        mainClass = 'ludo.Lwjgl3Launcher'
+        mainClass = 'main.java.ludo.lwjgl3.Lwjgl3Launcher'
     }
 
     jar {
