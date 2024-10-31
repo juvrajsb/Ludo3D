@@ -1,0 +1,5 @@
+<!-- Note: you can get content assist thanks to DTD schema files. See the official LML page. -->
+<window title="Example" style="border" defaultPad="4" oneColumn="true">
+  This is a simple Autumn MVC view constructed with LML.
+  <textButton onClick="setClicked" tablePad="8">Click me!</textButton>
+</window>

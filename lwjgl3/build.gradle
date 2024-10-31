@@ -15,7 +15,7 @@ application {
 }
 
 run {
-    workingDir = rootProject.file('core/assets')
+    workingDir = rootProject.file('assets')
     ignoreExitValue = true
 
     if (org.gradle.internal.os.OperatingSystem.current() == org.gradle.internal.os.OperatingSystem.MAC_OS) {

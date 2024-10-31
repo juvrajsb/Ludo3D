@@ -22,7 +22,7 @@ public class Lobby {
     public Lobby(Client client) {
         this.client = client;
         stage = new Stage(new ScreenViewport());
-        skin = new Skin(Gdx.files.internal("uiskin.json"));
+        skin = new Skin(Gdx.files.internal("ui/uiskin.json"));
         createUI();
     }
 

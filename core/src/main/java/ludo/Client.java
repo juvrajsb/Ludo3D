@@ -420,7 +420,7 @@ public class Client extends ApplicationAdapter {
 
     private void createGameUI() {
         Stage uiStage = new Stage(new ScreenViewport());
-        Skin skin = new Skin(Gdx.files.internal("uiskin.json"));
+        Skin skin = new Skin(Gdx.files.internal("ui/uiskin.json"));
 
         Table uiTable = new Table();
         uiTable.setFillParent(true);
