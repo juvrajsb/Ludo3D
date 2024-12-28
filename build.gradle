@@ -1,51 +1,55 @@
 plugins {
-    id 'java-library'
-    id 'com.github.johnrengelman.shadow' version '7.1.2' apply false
+  id 'java-library'
+  id 'com.github.johnrengelman.shadow' version '7.1.2' apply false
 }
 
 allprojects {
-    apply plugin: 'java'
-    sourceCompatibility = 1.8
-    targetCompatibility = 1.8
+  apply plugin: 'java'
+  sourceCompatibility = 17
+  targetCompatibility = 17
 }
 
 subprojects {
-    apply plugin: 'java-library'
+  apply plugin: 'java-library'
 
-    ext {
-        gdxVersion = '1.11.0'
-    }
+  ext {
+    gdxVersion = '1.13.0'
+  }
 
-    repositories {
-        mavenCentral()
-    }
+  repositories {
+    mavenCentral()
+  }
+
+  dependencies {
+    testImplementation 'junit:junit:4.13.2'
+  }
 }
 
 project(":core") {
-    dependencies {
-        api "com.badlogicgames.gdx:gdx:$gdxVersion"
-        api "com.badlogicgames.gdx:gdx-bullet:$gdxVersion"
-    }
+  dependencies {
+    api "com.badlogicgames.gdx:gdx:$gdxVersion"
+    api "com.badlogicgames.gdx:gdx-bullet:$gdxVersion"
+  }
 }
 
 project(":lwjgl3") {
-    apply plugin: 'application'
-    apply plugin: 'com.github.johnrengelman.shadow'
+  apply plugin: 'application'
+  apply plugin: 'com.github.johnrengelman.shadow'
 
-    dependencies {
-        implementation project(":core")
-        implementation "com.badlogicgames.gdx:gdx-backend-lwjgl3:$gdxVersion"
-        implementation "com.badlogicgames.gdx:gdx-platform:$gdxVersion:natives-desktop"
-    }
+  dependencies {
+    implementation project(":core")
+    implementation "com.badlogicgames.gdx:gdx-backend-lwjgl3:$gdxVersion"
+    implementation "com.badlogicgames.gdx:gdx-platform:$gdxVersion:natives-desktop"
+  }
 
-    application {
-        mainClass = 'main.java.ludo.lwjgl3.Lwjgl3Launcher'
-    }
+  application {
+    mainClass = 'main.java.ludo.lwjgl3.Lwjgl3Launcher'
+  }
 
-    jar {
-        manifest {
-            attributes 'Main-Class': application.mainClass
-        }
-        from { configurations.runtimeClasspath.collect { it.isDirectory() ? it : zipTree(it) } }
+  jar {
+    manifest {
+      attributes 'Main-Class': application.mainClass
     }
+    from { configurations.runtimeClasspath.collect { it.isDirectory() ? it : zipTree(it) } }
+  }
 }
