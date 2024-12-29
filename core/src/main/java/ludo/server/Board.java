@@ -52,6 +52,27 @@ public class Board {
 
     public boolean isHomeColumn(int position, String color) {
         int startPosition = getStartPosition(color);
-        return position >= startPosition + BOARD_SIZE - HOME_COLUMN_SIZE && position < startPosition + BOARD_SIZE;
+
+        // Regular board positions
+        if (position < BOARD_SIZE) {
+            // Check if position is in the last 6 spaces before the next player's start
+            int homeStart = (startPosition + BOARD_SIZE - HOME_COLUMN_SIZE) % BOARD_SIZE;
+            int homeEnd = (startPosition + BOARD_SIZE - 1) % BOARD_SIZE;
+
+            // Handle wraparound case
+            if (homeStart > homeEnd) {
+                return position >= homeStart || position <= homeEnd;
+            }
+            return position >= homeStart && position <= homeEnd;
+        }
+
+        // Home column positions (>=52)
+        if (position >= BOARD_SIZE) {
+            // Each player's home column starts at BOARD_SIZE + (their_start_position / 13) * HOME_COLUMN_SIZE
+            int homeColumnBaseIndex = BOARD_SIZE + (startPosition / 13) * HOME_COLUMN_SIZE;
+            return position >= homeColumnBaseIndex && position < homeColumnBaseIndex + HOME_COLUMN_SIZE;
+        }
+
+        return false;
     }
 }

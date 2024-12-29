@@ -52,7 +52,7 @@ public class LudoGame {
 
         Player player = players.get(playerIndex);
         Pawn pawn = player.getPawns().get(pawnIndex);
-        int currentPosition = player.getPawnPosition(pawnIndex);
+        int currentPosition = pawn.getPosition();
 
         // Rule: Can only leave home with a 6
         if (currentPosition == -1 && steps != 6) {
@@ -61,7 +61,7 @@ public class LudoGame {
 
         // If pawn is in home and rolled a 6, place it on start position
         if (currentPosition == -1 && steps == 6) {
-            pawn.leaveHome(board);  // This will set position and isHome status
+            pawn.leaveHome(board);
             return true;
         }
 
@@ -73,48 +73,29 @@ public class LudoGame {
             return false;
         }
 
-        // Check for home column entry and overshooting
-        if (newPosition >= BOARD_SIZE) {
-            // Check if occupied by own pawn in home column
-            for (int i = 0; i < PAWNS_PER_PLAYER; i++) {
-                if (i != pawnIndex && player.getPawns().get(i).getPosition() == newPosition) {
-                    return false;
-                }
+        // Check for collisions with own pawns
+        for (int i = 0; i < PAWNS_PER_PLAYER; i++) {
+            if (i != pawnIndex && player.getPawns().get(i).getPosition() == newPosition
+                && !board.isSafeSpot(newPosition % BOARD_SIZE)) {
+                return false;
             }
-            pawn.setPosition(newPosition);
+        }
 
-            // Check if player has won
-            if (player.getPawnsInHome() == PAWNS_PER_PLAYER) {
-                return true;
-            }
-        } else {
-            // Main board movement
-
-            // Check if occupied by own pawn on non-safe spot
-            for (int i = 0; i < PAWNS_PER_PLAYER; i++) {
-                if (i != pawnIndex && player.getPawns().get(i).getPosition() == newPosition
-                    && !board.isSafeSpot(newPosition)) {
-                    return false;
-                }
-            }
-
-            // Handle captures on non-safe spots
-            if (!board.isSafeSpot(newPosition)) {
-                for (Player opponent : players) {
-                    if (opponent != player) {
-                        for (Pawn opponentPawn : opponent.getPawns()) {
-                            if (opponentPawn.getPosition() == newPosition) {
-                                opponentPawn.sendHome();
-                                break;
-                            }
+        // Handle captures on main board only
+        if (newPosition < BOARD_SIZE && !board.isSafeSpot(newPosition)) {
+            for (Player opponent : players) {
+                if (opponent != player) {
+                    for (Pawn opponentPawn : opponent.getPawns()) {
+                        if (opponentPawn.getPosition() == newPosition) {
+                            opponentPawn.sendHome();
+                            break;
                         }
                     }
                 }
             }
-
-            pawn.setPosition(newPosition);
         }
 
+        pawn.setPosition(newPosition);
         return true;
     }
 
@@ -127,31 +108,41 @@ public class LudoGame {
             return -1;
         }
 
-        int playerStart = player.getStartPosition();
-        int newPosition = currentPosition + steps;
-
-        // Calculate entry point (the position just before start position)
-        int entryPoint = (playerStart - 1 + BOARD_SIZE) % BOARD_SIZE;
-
-        // Check if pawn is before entry point and will cross it
-        if (currentPosition <= entryPoint && newPosition > entryPoint) {
-            // Calculate how many steps into home column
-            int stepsIntoHome = newPosition - entryPoint - 1;
-
-            // If within home column size, return home column position
-            if (stepsIntoHome < HOME_COLUMN_SIZE) {
-                return BOARD_SIZE + stepsIntoHome;
-            } else {
-                // Can't move - would overshoot home column
-                return -1;
+        // If pawn is already in home column
+        if (currentPosition >= BOARD_SIZE) {
+            int homePosition = currentPosition + steps;
+            if (homePosition >= BOARD_SIZE + HOME_COLUMN_SIZE) {
+                return -1; // Would overshoot home
             }
+            return homePosition;
         }
 
-        // Normal movement on main track
-        return newPosition % BOARD_SIZE;
+        int playerStart = player.getStartPosition();
+        int entryPoint = (playerStart + BOARD_SIZE - 1) % BOARD_SIZE;
+
+        // First, check if we're going to enter home column
+        if (currentPosition <= entryPoint &&
+            (currentPosition + steps) > entryPoint &&
+            playerStart == board.getStartPosition(player.getColor())) {
+
+            int stepsAfterEntry = (currentPosition + steps) - entryPoint - 1;
+            if (stepsAfterEntry < HOME_COLUMN_SIZE) {
+                // Calculate home column position based on player's start position
+                int homeColumnBase = BOARD_SIZE + (playerStart / 13) * HOME_COLUMN_SIZE;
+                return homeColumnBase + stepsAfterEntry;
+            }
+            return -1; // Would overshoot home
+        }
+
+        // Regular movement with wraparound
+        int newPosition = currentPosition + steps;
+        if (newPosition >= BOARD_SIZE) {
+            newPosition = newPosition % BOARD_SIZE;
+        }
+        return newPosition;
     }
 
-    public String getGameState() {
+      public String getGameState() {
         StringBuilder state = new StringBuilder();
         for (Player player : players) {
             state.append(player.toString()).append(";");

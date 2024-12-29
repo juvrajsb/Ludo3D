@@ -33,8 +33,43 @@ public class BotPlayer extends Player {
     }
 
     private boolean canMovePawn(Pawn pawn, Board board, int diceRoll) {
-        // Implement logic to check if the pawn can move based on the game rules
-        // This should consider if the pawn is in the home, on the board, or in the final stretch
+        if (pawn.isHome()) {
+            return diceRoll == 6;  // Can only leave home with a 6
+        }
+
+        int currentPosition = pawn.getPosition();
+        int playerStart = board.getStartPosition(getColor());
+        int newPosition = currentPosition + diceRoll;
+        int entryPoint = (playerStart - 1 + board.getTotalSpaces()) % board.getTotalSpaces();
+
+        // Check if pawn will enter home column
+        if (currentPosition <= entryPoint && newPosition > entryPoint) {
+            int stepsIntoHome = newPosition - entryPoint - 1;
+            if (stepsIntoHome >= board.getHomeColumnSize()) {
+                return false;  // Would overshoot home
+            }
+
+            // Check if home column position is blocked by own pawn
+            int homePosition = board.getTotalSpaces() + stepsIntoHome;
+            for (Pawn otherPawn : getPawns()) {
+                if (otherPawn != pawn && otherPawn.getPosition() == homePosition) {
+                    return false;
+                }
+            }
+            return true;
+        }
+
+        // Normal board movement
+        newPosition = newPosition % board.getTotalSpaces();
+
+        // Check if blocked by own pawn on non-safe spot
+        for (Pawn otherPawn : getPawns()) {
+            if (otherPawn != pawn && otherPawn.getPosition() == newPosition
+                && !board.isSafeSpot(newPosition)) {
+                return false;
+            }
+        }
+
         return true;
     }
 
