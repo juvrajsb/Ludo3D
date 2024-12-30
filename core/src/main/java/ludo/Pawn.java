@@ -58,4 +58,8 @@ public class Pawn {
     public boolean isFinished() {
         return isFinished;
     }
+
+    public void setFinished(boolean finished) {
+        isFinished = finished;
+    }
 }

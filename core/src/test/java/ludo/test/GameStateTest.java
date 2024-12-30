@@ -41,13 +41,22 @@ public class GameStateTest {
         Player red = players.get(0);
         Player blue = players.get(2);
 
-        // Move red pawn out
-        game.movePawn(0, 0, 6);
-        game.movePawn(0, 0, 3);
+        // Move red pawn out and to position 3
+        assertTrue(game.movePawn(0, 0, 6));  // Move out of home
+        assertTrue(game.movePawn(0, 0, 3));  // Move to position 3
+        System.out.println("Red pawn position: " + red.getPawns().get(0).getPosition());
 
-        // Move blue pawn to same position
-        blue.getPawns().get(0).setPosition(3);
-        game.movePawn(2, 0, 6);
+        // Move blue pawn to capture red (need multiple moves to get to same position)
+        assertTrue(game.movePawn(2, 0, 6));  // Move out of home
+        assertTrue(game.movePawn(2, 0, 6));  // Move 6 spaces
+        assertTrue(game.movePawn(2, 0, 6));  // Move 6 more spaces
+        assertTrue(game.movePawn(2, 0, 6));  // Move 6 more spaces
+        assertTrue(game.movePawn(2, 0, 6));  // Move 6 more spaces
+        assertTrue(game.movePawn(2, 0, 5));  // Final move to reach same position
+
+        // Print final positions to verify
+        System.out.println("Red pawn position: " + red.getPawns().get(0).getPosition());
+        System.out.println("Blue pawn position: " + blue.getPawns().get(0).getPosition());
 
         // Red pawn should be sent home
         assertTrue(red.getPawns().get(0).isHome());
@@ -58,6 +67,8 @@ public class GameStateTest {
         Player player = players.get(0);
         for (Pawn pawn : player.getPawns()) {
             pawn.setPosition(52); // Move all pawns to home
+            pawn.setFinished(true);
+
         }
         assertTrue(game.isGameOver());
         assertEquals(player, game.getWinner());

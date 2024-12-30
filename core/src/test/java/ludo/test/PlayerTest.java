@@ -1,5 +1,6 @@
 package ludo.test;
 
+import ludo.Pawn;
 import ludo.server.*;
 import org.junit.Before;
 import org.junit.Test;
@@ -26,10 +27,19 @@ public class PlayerTest {
 
     @Test
     public void testPawnManagement() {
-        assertEquals(0, player.getPawnsInHome());
-        player.getPawns().get(0).setPosition(51); // Set near home column
-        assertEquals(0, player.getPawnsInHome()); // Not in home yet
-        player.getPawns().get(0).setPosition(52); // Set in home
+        Board board = new Board();
+        assertEquals(0, player.getPawnsInHome());  // No pawns finished
+        assertEquals(0, player.getPawnsInHomeColumn(board)); // No pawns in home column
+
+        Pawn pawn = player.getPawns().get(0);
+        pawn.setPosition(45);  // Before home column (RED home column is 46-51)
+        assertEquals(0, player.getPawnsInHomeColumn(board)); // Still not in home column
+
+        pawn.setPosition(47);  // In home column
+        assertEquals(0, player.getPawnsInHome());  // Not finished
+        assertEquals(1, player.getPawnsInHomeColumn(board)); // But in home column!
+
+        pawn.setFinished(true); // Finally reaches home
         assertEquals(1, player.getPawnsInHome());
     }
 }

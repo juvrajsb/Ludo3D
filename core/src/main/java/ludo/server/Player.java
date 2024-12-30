@@ -61,6 +61,16 @@ public class Player {
         return board.isHomeColumn(pawns.get(pawnIndex).getPosition(), color);
     }
 
+    public int getPawnsInHomeColumn(Board board) {
+        int count = 0;
+        for (int i = 0; i < pawns.size(); i++) {
+            if (isInHomeColumn(i, board)) {
+                count++;
+            }
+        }
+        return count;
+    }
+
     public void setUseSingleDie(boolean useSingleDie) {
         this.useSingleDie = useSingleDie;
     }
