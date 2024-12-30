@@ -17,8 +17,8 @@ public class Lwjgl3Launcher {
         configuration.setTitle("Ludo");
         configuration.useVsync(true);
         configuration.setForegroundFPS(Lwjgl3ApplicationConfiguration.getDisplayMode().refreshRate);
-        configuration.setWindowedMode(640, 480);
-        configuration.setWindowIcon("libgdx128.png", "libgdx64.png", "libgdx32.png", "libgdx16.png");
+        configuration.setWindowedMode(800, 600);
+        configuration.setWindowIcon("ui/icon.png", "ui/icon.png", "ui/icon.png", "ui/icon.png");
         return configuration;
     }
 }

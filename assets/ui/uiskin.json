@@ -1,95 +1,21 @@
 {
   "com.badlogic.gdx.graphics.Color": {
     "white": { "r": 1, "g": 1, "b": 1, "a": 1 },
-    "black": { "r": 0, "g": 0, "b": 0, "a": 1 },
-    "gray": { "r": 0.5, "g": 0.5, "b": 0.5, "a": 1 },
-    "accent": { "r": 0, "g": 0.478, "b": 1, "a": 1 },
-    "accent-light": { "r": 0.2, "g": 0.6, "b": 1, "a": 1 },
-    "accent-dark": { "r": 0, "g": 0.4, "b": 0.9, "a": 1 },
-    "background": { "r": 0.98, "g": 0.98, "b": 0.98, "a": 1 },
-    "disabled": { "r": 0.8, "g": 0.8, "b": 0.8, "a": 1 },
-    "selection": { "r": 0, "g": 0.478, "b": 1, "a": 0.5 },
-    "dim-gray": { "r": 0.2, "g": 0.2, "b": 0.2, "a": 1 },
-    "light-gray": { "r": 0.95, "g": 0.95, "b": 0.95, "a": 1 }
+    "black": { "r": 0, "g": 0, "b": 0, "a": 1 }
   },
-
   "com.badlogic.gdx.graphics.g2d.BitmapFont": {
     "default": { "file": "default.fnt" }
   },
-
-  "com.badlogic.gdx.scenes.scene2d.ui.Skin$TintedDrawable": {
-    "white": { "name": "white-pixel", "color": "white" },
-    "gray": { "name": "white-pixel", "color": "gray" },
-    "black": { "name": "white-pixel", "color": "black" },
-    "accent": { "name": "white-pixel", "color": "accent" },
-    "accent-light": { "name": "white-pixel", "color": "accent-light" },
-    "accent-dark": { "name": "white-pixel", "color": "accent-dark" },
-    "selection": { "name": "white-pixel", "color": "selection" },
-    "button-up": { "name": "white-pixel", "color": "accent" },
-    "button-over": { "name": "white-pixel", "color": "accent-light" },
-    "button-down": { "name": "white-pixel", "color": "accent-dark" },
-    "button-disabled": { "name": "white-pixel", "color": "disabled" },
-    "textfield-normal": { "name": "white-pixel", "color": "light-gray" },
-    "textfield-focused": { "name": "white-pixel", "color": "white" },
-    "list-background": { "name": "white-pixel", "color": "white" },
-    "scrollbar": { "name": "white-pixel", "color": "gray" }
-  },
-
   "com.badlogic.gdx.scenes.scene2d.ui.TextButton$TextButtonStyle": {
-    "default": {
-      "up": "button-up",
-      "over": "button-over",
-      "down": "button-down",
-      "disabled": "button-disabled",
-      "font": "default",
-      "fontColor": "white",
-      "disabledFontColor": "dim-gray"
-    }
-  },
-
-  "com.badlogic.gdx.scenes.scene2d.ui.TextField$TextFieldStyle": {
-    "default": {
-      "font": "default",
-      "fontColor": "black",
-      "background": "textfield-normal",
-      "focusedBackground": "textfield-focused",
-      "cursor": "black",
-      "selection": "selection",
-      "messageFont": "default",
-      "messageFontColor": "gray"
-    }
-  },
-
-  "com.badlogic.gdx.scenes.scene2d.ui.List$ListStyle": {
-    "default": {
-      "font": "default",
-      "fontColorSelected": "white",
-      "fontColorUnselected": "black",
-      "selection": "accent",
-      "background": "list-background"
-    }
-  },
-
-  "com.badlogic.gdx.scenes.scene2d.ui.ScrollPane$ScrollPaneStyle": {
-    "default": {
-      "background": "list-background",
-      "hScrollKnob": "scrollbar",
-      "vScrollKnob": "scrollbar"
-    }
-  },
-
-  "com.badlogic.gdx.scenes.scene2d.ui.Label$LabelStyle": {
     "default": {
       "font": "default",
       "fontColor": "black"
     }
   },
-
-  "com.badlogic.gdx.scenes.scene2d.ui.Window$WindowStyle": {
+  "com.badlogic.gdx.scenes.scene2d.ui.Label$LabelStyle": {
     "default": {
-      "titleFont": "default",
-      "titleFontColor": "black",
-      "background": "list-background"
+      "font": "default",
+      "fontColor": "black"
     }
   }
 }
