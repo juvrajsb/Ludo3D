@@ -4,10 +4,13 @@ import ludo.core.entities.Player;
 import ludo.core.entities.Board;
 import ludo.core.entities.Dice;
 import ludo.core.utils.Constants;
+import ludo.server.networking.Connection;
+import ludo.server.events.serverToClient.GameStateUpdateEvent;
 
-import java.util.ArrayList;
-import java.util.List;
+import java.io.IOException;
+import java.util.*;
 import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.stream.Collectors;
 
 public class GameManager {
     private static GameManager instance;
@@ -17,6 +20,7 @@ public class GameManager {
     private int currentPlayerIndex;
     private GameState gameState;
     private boolean gameStarted;
+    private final Map<String, Player> playerMap; // For quick player lookups
 
     private GameManager() {
         this.players = new CopyOnWriteArrayList<>();
@@ -25,6 +29,7 @@ public class GameManager {
         this.currentPlayerIndex = 0;
         this.gameState = GameState.WAITING_FOR_PLAYERS;
         this.gameStarted = false;
+        this.playerMap = new HashMap<>();
     }
 
     public static synchronized GameManager getInstance() {
@@ -34,14 +39,16 @@ public class GameManager {
         return instance;
     }
 
-    public boolean addPlayer(Player player) {
+    public synchronized boolean addPlayer(Player player) {
         if (players.size() >= Constants.MAX_PLAYERS || gameStarted) {
             return false;
         }
-        return players.add(player);
+        players.add(player);
+        playerMap.put(player.getName(), player);
+        return true;
     }
 
-    public void startGame() {
+    public synchronized void startGame() {
         if (players.size() >= 2) {
             gameStarted = true;
             gameState = GameState.IN_PROGRESS;
@@ -50,55 +57,106 @@ public class GameManager {
         }
     }
 
-    private void initializePlayerPositions() {
-        for (Player player : players) {
-            player.initializePawns();
-        }
-    }
-
-    public boolean movePawn(Player player, int pawnIndex, int steps) {
+    public synchronized boolean movePawn(Player player, int pawnIndex, int steps) {
         if (!isValidMove(player, pawnIndex, steps)) {
             return false;
         }
 
         // Execute the move
-        player.getPawns().get(pawnIndex).move(steps, board);
+        boolean moveSuccess = player.getPawns().get(pawnIndex).move(steps, board);
 
-        // Check if this player has won
-        if (hasPlayerWon(player)) {
-            gameState = GameState.GAME_OVER;
+        if (moveSuccess) {
+            checkForCaptures(player, player.getPawns().get(pawnIndex).getPosition());
+            return true;
+        }
+        return false;
+    }
+
+    private void checkForCaptures(Player movingPlayer, int position) {
+        if (board.isSafeSpot(position)) {
+            return;
         }
 
-        return true;
+        for (Player otherPlayer : players) {
+            if (otherPlayer != movingPlayer) {
+                otherPlayer.getPawns().stream()
+                    .filter(p -> p.getPosition() == position)
+                    .forEach(p -> p.sendHome());
+            }
+        }
     }
 
     private boolean isValidMove(Player player, int pawnIndex, int steps) {
-        if (player != getCurrentPlayer() || pawnIndex < 0 || pawnIndex >= Constants.PAWNS_PER_PLAYER) {
+        if (player != getCurrentPlayer() ||
+            pawnIndex < 0 ||
+            pawnIndex >= Constants.PAWNS_PER_PLAYER) {
             return false;
         }
 
-        // Add more move validation logic here
+        return canPawnMove(player.getPawns().get(pawnIndex), steps);
+    }
+
+    private boolean canPawnMove(Pawn pawn, int steps) {
+        // Implement move validation logic
+        if (pawn.isHome() && steps != 6) {
+            return false;
+        }
+
+        int newPosition = pawn.getPosition() + steps;
+        if (newPosition >= board.getTotalSpaces() && !board.isHomeColumn(newPosition, pawn.getColor())) {
+            return false;
+        }
+
         return true;
     }
 
-    public void nextTurn() {
+    public synchronized void nextTurn() {
         currentPlayerIndex = (currentPlayerIndex + 1) % players.size();
-    }
-
-    public Player getCurrentPlayer() {
-        return players.get(currentPlayerIndex);
+        gameState = GameState.IN_PROGRESS;
     }
 
     public int rollDice() {
         return dice.roll();
     }
 
+    public Map<String, List<Integer>> getCurrentPawnPositions() {
+        Map<String, List<Integer>> positions = new HashMap<>();
+        for (Player player : players) {
+            positions.put(player.getColor(),
+                player.getPawns().stream()
+                    .map(Pawn::getPosition)
+                    .collect(Collectors.toList())
+            );
+        }
+        return positions;
+    }
+
+    public void sendGameState(Connection connection) throws IOException {
+        GameStateUpdateEvent stateEvent = new GameStateUpdateEvent(
+            getCurrentPawnPositions(),
+            getCurrentPlayer().getColor(),
+            gameState
+        );
+        connection.send(stateEvent);
+    }
+
+    private void initializePlayerPositions() {
+        for (Player player : players) {
+            player.initializePawns();
+        }
+    }
+
     public boolean hasPlayerWon(Player player) {
         return player.getPawnsInHome() == Constants.PAWNS_PER_PLAYER;
     }
 
+    // Getters and utility methods
     public List<Player> getPlayers() {
         return new ArrayList<>(players);
+    }
+
+    public Player getPlayerByName(String name) {
+        return playerMap.get(name);
     }
 
     public Board getBoard() {
@@ -109,7 +167,15 @@ public class GameManager {
         return gameState;
     }
 
+    public void setGameState(GameState state) {
+        this.gameState = state;
+    }
+
     public boolean isGameStarted() {
         return gameStarted;
+    }
+
+    public Player getCurrentPlayer() {
+        return players.isEmpty() ? null : players.get(currentPlayerIndex);
     }
 }
