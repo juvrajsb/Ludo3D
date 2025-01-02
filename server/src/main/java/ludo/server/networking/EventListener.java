@@ -33,10 +33,6 @@ public class EventListener implements Runnable {
                 if (usedByServer) {
                     ConnectionsController.getInstance().signalClientDisconnection(listeningConnection);
                 }
-
-                // TODO: remove before releasing
-                System.out.println("Event Listener with "+ listeningConnection.getConnectionID() +" closed");
-
                 break;
             } catch (ClassNotFoundException e) {
                 throw new RuntimeException(e);

@@ -47,9 +47,6 @@ public class EventReceiver implements Runnable {
                 receivedEvent = eventsQueue.remove();
             }
 
-            // TODO: remove before releasing
-            System.out.println("Received " + receivedEvent);
-
             receivedEvent.callHandler();
         }
     }
