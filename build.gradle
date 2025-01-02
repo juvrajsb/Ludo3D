@@ -5,10 +5,6 @@ buildscript {
     maven { url "https://oss.sonatype.org/content/repositories/snapshots/" }
     google()
   }
-  dependencies {
-    classpath 'com.android.tools.build:gradle:7.2.2'
-    classpath 'com.mobidevelop.robovm:robovm-gradle-plugin:2.3.19'
-  }
 }
 
 allprojects {
@@ -19,45 +15,57 @@ allprojects {
   ext {
     appName = "ludo"
     gdxVersion = '1.13.0'
-    roboVMVersion = '2.3.19'
     box2DLightsVersion = '1.5'
-    ashleyVersion = '1.7.4'
-    aiVersion = '1.8.2'
-    gdxControllersVersion = '2.2.1'
   }
 
   repositories {
     mavenCentral()
     maven { url "https://oss.sonatype.org/content/repositories/snapshots/" }
     maven { url "https://oss.sonatype.org/content/repositories/releases/" }
-    maven { url "https://jitpack.io" }
-    google()
   }
 }
 
+// Core module for shared code
 project(":core") {
   apply plugin: "java-library"
 
   dependencies {
     api "com.badlogicgames.gdx:gdx:$gdxVersion"
     api "com.badlogicgames.gdx:gdx-box2d:$gdxVersion"
-    api "com.badlogicgames.gdx:gdx-freetype:$gdxVersion"
+
     testImplementation "junit:junit:4.13.2"
+    testImplementation "org.mockito:mockito-core:5.3.1"
   }
 }
 
+// Client module for desktop game
 project(":client") {
   apply plugin: "java-library"
+  apply plugin: "application"
 
   dependencies {
     implementation project(":core")
-    api "com.badlogicgames.gdx:gdx-backend-lwjgl3:$gdxVersion"
-    api "com.badlogicgames.gdx:gdx-platform:$gdxVersion:natives-desktop"
-    api "com.badlogicgames.gdx:gdx-box2d-platform:$gdxVersion:natives-desktop"
-    api "com.badlogicgames.gdx:gdx-freetype-platform:$gdxVersion:natives-desktop"
+    implementation "com.badlogicgames.gdx:gdx-backend-lwjgl3:$gdxVersion"
+    implementation "com.badlogicgames.gdx:gdx-platform:$gdxVersion:natives-desktop"
+    implementation "com.badlogicgames.gdx:gdx-box2d-platform:$gdxVersion:natives-desktop"
+    implementation "org.java-websocket:Java-WebSocket:1.5.3"
+    implementation "com.google.code.gson:gson:2.10.1"
+  }
+
+  application {
+    mainClass = 'ludo.client.Lwjgl3Launcher'
+  }
+
+  tasks.withType(JavaExec) {
+    workingDir = rootProject.file("assets")
+
+    if (System.getProperty("os.name").toLowerCase().contains("mac")) {
+      jvmArgs += "-XstartOnFirstThread"
+    }
   }
 }
 
+// Server module
 project(":server") {
   apply plugin: "java-library"
   apply plugin: "application"
@@ -66,9 +74,11 @@ project(":server") {
     implementation project(":core")
     implementation "org.java-websocket:Java-WebSocket:1.5.3"
     implementation "com.google.code.gson:gson:2.10.1"
+    implementation "org.slf4j:slf4j-api:2.0.7"
+    implementation "ch.qos.logback:logback-classic:1.4.7"
   }
 
   application {
-    mainClass = 'ludo.server.LudoServer'
+    mainClass = 'ludo.controller.LudoServer'
   }
 }

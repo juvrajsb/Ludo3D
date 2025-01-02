@@ -1,27 +1,10 @@
-plugins {
-  id 'java'
-  id 'application'
+sourceSets {
+  main.java.srcDirs = [ "src/main/java" ]
+  main.resources.srcDirs = [ "src/main/resources" ]
 }
-
-sourceSets.main.java.srcDirs = [ "src/main/java" ]
-sourceSets.main.resources.srcDirs = [ "src/main/resources" ]
-
-application {
-  mainClass = "main.java.ludo.lwjgl3.Lwjgl3Launcher"
-}
-
-project.ext.assetsDir = new File("../assets")
 
 dependencies {
   implementation project(":core")
-
-  implementation "com.badlogicgames.gdx:gdx-backend-lwjgl3:$gdxVersion"
-  implementation "com.badlogicgames.gdx:gdx-platform:$gdxVersion:natives-desktop"
-  implementation "com.badlogicgames.gdx:gdx-box2d-platform:$gdxVersion:natives-desktop"
-  implementation "com.badlogicgames.gdx:gdx-freetype-platform:$gdxVersion:natives-desktop"
-
-  implementation "org.java-websocket:Java-WebSocket:1.5.3"
-  implementation "com.google.code.gson:gson:2.10.1"
 }
 
 jar {
@@ -30,14 +13,5 @@ jar {
   from { configurations.compileClasspath.collect { it.isDirectory() ? it : zipTree(it) } }
   manifest {
     attributes 'Main-Class': application.mainClass
-  }
-}
-
-tasks.withType(JavaExec) {
-  workingDir = rootProject.file("assets")
-
-  // Required for MacOS
-  if (System.getProperty("os.name").toLowerCase().contains("mac")) {
-    jvmArgs += "-XstartOnFirstThread"
   }
 }
