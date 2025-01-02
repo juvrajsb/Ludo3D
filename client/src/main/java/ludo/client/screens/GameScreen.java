@@ -16,6 +16,9 @@ import ludo.client.ui.GameHUD;
 import ludo.core.entities.Player;
 import java.util.List;
 import java.util.Map;
+import ludo.client.networking.NetworkManager;
+import ludo.client.ui.GameUI;
+import ludo.core.game.GameState;
 
 public class GameScreen implements Screen {
     private final LudoGame game;
