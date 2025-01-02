@@ -2,14 +2,15 @@ package main.java.ludo.lwjgl3;
 
 import com.badlogic.gdx.backends.lwjgl3.Lwjgl3Application;
 import com.badlogic.gdx.backends.lwjgl3.Lwjgl3ApplicationConfiguration;
-import ludo.Client;
+import ludo.client.LudoGame;
+
 public class Lwjgl3Launcher {
     public static void main(String[] args) {
         createApplication();
     }
 
     private static Lwjgl3Application createApplication() {
-        return new Lwjgl3Application(new Client(), getDefaultConfiguration());
+        return new Lwjgl3Application(new LudoGame(), getDefaultConfiguration());
     }
 
     private static Lwjgl3ApplicationConfiguration getDefaultConfiguration() {
