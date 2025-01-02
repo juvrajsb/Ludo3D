@@ -1,11 +1,13 @@
 package ludo.server.game;
 
+import ludo.core.entities.Pawn;
 import ludo.core.entities.Player;
 import ludo.core.entities.Board;
 import ludo.core.entities.Dice;
 import ludo.core.utils.Constants;
 import ludo.server.networking.Connection;
 import ludo.server.events.serverToClient.GameStateUpdateEvent;
+import ludo.core.validation.MoveValidator;
 
 import java.io.IOException;
 import java.util.*;
@@ -93,21 +95,8 @@ public class GameManager {
             return false;
         }
 
-        return canPawnMove(player.getPawns().get(pawnIndex), steps);
-    }
-
-    private boolean canPawnMove(Pawn pawn, int steps) {
-        // Implement move validation logic
-        if (pawn.isHome() && steps != 6) {
-            return false;
-        }
-
-        int newPosition = pawn.getPosition() + steps;
-        if (newPosition >= board.getTotalSpaces() && !board.isHomeColumn(newPosition, pawn.getColor())) {
-            return false;
-        }
-
-        return true;
+        Pawn pawn = player.getPawns().get(pawnIndex);
+        return MoveValidator.isValidMove(player, pawn, steps, board);
     }
 
     public synchronized void nextTurn() {
