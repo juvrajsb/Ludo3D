@@ -1,13 +1,13 @@
 package ludo.server.networking;
 
-import ludo.server.events.Event;
+import ludo.core.events.Event;
 
 import java.util.LinkedList;
 import java.util.Queue;
 
 /**
  * Class that receives the Events from the socket through a Queue
- * and calls their associated handler.
+ * and calls their associated handlers.
  *
  * @see EventListener
  */
@@ -47,7 +47,7 @@ public class EventReceiver implements Runnable {
                 receivedEvent = eventsQueue.remove();
             }
 
-            receivedEvent.callHandler();
+            receivedEvent.process();
         }
     }
 

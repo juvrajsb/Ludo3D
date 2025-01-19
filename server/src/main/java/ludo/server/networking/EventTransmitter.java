@@ -1,6 +1,7 @@
 package ludo.server.networking;
 
-import ludo.server.events.Event;
+import ludo.core.events.Event;
+import ludo.core.network.Connection;
 
 import java.io.IOException;
 import java.util.List;
