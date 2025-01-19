@@ -1,7 +1,9 @@
 package ludo.server.networking;
 
+import ludo.core.network.Connection;
+import ludo.core.network.PingSender;
 import ludo.server.Server;
-import ludo.server.events.Event;
+import ludo.core.events.Event;
 
 import java.io.IOException;
 import java.net.Socket;
@@ -42,9 +44,13 @@ public class NetworkListener implements Runnable {
             }
 
             try {
-                clientConnection = new Connection(clientSocket);
+                clientConnection = Connection.createServerSide(clientSocket);
             } catch (IOException e) {
-                Server.LOGGER.severe("Connection with client failed");
+                Server.LOGGER.severe("Connection with client failed: " + e.getMessage());
+                try {
+                    clientSocket.close();  // Clean up failed socket
+                } catch (IOException ignored) {}
+                continue;  // Continue to next iteration to accept new connections
             }
 
             clientDedicatedThread = getClientDedicatedThread(clientConnection, eventsQueue);
@@ -56,11 +62,9 @@ public class NetworkListener implements Runnable {
     }
 
     private static void startPingRoutine(Connection clientConnection) {
-        Timer timer = new Timer();
-        TimerTask pingSender = new PingSender(clientConnection);
-
+        ServerPingSender pingSender = new ServerPingSender(clientConnection);
         clientConnection.setPingSender(pingSender);
-        timer.schedule(pingSender, 0, PingSender.PING_PERIOD);
+        pingSender.start();
     }
 
     private static Thread getClientDedicatedThread(Connection clientConnection, Queue<Event> eventsQueue) {

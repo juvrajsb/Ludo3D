@@ -1,14 +1,15 @@
 package ludo.server.networking;
 
-import ludo.server.events.Event;
+import ludo.core.events.Event;
+import ludo.core.network.Connection;
 import ludo.server.Server;
-import ludo.server.handler.NetworkErrorHandler;
+import ludo.server.handlers.NetworkErrorHandler;
 
 import java.io.IOException;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 
-public class ConnectionManager {
+public class ConnectionManager{
     private static ConnectionManager instance;
     private final Map<String, Connection> connections;
     private final NetworkErrorHandler errorHandler;
@@ -34,10 +35,9 @@ public class ConnectionManager {
 
     private void initializeConnection(Connection connection) {
         // Start ping monitoring
-        Timer timer = new Timer();
-        TimerTask pingSender = new PingSender(connection);
+        ServerPingSender pingSender = new ServerPingSender(connection);
         connection.setPingSender(pingSender);
-        timer.schedule(pingSender, 0, PingSender.PING_PERIOD);
+        pingSender.start();
     }
 
     public void removeConnection(String connectionId) {
@@ -107,5 +107,9 @@ public class ConnectionManager {
 
     public EventTransmitter getEventTransmitter() {
         return eventTransmitter;
+    }
+
+    public void handleDisconnection(String connectionId) {
+        removeConnection(connectionId);
     }
 }

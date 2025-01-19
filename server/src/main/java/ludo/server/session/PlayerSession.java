@@ -1,8 +1,8 @@
 package ludo.server.session;
 
 import ludo.core.entities.Player;
-import ludo.server.networking.Connection;
-import ludo.server.events.Event;
+import ludo.core.network.Connection;
+import ludo.core.events.Event;
 import java.io.IOException;
 
 public class PlayerSession {
