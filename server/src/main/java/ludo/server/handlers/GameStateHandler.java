@@ -1,12 +1,12 @@
-package ludo.server.handler;
+package ludo.server.handlers;
 
-import ludo.server.game.GameManager;
-import ludo.server.game.GameState;
+import ludo.core.game.GameManager;
+import ludo.core.game.GameState;
 import ludo.server.networking.EventTransmitter;
 import ludo.server.Server;
 import ludo.core.entities.Player;
-import ludo.server.events.serverToClient.GameStateUpdateEvent;
-import ludo.server.events.serverToClient.WinnerProclamationEvent;
+import ludo.core.events.serverToClient.GameStateUpdateEvent;
+import ludo.core.events.serverToClient.WinnerProclamationEvent;
 
 import java.util.Collections;
 import java.util.HashMap;
@@ -14,7 +14,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
-public class GameStateHandler extends BaseHandler {
+public class GameStateHandler {
     private final GameManager gameManager;
     private final EventTransmitter eventTransmitter;
     private GameState currentState;

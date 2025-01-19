@@ -1,10 +1,10 @@
-package ludo.server.handler;
+package ludo.server.handlers;
 
-import ludo.server.networking.Connection;
+import ludo.core.network.Connection;
 import ludo.server.networking.EventTransmitter;
 import ludo.server.Server;
-import ludo.server.game.GameManager;
-import ludo.server.game.GameState;
+import ludo.core.game.GameManager;
+import ludo.core.game.GameState;
 import java.io.IOException;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
@@ -71,7 +71,7 @@ public class NetworkErrorHandler {
         reconnectAttempts.remove(clientId);
         playerStates.remove(clientId);
 
-        // Handle player removal through connection handler
+        // Handle player removal through connection handlers
         connectionHandler.handleUnexpectedDisconnection(clientId);
     }
 
@@ -85,7 +85,7 @@ public class NetworkErrorHandler {
             syncGameState(newConnection);
         }
 
-        // Update connection in connection handler
+        // Update connection in connection handlers
         connectionHandler.handleReconnection(clientId, newConnection);
 
         Server.LOGGER.info("Client " + clientId + " successfully reconnected");

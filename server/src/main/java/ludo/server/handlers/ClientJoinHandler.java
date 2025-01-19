@@ -1,14 +1,14 @@
-package ludo.server.handler;
+package ludo.server.handlers;
 
-import ludo.server.events.clientToServer.JoinGameRequestEvent;
-import ludo.server.events.serverToClient.JoinGameResponseEvent;
-import ludo.server.events.serverToClient.Response;
-import ludo.server.game.GameManager;
+import ludo.core.events.clientToServer.JoinGameRequestEvent;
+import ludo.core.events.serverToClient.JoinGameResponseEvent;
+import ludo.core.events.serverToClient.Response;
+import ludo.core.game.GameManager;
 import ludo.core.entities.Player;
 import ludo.server.networking.EventTransmitter;
 import ludo.server.Server;
 
-public class ClientJoinHandler extends BaseHandler {
+public class ClientJoinHandler{
     private final GameManager gameManager;
     private final EventTransmitter eventTransmitter;
 

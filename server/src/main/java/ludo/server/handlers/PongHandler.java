@@ -1,10 +1,10 @@
-package ludo.server.handler;
+package ludo.server.handlers;
 
-import ludo.server.events.clientToServer.PongEvent;
-import ludo.server.networking.Connection;
+import ludo.core.events.clientToServer.PongEvent;
+import ludo.core.network.Connection;
 import ludo.server.Server;
 
-public class PongHandler extends BaseHandler {
+public class PongHandler{
     private final ClientConnectionHandler connectionHandler;
 
     public PongHandler() {

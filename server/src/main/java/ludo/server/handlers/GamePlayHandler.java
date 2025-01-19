@@ -1,17 +1,18 @@
-package ludo.server.handler;
+package ludo.server.handlers;
 
-import ludo.server.events.clientToServer.*;
-import ludo.server.events.serverToClient.*;
-import ludo.server.game.GameManager;
+import ludo.core.events.clientToServer.*;
+import ludo.core.events.serverToClient.*;
+import ludo.server.Server;
+import ludo.core.game.GameManager;
 import ludo.server.networking.EventTransmitter;
-import ludo.entities.Player;
+import ludo.core.entities.Player;
 
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
-public class GamePlayHandler extends BaseHandler {
+public class GamePlayHandler {
     private final GameManager gameManager;
     private final EventTransmitter eventTransmitter;
 

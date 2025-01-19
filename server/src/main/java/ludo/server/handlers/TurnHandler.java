@@ -1,11 +1,11 @@
-package ludo.server.handler;
+package ludo.server.handlers;
 
-import ludo.server.game.GameManager;
-import ludo.server.game.GameState;
+import ludo.core.game.GameManager;
+import ludo.core.game.GameState;
 import ludo.server.networking.EventTransmitter;
 import ludo.server.Server;
 import ludo.core.entities.Player;
-import ludo.server.events.serverToClient.GameStateUpdateEvent;
+import ludo.core.events.serverToClient.GameStateUpdateEvent;
 
 import java.util.Timer;
 import java.util.TimerTask;

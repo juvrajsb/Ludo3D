@@ -1,9 +1,9 @@
-package ludo.server.handler;
+package ludo.server.handlers;
 
-import ludo.server.events.clientToServer.MoveRequestEvent;
-import ludo.server.events.serverToClient.MoveResultEvent;
-import ludo.server.events.serverToClient.GameStateUpdateEvent;
-import ludo.server.game.GameManager;
+import ludo.core.events.clientToServer.MoveRequestEvent;
+import ludo.core.events.serverToClient.MoveResultEvent;
+import ludo.core.events.serverToClient.GameStateUpdateEvent;
+import ludo.core.game.GameManager;
 import ludo.server.networking.EventTransmitter;
 import ludo.server.Server;
 import ludo.core.entities.Player;
@@ -13,7 +13,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
-public class MoveRequestHandler extends BaseHandler {
+public class MoveRequestHandler {
     private final GameManager gameManager;
     private final EventTransmitter eventTransmitter;
 

@@ -1,10 +1,10 @@
-package ludo.server.handler;
+package ludo.server.handlers;
 
-import ludo.server.networking.Connection;
+import ludo.core.network.Connection;
 import ludo.server.networking.EventTransmitter;
 import ludo.server.Server;
-import ludo.server.events.clientToServer.ClientDisconnectedEvent;
-import ludo.server.events.serverToClient.UnexceptedDisconnetionEvent;
+import ludo.core.events.clientToServer.ClientDisconnectedEvent;
+import ludo.core.events.serverToClient.UnexceptedDisconnetionEvent;
 
 import java.io.IOException;
 import java.util.Map;
@@ -23,23 +23,19 @@ public class ClientConnectionHandler {
 
     public void handleNewConnection(Connection connection) {
         // Add to active connections
-        activeConnections.put(connection.getConnectionID(), connection);
+        activeConnections.put(connection.getConnectionID(), connection); //TODO check, no getConnectionID method in Connection
         Server.LOGGER.info("New client connected: " + connection.getConnectionID());
     }
 
-    public void handleDisconnection(ClientDisconnectedEvent event) {
-        Connection connection = event.getConnection();
+    public void handleDisconnection(ClientDisconnectedEvent event) throws IOException {
+        Connection connection = event.getConnection(); //TODO check, no getConnection method in ClientDisconnectedEvent
         String clientId = connection.getConnectionID();
 
         // Remove from active connections
         activeConnections.remove(clientId);
 
-        try {
-            // Close connection
-            connection.close();
-        } catch (IOException e) {
-            Server.LOGGER.severe("Error closing connection: " + e.getMessage());
-        }
+        // Close connection
+        connection.close();
 
         // Handle player removal if game hasn't started
         playerJoinHandler.handlePlayerDisconnect(clientId);
@@ -56,7 +52,7 @@ public class ClientConnectionHandler {
             try {
                 // Notify other players
                 UnexceptedDisconnetionEvent disconnectionEvent = new UnexceptedDisconnetionEvent();
-                eventTransmitter.broadcast(disconnectionEvent);
+                eventTransmitter.broadcast(disconnectionEvent); //TODO check, provided UnexceptedDisconnetionEvent; required Event
 
                 // Close connection
                 connection.close();

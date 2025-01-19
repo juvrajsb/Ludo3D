@@ -1,10 +1,10 @@
-package ludo.server.handler;
+package ludo.server.handlers;
 
-import ludo.server.game.GameManager;
+import ludo.core.game.GameManager;
 import ludo.server.networking.EventTransmitter;
 import ludo.server.Server;
 import ludo.core.entities.Player;
-import ludo.server.events.serverToClient.WaitingRoomUpdateEvent;
+import ludo.core.events.serverToClient.WaitingRoomUpdateEvent;
 import ludo.core.utils.Constants;
 
 import java.util.ArrayList;
