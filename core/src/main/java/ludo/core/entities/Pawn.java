@@ -14,13 +14,34 @@ public class Pawn {
         this.isFinished = false;
     }
 
+    public boolean canMove(int spaces, Board board) {
+        // Can't move if at home or finished
+        if (isHome || isFinished) {
+            return false;
+        }
+
+        int newPosition = (position + spaces) % board.getTotalSpaces();
+
+        // Check home column entry
+        if (board.isHomeColumn(newPosition, color)) {
+            // Check if would overshoot home
+            return newPosition < board.getStartPosition(color) + board.getTotalSpaces() - 1;
+        }
+
+        return true;
+    }
+
     public void move(int spaces, Board board) {
-        if (!isHome && !isFinished) {
-            position = (position + spaces) % board.getTotalSpaces();
-            if (board.isHomeColumn(position, color)) {
-                if (position == board.getStartPosition(color) + board.getTotalSpaces() - 1) {
-                    isFinished = true;
-                }
+        if (!canMove(spaces, board)) {
+            return;
+        }
+
+        position = (position + spaces) % board.getTotalSpaces();
+
+        // Check if pawn finished
+        if (board.isHomeColumn(position, color)) {
+            if (position == board.getStartPosition(color) + board.getTotalSpaces() - 1) {
+                isFinished = true;
             }
         }
     }

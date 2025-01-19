@@ -19,6 +19,7 @@ public class Constants {
 
     // Game constants
     public static final int MAX_PLAYERS = 4;
+    public static final int MIN_PLAYERS = 2;
     public static final int PAWNS_PER_PLAYER = 4;
     public static final int DICE_MAX = 6;
 }
