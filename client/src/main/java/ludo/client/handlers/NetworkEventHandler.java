@@ -1,27 +1,28 @@
 package ludo.client.handlers;
 
-import ludo.client.networking.Client;
-import ludo.server.events.clientToServer.*;
-import ludo.server.networking.Connection;
+import ludo.client.networking.ClientNetworkHandler;
+import ludo.core.events.clientToServer.*;
+import ludo.core.network.Connection;
 
 public class NetworkEventHandler {
-    private final Client client;
+    private final ClientNetworkHandler client;
     private final Connection serverConnection;
 
-    public NetworkEventHandler(Connection serverConnection) {
-        this.client = Client.getInstance();
+    public NetworkEventHandler(Connection serverConnection, ClientNetworkHandler client) {
+        this.client = client;
+//        this.client = Client.getInstance();
         this.serverConnection = serverConnection;
     }
 
     public void handleDisconnection() {
         // Handle controller disconnection
-        client.stop();
+        client.stop(); //TODO check
         // Show disconnection screen or return to menu
     }
 
     public void handleReconnection() {
         try {
-            client.start(serverConnection.getConnectionID(),
+            client.start(serverConnection.getConnectionID(), //TODO check
                 Integer.parseInt(System.getProperty("controller.port", "12000")));
         } catch (Exception e) {
             System.err.println("Failed to reconnect: " + e.getMessage());

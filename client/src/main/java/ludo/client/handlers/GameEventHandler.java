@@ -1,8 +1,11 @@
 package ludo.client.handlers;
 
-import ludo.client.events.*;
 import ludo.core.entities.Player;
 import ludo.client.screens.GameScreen;
+import ludo.core.events.serverToClient.DiceRollResultEvent;
+import ludo.core.events.serverToClient.GameStartEvent;
+import ludo.core.events.serverToClient.GameStateUpdateEvent;
+import ludo.core.events.serverToClient.MoveResultEvent;
 
 public class GameEventHandler {
     private final GameScreen gameScreen;
@@ -50,7 +53,7 @@ public class GameEventHandler {
         gameScreen.setCurrentPlayer(event.getCurrentPlayer());
 
         // Update game state
-        gameScreen.updateGameState(event.getGameState());
+        gameScreen.updateGameState(event.getGameState().toString()); //TODO need to check
     }
 
     public void handleGameStart(GameStartEvent event) {
