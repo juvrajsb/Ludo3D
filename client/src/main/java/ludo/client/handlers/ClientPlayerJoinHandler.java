@@ -3,7 +3,7 @@ package ludo.client.handlers;
 import ludo.client.screens.GameScreen;
 import ludo.core.entities.Player;
 
-// Client-side player join handler
+// Client-side player join handlers
 public class ClientPlayerJoinHandler {
     private final GameScreen gameScreen;
 

@@ -1,9 +1,9 @@
 package ludo.client.handlers;
 
-import ludo.client.events.DiceRollResultEvent;
+import ludo.core.events.serverToClient.DiceRollResultEvent;
 import ludo.client.screens.GameScreen;
 
-// Client-side turn handler
+// Client-side turn handlers
 public class ClientTurnHandler {
     private final GameScreen gameScreen;
     private String currentPlayerName;

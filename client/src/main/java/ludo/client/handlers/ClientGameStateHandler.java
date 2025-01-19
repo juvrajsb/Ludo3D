@@ -1,9 +1,9 @@
 package ludo.client.handlers;
 
-import ludo.client.events.GameStateUpdateEvent;
+import ludo.core.events.serverToClient.GameStateUpdateEvent;
 import ludo.client.screens.GameScreen;
 
-// Client-side game state handler
+// Client-side game state handlers
 public class ClientGameStateHandler {
     private final GameScreen gameScreen;
 
@@ -18,7 +18,7 @@ public class ClientGameStateHandler {
         });
 
         gameScreen.setCurrentPlayer(event.getCurrentPlayer());
-        gameScreen.updateGameState(event.getGameState());
+        gameScreen.updateGameState(event.getGameState().toString()); //TODO check if correct
     }
 
     public void handleTurnChange(String currentPlayer) {
