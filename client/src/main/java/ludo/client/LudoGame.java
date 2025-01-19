@@ -1,61 +1,76 @@
 package ludo.client;
+
 import com.badlogic.gdx.Game;
-import com.badlogic.gdx.graphics.g2d.SpriteBatch;
-import ludo.client.networking.Client;
-import ludo.client.render.DiceRenderer;
-import ludo.client.render.GameCamera;
-import ludo.client.render.PawnRenderer;
+import ludo.client.screens.GameScreen;
 import ludo.client.screens.MenuScreen;
+import ludo.client.GameStateManager;
 import ludo.core.entities.Player;
 
+import java.util.ArrayList;
+import java.util.List;
 
 public class LudoGame extends Game {
-    private SpriteBatch batch;
-    private GameCamera camera;
-    private PawnRenderer pawnRenderer;
-    private DiceRenderer diceRenderer;
-    private Player[] players;
-    private Client client;
+    private GameStateManager gameStateManager;
+    private List<Player> players;
+    private String currentPlayerName;
+    private GameScreen gameScreen;
+
+    public LudoGame() {
+        players = new ArrayList<>();
+    }
 
     @Override
     public void create() {
-        batch = new SpriteBatch();
-        camera = new GameCamera();
-        pawnRenderer = new PawnRenderer();
-        diceRenderer = new DiceRenderer();
-        client = new Client();
+        // Initialize game state manager
+        gameStateManager = new GameStateManager();
 
+        // Start with menu screen
         setScreen(new MenuScreen(this));
-
-        // Initialize players
-        players = new Player[4];
-        players[0] = new Player("Player 1", "red");
-        players[1] = new Player("Player 2", "blue");
-        players[2] = new Player("Player 3", "green");
-        players[3] = new Player("Player 4", "yellow");
     }
 
-    public Client getClient() {
-        return client;
+    public GameStateManager getGameStateManager() {
+        return gameStateManager;
     }
 
-    @Override
-    public void render() {
-        super.render();
-        camera.update();
-        batch.setProjectionMatrix(camera.combined);
+    public void startGame(String playerName, String color) {
+        this.currentPlayerName = playerName;
+        // Create initial player
+        Player localPlayer = new Player(playerName, color);
+        players.add(localPlayer);
 
-        // Render pawns for each player
-        for (Player player : players) {
-            pawnRenderer.render(player);
+        // Switch to game screen
+        gameScreen = new GameScreen(this);
+        setScreen(gameScreen);
+    }
+
+    public void addPlayer(Player player) {
+        if (players.size() < 4 && !players.stream().anyMatch(p ->
+            p.getColor().equals(player.getColor()) ||
+                p.getName().equals(player.getName()))) {
+            players.add(player);
         }
+    }
+
+    public List<Player> getPlayers() {
+        return new ArrayList<>(players);
+    }
+
+    public String getCurrentPlayerName() {
+        return currentPlayerName;
+    }
+
+    public Player getLocalPlayer() {
+        return players.stream()
+            .filter(p -> p.getName().equals(currentPlayerName))
+            .findFirst()
+            .orElse(null);
     }
 
     @Override
     public void dispose() {
-        batch.dispose();
-        pawnRenderer.dispose();
-        diceRenderer.dispose();
+        super.dispose();
+        if (gameStateManager != null) {
+            // Clean up resources
+        }
     }
 }
-
