@@ -9,9 +9,13 @@ public class PawnRenderer {
     private final ShapeRenderer shapeRenderer;
     private static final float CELL_SIZE = 40f;
     private static final float PAWN_RADIUS = 15f;
+    private Player currentPlayer;
 
     public PawnRenderer() {
         this.shapeRenderer = new ShapeRenderer();
+        this.currentPlayer = currentPlayer;
+
+
     }
 
     public void render(Player player) {
@@ -47,5 +51,22 @@ public class PawnRenderer {
 
     public void dispose() {
         shapeRenderer.dispose();
+    }
+
+    public int getPawnAtPosition(float x, float y) {
+        for (int i = 0; i < currentPlayer.getPawns().size(); i++) {
+            Pawn pawn = currentPlayer.getPawns().get(i);
+            int position = pawn.getPosition();
+            if (position >= 0) {
+                float pawnX = (position % 15) * CELL_SIZE + CELL_SIZE / 2;
+                float pawnY = (position / 15) * CELL_SIZE + CELL_SIZE / 2;
+                float dx = x - pawnX;
+                float dy = y - pawnY;
+                if (dx * dx + dy * dy <= PAWN_RADIUS * PAWN_RADIUS) {
+                    return i;
+                }
+            }
+        }
+        return -1;
     }
 }

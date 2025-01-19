@@ -3,22 +3,19 @@ package ludo.client.screens;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.Screen;
 import com.badlogic.gdx.graphics.GL20;
+import com.badlogic.gdx.scenes.scene2d.InputEvent;
 import com.badlogic.gdx.scenes.scene2d.Stage;
 import com.badlogic.gdx.utils.viewport.ScreenViewport;
+import ludo.client.GameStateManager;
 import ludo.client.LudoGame;
-import ludo.client.handlers.GameEventHandler;
-import ludo.client.handlers.NetworkEventHandler;
-import ludo.client.render.BoardRenderer;
-import ludo.client.render.DiceRenderer;
-import ludo.client.render.PawnRenderer;
-import ludo.client.render.GameCamera;
-import ludo.client.ui.GameHUD;
-import ludo.core.entities.Player;
+import ludo.client.handlers.*;
+import ludo.client.render.*;
+import ludo.client.ui.*;
+import ludo.core.entities.*;
 import java.util.List;
 import java.util.Map;
-import ludo.client.networking.NetworkManager;
-import ludo.client.ui.GameUI;
-import ludo.core.game.GameState;
+
+
 
 public class GameScreen implements Screen {
     private final LudoGame game;
@@ -28,8 +25,9 @@ public class GameScreen implements Screen {
     private final DiceRenderer diceRenderer;
     private final PawnRenderer pawnRenderer;
     private final GameHUD gameHUD;
-    private final GameEventHandler gameEventHandler;
-    private final NetworkEventHandler networkHandler;
+//    private final GameEventHandler gameEventHandler;
+//    private final NetworkEventHandler networkHandler;
+    private final GameStateManager gameStateManager;
 
     private Player currentPlayer;
     private boolean isMyTurn;
@@ -44,8 +42,11 @@ public class GameScreen implements Screen {
         this.diceRenderer = new DiceRenderer();
         this.pawnRenderer = new PawnRenderer();
         this.gameHUD = new GameHUD();
-        this.gameEventHandler = new GameEventHandler(this);
-        this.networkHandler = new NetworkEventHandler(game.getClient());
+//        this.gameEventHandler = new GameEventHandler(this);
+//        this.networkHandler = new NetworkEventHandler(game.getClient());
+
+        this.gameStateManager = new GameStateManager();
+        this.gameStateManager.initialize(this);
 
         setupUI();
         setupInputHandling();
@@ -59,29 +60,29 @@ public class GameScreen implements Screen {
     private void setupInputHandling() {
         // Set up input handling for dice rolls and pawn movement
         stage.addListener(event -> {
-            if (isMyTurn && event instanceof com.badlogic.gdx.scenes.scene2d.InputEvent) {
-                com.badlogic.gdx.scenes.scene2d.InputEvent inputEvent =
-                    (com.badlogic.gdx.scenes.scene2d.InputEvent) event;
-
-                if (inputEvent.getType() == com.badlogic.gdx.scenes.scene2d.InputEvent.Type.touchDown) {
+            if (event instanceof InputEvent inputEvent) {
+                if (inputEvent.getType() == InputEvent.Type.touchDown) {
                     handleInput(inputEvent.getStageX(), inputEvent.getStageY());
                 }
             }
             return false;
         });
+
+        // Initialize game state manager
+        gameStateManager.initialize(this);
     }
 
     private void handleInput(float x, float y) {
         if (!canMove) {
             // Handle dice roll
             if (diceRenderer.isClicked(x, y)) {
-                networkHandler.sendDiceRollRequest();
+                gameStateManager.requestDiceRoll();
             }
         } else {
             // Handle pawn selection
-            int pawnIndex = pawnRenderer.getPawnAtPosition(x, y);
+            int pawnIndex = pawnRenderer.getPawnAtPosition(x, y); //TODO check
             if (pawnIndex != -1) {
-                networkHandler.sendMoveRequest(pawnIndex, lastDiceRoll);
+                gameStateManager.requestMove(pawnIndex);
             }
         }
     }
@@ -95,7 +96,8 @@ public class GameScreen implements Screen {
         camera.update();
 
         // Render game elements
-        boardRenderer.render();
+        boardRenderer.render(game.getPlayers().toArray(new Player[0])); //TODO check
+
         for (Player player : game.getPlayers()) {
             pawnRenderer.render(player);
         }
@@ -208,5 +210,23 @@ public class GameScreen implements Screen {
         boardRenderer.dispose();
         diceRenderer.dispose();
         pawnRenderer.dispose();
+        gameStateManager.dispose();
+    }
+
+    public void disableControls() {
+    }
+
+    public void updateWaitingRoom() {
+    }
+
+    public void removePlayer(String playerName) {
+    }
+
+    public void showWaitingRoom() {
+    }
+
+    public void showError(String message) {
+
     }
 }
+

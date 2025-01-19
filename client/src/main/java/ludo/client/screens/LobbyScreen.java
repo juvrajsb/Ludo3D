@@ -8,6 +8,7 @@ import com.badlogic.gdx.scenes.scene2d.ui.Table;
 import com.badlogic.gdx.scenes.scene2d.ui.TextButton;
 import com.badlogic.gdx.scenes.scene2d.ui.Skin;
 import com.badlogic.gdx.scenes.scene2d.utils.ChangeListener;
+import ludo.client.LudoGame;
 
 public class LobbyScreen extends BaseScreen {
     private Table mainTable;
@@ -16,7 +17,7 @@ public class LobbyScreen extends BaseScreen {
     public LobbyScreen(Game game) {
         super(game);
 
-        skin = new Skin(Gdx.files.internal("uiskin.json"));
+        skin = new Skin(Gdx.files.internal("ui/uiskin.json"));
 
         createUI();
     }
@@ -34,7 +35,11 @@ public class LobbyScreen extends BaseScreen {
         startButton.addListener(new ChangeListener() {
             @Override
             public void changed(ChangeEvent event, Actor actor) {
-                game.setScreen(new GameScreen(game));
+                if (game instanceof LudoGame) {
+                    game.setScreen(new GameScreen((LudoGame) game));
+                } else {
+                    Gdx.app.error("LobbyScreen", "The game instance is not of type LudoGame");
+                }
             }
         });
 

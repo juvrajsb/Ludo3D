@@ -1,63 +1,125 @@
 package ludo.client.ui;
 
-import com.badlogic.gdx.scenes.scene2d.ui.Table;
-import com.badlogic.gdx.scenes.scene2d.ui.Label;
-import com.badlogic.gdx.scenes.scene2d.ui.Label.LabelStyle;
-import com.badlogic.gdx.graphics.g2d.BitmapFont;
+import com.badlogic.gdx.scenes.scene2d.ui.*;
 import com.badlogic.gdx.graphics.Color;
+import com.badlogic.gdx.scenes.scene2d.Actor;
+import com.badlogic.gdx.Gdx;
+import com.badlogic.gdx.scenes.scene2d.utils.ChangeListener;
+import ludo.core.entities.Player;
+import java.util.List;
 
-/**
- * Class that represents the Heads Up Display (HUD) for the game.
- * Contains game status information like current player, dice results, etc.
- */
 public class GameHUD extends Table {
-    private Label currentPlayerLabel;
-    private DiceUI diceUI;
-    private Label statusLabel;
-    private LabelStyle labelStyle;
+    private final Label currentPlayerLabel;
+    private final Label messageLabel;
+    private final Label diceValueLabel;
+    private final Table playerInfoTable;
+    private final Skin skin;
+    private final Window winnerWindow;
+    private final Table controlsTable;
 
     public GameHUD() {
-        // Initialize label style
-        labelStyle = new LabelStyle(new BitmapFont(), Color.WHITE);
+        skin = new Skin(Gdx.files.internal("uiskin.json"));
 
-        // Initialize components
-        currentPlayerLabel = new Label("Current Player: ", labelStyle);
-        diceUI = new DiceUI();
-        statusLabel = new Label("Waiting for game to start...", labelStyle);
-
-        // Layout setup using Table (LibGDX's layout system)
-        add(currentPlayerLabel).padRight(10);
-        add(diceUI).size(50);
-        row();
-        add(statusLabel).colspan(2).padTop(10);
-
-        // Table properties
+        // Setup main layout
         setFillParent(true);
-        pad(10);
+        pad(20);
+
+        // Create UI components
+        currentPlayerLabel = new Label("Current Player: ", skin);
+        messageLabel = new Label("", skin);
+        diceValueLabel = new Label("Dice: ", skin);
+        playerInfoTable = new Table(skin);
+        controlsTable = new Table(skin);
+
+        // Setup winner window (initially hidden)
+        winnerWindow = new Window("Game Over", skin);
+        winnerWindow.setVisible(false);
+        winnerWindow.setModal(true);
+        winnerWindow.setMovable(false);
+
+        setupLayout();
     }
 
-    /**
-     * Updates the current player display
-     * @param playerName name of the current player
-     */
-    public void setCurrentPlayer(String playerName) {
+    private void setupLayout() {
+        // Add player info section at top
+        add(playerInfoTable).expandX().fillX().pad(10).row();
+
+        // Add current player and dice info
+        Table infoTable = new Table();
+        infoTable.add(currentPlayerLabel).pad(5);
+        infoTable.add(diceValueLabel).pad(5);
+        add(infoTable).expandX().fillX().pad(10).row();
+
+        // Add message display in middle
+        add(messageLabel).expandX().fillX().pad(10).row();
+
+        // Add controls at bottom
+        add(controlsTable).expandX().fillX().pad(10);
+    }
+
+    public void updateDiceRoll(int value) {
+        diceValueLabel.setText("Dice: " + value);
+    }
+
+    public void updateCurrentPlayer(String playerName) {
         currentPlayerLabel.setText("Current Player: " + playerName);
     }
 
-    /**
-     * Updates the dice display
-     * @param value dice value to display (1-6)
-     */
-    public void updateDice(int value) {
-        diceUI.showFace(value);
+    public void updateGameState(String state) {
+        messageLabel.setText(state);
     }
 
-    /**
-     * Updates the status message
-     * @param message status message to display
-     */
-    public void setStatus(String message) {
-        statusLabel.setText(message);
+    public void showMessage(String message) {
+        messageLabel.setText(message);
+    }
+
+    public void updatePlayers(List<Player> players) {
+        playerInfoTable.clear();
+        for (Player player : players) {
+            Label playerLabel = new Label(player.getName() + " (" + player.getColor() + ")", skin);
+            playerLabel.setColor(getColorForPlayer(player.getColor()));
+            playerInfoTable.add(playerLabel).pad(5);
+        }
+    }
+
+    public void enableControls() {
+        controlsTable.setVisible(true);
+    }
+
+    public void disableControls() {
+        controlsTable.setVisible(false);
+    }
+
+    public void showWinnerScreen(String winner) {
+        winnerWindow.clear();
+
+        Label winnerLabel = new Label(winner + " wins!", skin);
+        TextButton okButton = new TextButton("OK", skin);
+
+        winnerWindow.add(winnerLabel).pad(20).row();
+        winnerWindow.add(okButton).pad(10);
+
+        okButton.addListener(new ChangeListener() {
+            @Override
+            public void changed(ChangeEvent event, Actor actor) {
+                winnerWindow.setVisible(false);
+            }
+        });
+
+        winnerWindow.setVisible(true);
+        winnerWindow.setPosition(
+            (Gdx.graphics.getWidth() - winnerWindow.getWidth()) / 2,
+            (Gdx.graphics.getHeight() - winnerWindow.getHeight()) / 2
+        );
+    }
+
+    private Color getColorForPlayer(String colorName) {
+        switch (colorName.toLowerCase()) {
+            case "red": return Color.RED;
+            case "blue": return Color.BLUE;
+            case "green": return Color.GREEN;
+            case "yellow": return Color.YELLOW;
+            default: return Color.WHITE;
+        }
     }
 }
-
