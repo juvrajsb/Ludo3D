@@ -1,8 +1,8 @@
 package ludo.server.session;
 
 import ludo.core.entities.Player;
-import ludo.server.networking.Connection;
-import ludo.server.events.Event;
+import ludo.core.network.Connection;
+import ludo.core.events.Event;
 import java.io.IOException;
 import java.util.Map;
 import java.util.List;
@@ -107,5 +107,51 @@ public class SessionManager {
     public void shutdown() {
         sessions.values().forEach(PlayerSession::disconnect);
         sessions.clear();
+    }
+
+    public boolean handlePlayerJoin(String playerName, String desiredColor, Connection connection) {
+        // Check if player already exists
+        if (sessions.containsKey(playerName)) {
+            return false;
+        }
+
+        // Create new player
+        Player player = new Player(playerName, desiredColor);
+        PlayerSession session = createSession(player, connection);
+        return true;
+    }
+
+    public void handlePlayerLeave(String playerName) {
+        removeSession(playerName);
+    }
+
+    public void handleDisconnection(String connectionId) {
+        PlayerSession session = sessions.values().stream()
+            .filter(s -> s.getConnection().getConnectionID().equals(connectionId))
+            .findFirst()
+            .orElse(null);
+
+        if (session != null) {
+            session.handleConnectionError();
+        }
+    }
+
+    public void handleReconnection(Connection connection) {
+        String connectionId = connection.getConnectionID();
+        PlayerSession session = sessions.values().stream()
+            .filter(s -> s.getPlayerName().equals(connectionId))
+            .findFirst()
+            .orElse(null);
+
+        if (session != null) {
+            session.attemptReconnect(connection);
+        }
+    }
+
+    public void updatePlayerActivity(String playerName) {
+        PlayerSession session = sessions.get(playerName);
+        if (session != null) {
+            session.updateActivity();
+        }
     }
 }
