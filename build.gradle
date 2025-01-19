@@ -14,7 +14,7 @@ allprojects {
   version = '1.0'
   ext {
     appName = "ludo"
-    gdxVersion = '1.13.0'
+    gdxVersion = '1.13.1'
     box2DLightsVersion = '1.5'
   }
 
@@ -53,8 +53,22 @@ project(":client") {
   }
 
   application {
-    mainClass = 'ludo.client.Lwjgl3Launcher'
+    mainClass = 'ludo.lwjgl3.Lwjgl3Launcher'
   }
+}
+
+  project(":lwjgl3") {
+    apply plugin: 'application'
+
+    dependencies {
+        implementation project(":core")
+        implementation "com.badlogicgames.gdx:gdx-backend-lwjgl3:$gdxVersion"
+        implementation "com.badlogicgames.gdx:gdx-platform:$gdxVersion:natives-desktop"
+    }
+
+    application {
+        mainClass = 'ludo.lwjgl3.Lwjgl3Launcher'
+    }
 
   tasks.withType(JavaExec) {
     workingDir = rootProject.file("assets")
@@ -79,6 +93,6 @@ project(":server") {
   }
 
   application {
-    mainClass = 'ludo.controller.LudoServer'
+    mainClass = 'ludo.server.LudoServer'
   }
 }
