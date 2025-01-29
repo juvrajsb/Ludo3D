@@ -2,35 +2,89 @@ package ludo.client;
 
 import ludo.core.events.serverToClient.*;
 import ludo.core.events.clientToServer.*;
-
 import ludo.core.game.GameState;
 import ludo.core.network.*;
 import ludo.client.networking.ClientNetworkHandler;
 import ludo.client.screens.GameScreen;
 import ludo.core.entities.Player;
 import ludo.core.events.*;
-import java.util.List;
-import java.util.Map;
 
 public class GameStateManager implements MessageListener {
     private final ClientNetworkHandler networkHandler;
     private GameScreen gameScreen;
     private boolean isMyTurn;
     private int currentDiceValue;
+    private boolean isFirstPlayer;
+    private boolean gameStarted;
+    private String currentUsername;
+    private String currentColor;
 
     public GameStateManager() {
         this.networkHandler = new ClientNetworkHandler();
         this.networkHandler.setMessageListener(this);
+        this.isFirstPlayer = false;
+        this.gameStarted = false;
+    }
+
+    public boolean connect(String ip, int port) {
+        try {
+            networkHandler.connect(ip, port);
+            return networkHandler.isConnected();
+        } catch (Exception e) {
+            System.err.println("Connection failed: " + e.getMessage());
+            return false;
+        }
+    }
+
+    public boolean joinGame(String username, String color) {
+        if (!networkHandler.isConnected()) {
+            return false;
+        }
+
+        this.currentUsername = username;
+        this.currentColor = color;
+
+        JoinGameRequestEvent joinRequest = new JoinGameRequestEvent(username, color);
+        try {
+            networkHandler.sendMessage(joinRequest);
+            return true; // Return true initially, actual result will come through message
+        } catch (Exception e) {
+            System.err.println("Failed to send join request: " + e.getMessage());
+            return false;
+        }
+    }
+
+    public boolean isFirstPlayer() {
+        return isFirstPlayer;
+    }
+
+    public void startGame() {
+        if (isFirstPlayer && !gameStarted) {
+            networkHandler.sendMessage(new StartGameRequestEvent());
+        }
+    }
+
+    public void leaveGame() {
+        networkHandler.sendMessage(new LeaveGameRequestEvent());
+        networkHandler.disconnect();
+        isFirstPlayer = false;
+        gameStarted = false;
+    }
+
+    public boolean isGameStarted() {
+        return gameStarted;
     }
 
     public void initialize(GameScreen gameScreen) {
         this.gameScreen = gameScreen;
-        this.networkHandler.connect("localhost", 12000);
     }
 
     @Override
     public void onMessageReceived(NetworkMessage message) {
         switch (message.getType()) {
+            case "JOIN_GAME_RESPONSE":
+                handleJoinResponse((JoinGameResponseEvent) message);
+                break;
             case "DICE_ROLL_RESULT":
                 handleDiceRoll(message);
                 break;
@@ -49,6 +103,9 @@ public class GameStateManager implements MessageListener {
             case "GAME_OVER":
                 handleGameOver(message);
                 break;
+            case "GAME_START":
+                handleGameStart((GameStartEvent) message);
+                break;
         }
     }
 
@@ -59,14 +116,15 @@ public class GameStateManager implements MessageListener {
         }
     }
 
+    private void handleJoinResponse(JoinGameResponseEvent event) {
+        if (event.getResponse() == Response.FIRST_PLAYER) {
+            isFirstPlayer = true;
+        }
+    }
 
-//    public void requestDiceRoll() {
-//        networkHandler.sendMessage(new DiceRollRequestEvent());
-//    }
-//
-//    public void requestMove(int pawnIndex) {
-//        networkHandler.sendMessage(new MoveRequestEvent(pawnIndex));
-//    }
+    private void handleGameStart(GameStartEvent event) {
+        gameStarted = true;
+    }
 
     public void handleDiceRoll(NetworkMessage message) {
         DiceRollResultEvent event = (DiceRollResultEvent) message; //todo: check if this is correct
@@ -124,6 +182,14 @@ public class GameStateManager implements MessageListener {
         gameScreen.showWinnerScreen(event.getWinner());
     }
 
+    public String getCurrentUsername() {
+        return currentUsername;
+    }
+
+    public String getCurrentColor() {
+        return currentColor;
+    }
+
     // Methods called by GameScreen
     public void requestDiceRoll() {
         if (isMyTurn) {
@@ -143,36 +209,6 @@ public class GameStateManager implements MessageListener {
             networkHandler.disconnect();
         }
     }
-
-//    public void updateGameState(Map<String, List<Integer>> pawnPositions, String currentPlayer, GameState gameState) {
-//    }
-//
-//    public void handleDiceRoll(int value, String playerColor) {
-//    }
-
-//    public void updatePawnPosition(int pawnIndex, int newPosition) {
-//    }
-//
-//    public void showErrorMessage(String message) {
-//    }
-//
-//    public void startGame(List<Player> players, String startingPlayer) {
-//    }
-//
-//    public void handleDisconnection() {
-//    }
-//
-//    public void handleReconnection() {
-//    }
-//
-//    public void sendPong() {
-//    }
-//
-//    public void addPlayer(Player player) {
-//    }
-//
-//    public void removePlayer(String playerName) {
-//    }
 
     public void handlePlayerLeft(String playerName) {
         gameScreen.removePlayer(playerName);
