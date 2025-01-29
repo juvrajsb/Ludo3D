@@ -1,7 +1,8 @@
 {
   "com.badlogic.gdx.graphics.Color": {
     "white": { "r": 1, "g": 1, "b": 1, "a": 1 },
-    "black": { "r": 0, "g": 0, "b": 0, "a": 1 }
+    "black": { "r": 0, "g": 0, "b": 0, "a": 1 },
+    "gray": { "r": 0.5, "g": 0.5, "b": 0.5, "a": 1 }
   },
   "com.badlogic.gdx.graphics.g2d.BitmapFont": {
     "default": { "file": "default.fnt" }
@@ -9,13 +10,33 @@
   "com.badlogic.gdx.scenes.scene2d.ui.TextButton$TextButtonStyle": {
     "default": {
       "font": "default",
-      "fontColor": "black"
+      "fontColor": "white",
+      "up": "button-normal",
+      "down": "button-normal-pressed",
+      "over": "button-normal-over"
     }
   },
   "com.badlogic.gdx.scenes.scene2d.ui.Label$LabelStyle": {
     "default": {
       "font": "default",
-      "fontColor": "black"
+      "fontColor": "white"
+    }
+  },
+  "com.badlogic.gdx.scenes.scene2d.ui.Window$WindowStyle": {
+    "default": {
+      "titleFont": "default",
+      "titleFontColor": "white",
+      "background": "window",
+      "stageBackground": "white"
+    }
+  },
+  "com.badlogic.gdx.scenes.scene2d.ui.ScrollPane$ScrollPaneStyle": {
+    "default": {
+      "background": "rect",
+      "hScroll": "scrollbar",
+      "hScrollKnob": "scrollbar",
+      "vScroll": "scrollbar",
+      "vScrollKnob": "scrollbar"
     }
   }
 }
