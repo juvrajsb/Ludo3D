@@ -12,7 +12,7 @@ dependencies {
 }
 
 application {
-    mainClass = 'main.java.ludo.lwjgl3.Lwjgl3Launcher'
+    mainClass = 'ludo.lwjgl3.Lwjgl3Launcher'
 }
 
 run {
