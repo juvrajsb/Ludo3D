@@ -10,22 +10,22 @@ public class Lwjgl3Launcher {
     private static final String GAME_TITLE = "Ludo Game";
 
     public static void main(String[] args) {
+        System.out.println("Starting Ludo game...");
         try {
-            if (StartupHelper.startNewJvmIfRequired()) return;
-            createApplication();
+            Lwjgl3Application app = createApplication();
+            System.out.println("Application created successfully");
         } catch (Exception e) {
-            System.err.println("Error launching game: " + e.getMessage());
+            System.err.println("Failed to create application: ");
             e.printStackTrace();
-            System.exit(-1);
+            System.exit(1);
         }
     }
 
     private static Lwjgl3Application createApplication() {
-        try {
-            return new Lwjgl3Application(new LudoGame(), getDefaultConfiguration());
-        } catch (Exception e) {
-            throw new RuntimeException("Failed to create application", e);
-        }
+        System.out.println("Creating application configuration...");
+        Lwjgl3ApplicationConfiguration config = getDefaultConfiguration();
+        System.out.println("Creating new LudoGame instance...");
+        return new Lwjgl3Application(new LudoGame(), config);
     }
 
     private static Lwjgl3ApplicationConfiguration getDefaultConfiguration() {
@@ -33,10 +33,14 @@ public class Lwjgl3Launcher {
 
         configuration.setTitle(GAME_TITLE);
         configuration.setWindowedMode(DEFAULT_WIDTH, DEFAULT_HEIGHT);
-        configuration.setWindowIcon("assets/icon.png");
+        configuration.setForegroundFPS(Lwjgl3ApplicationConfiguration.getDisplayMode().refreshRate);
+        configuration.setWindowIcon("ui/icon.png", "ui/icon.png", "ui/icon.png", "ui/icon.png");
         configuration.useVsync(true);
-        configuration.setForegroundFPS(60);
         configuration.setResizable(true);
+
+        configuration.setIdleFPS(60);
+        configuration.setInitialVisible(true);
+        configuration.setDecorated(true);
 
         return configuration;
     }
