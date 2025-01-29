@@ -2,10 +2,8 @@ package ludo.client.assets;
 
 import com.badlogic.gdx.assets.AssetManager;
 import com.badlogic.gdx.graphics.g3d.Model;
+import com.badlogic.gdx.graphics.Texture;
 
-/**
- * Singleton class to manage game assets and provide access to loaded resources
- */
 public class GameAssets {
     private static GameAssets instance;
     private AssetManager assetManager;
@@ -23,25 +21,22 @@ public class GameAssets {
     }
 
     private void loadAssets() {
-        // Load 3D models
-        assetManager.load("models/board.g3db", Model.class);
+        // Load pawn model
         assetManager.load("models/pawn.g3db", Model.class);
-        assetManager.load("models/dice.g3db", Model.class);
+
+        // Load textures
+        assetManager.load("images/board.png", Texture.class);
 
         // Block until all assets are loaded
         assetManager.finishLoading();
-    }
-
-    public Model getBoardModel() {
-        return assetManager.get("models/board.g3db", Model.class);
     }
 
     public Model getPawnModel() {
         return assetManager.get("models/pawn.g3db", Model.class);
     }
 
-    public Model getDiceModel() {
-        return assetManager.get("models/dice.g3db", Model.class);
+    public Texture getBoardTexture() {
+        return assetManager.get("images/board.png", Texture.class);
     }
 
     public void dispose() {
@@ -49,4 +44,3 @@ public class GameAssets {
         instance = null;
     }
 }
-

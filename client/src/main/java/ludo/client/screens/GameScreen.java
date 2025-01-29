@@ -1,232 +1,253 @@
 package ludo.client.screens;
 
 import com.badlogic.gdx.Gdx;
-import com.badlogic.gdx.Screen;
+import com.badlogic.gdx.Input;
 import com.badlogic.gdx.graphics.GL20;
-import com.badlogic.gdx.scenes.scene2d.InputEvent;
 import com.badlogic.gdx.scenes.scene2d.Stage;
+import com.badlogic.gdx.scenes.scene2d.ui.Table;
 import com.badlogic.gdx.utils.viewport.ScreenViewport;
 import ludo.client.GameStateManager;
 import ludo.client.LudoGame;
-import ludo.client.handlers.*;
-import ludo.client.render.*;
-import ludo.client.ui.*;
+import ludo.client.assets.GameAssets;
+import ludo.client.render.GameRenderer;
+import ludo.client.ui.GameHUD;
 import ludo.core.entities.*;
+
 import java.util.List;
-import java.util.Map;
 
+public class GameScreen extends BaseScreen implements GameView {
+    private final GameHUD hud;
+    private final GameRenderer renderer;
+    private final GameStateManager gameManager;
 
-
-public class GameScreen implements Screen {
-    private final LudoGame game;
-    private final Stage stage;
-    private final GameCamera camera;
-    private final BoardRenderer boardRenderer;
-    private final DiceRenderer diceRenderer;
-    private final PawnRenderer pawnRenderer;
-    private final GameHUD gameHUD;
-//    private final GameEventHandler gameEventHandler;
-//    private final NetworkEventHandler networkHandler;
-    private final GameStateManager gameStateManager;
-
+    // Game state
     private Player currentPlayer;
-    private boolean isMyTurn;
-    private int lastDiceRoll;
+    private int selectedPawnIndex = -1;
     private boolean canMove;
+    private int lastDiceRoll;
 
     public GameScreen(LudoGame game) {
-        this.game = game;
-        this.stage = new Stage(new ScreenViewport());
-        this.camera = new GameCamera();
-        this.boardRenderer = new BoardRenderer();
-        this.diceRenderer = new DiceRenderer();
-        this.pawnRenderer = new PawnRenderer();
-        this.gameHUD = new GameHUD();
-//        this.gameEventHandler = new GameEventHandler(this);
-//        this.networkHandler = new NetworkEventHandler(game.getClient());
-
-        this.gameStateManager = new GameStateManager();
-        this.gameStateManager.initialize(this);
+        super(game);
+        this.hud = new GameHUD();
+        this.renderer = new GameRenderer(Gdx.graphics.getWidth(), Gdx.graphics.getHeight());
+        this.gameManager = new GameStateManager();
 
         setupUI();
-        setupInputHandling();
+        initializeGame();
     }
 
     private void setupUI() {
-        stage.addActor(gameHUD);
-        Gdx.input.setInputProcessor(stage);
+        Table mainTable = new Table();
+        mainTable.setFillParent(true);
+        mainTable.add(hud).expand().fill();
+        stage.addActor(mainTable);
     }
 
-    private void setupInputHandling() {
-        // Set up input handling for dice rolls and pawn movement
-        stage.addListener(event -> {
-            if (event instanceof InputEvent inputEvent) {
-                if (inputEvent.getType() == InputEvent.Type.touchDown) {
-                    handleInput(inputEvent.getStageX(), inputEvent.getStageY());
-                }
-            }
-            return false;
-        });
-
-        // Initialize game state manager
-        gameStateManager.initialize(this);
-    }
-
-    private void handleInput(float x, float y) {
-        if (!canMove) {
-            // Handle dice roll
-            if (diceRenderer.isClicked(x, y)) {
-                gameStateManager.requestDiceRoll();
-            }
-        } else {
-            // Handle pawn selection
-            int pawnIndex = pawnRenderer.getPawnAtPosition(x, y); //TODO check
-            if (pawnIndex != -1) {
-                gameStateManager.requestMove(pawnIndex);
-            }
-        }
+    private void initializeGame() {
+        gameManager.initialize(this);
+        renderer.createPawnModels(
+            GameAssets.getInstance().getPawnModel(),
+            ((LudoGame)game).getPlayers().toArray(new Player[0])
+        );
     }
 
     @Override
     public void render(float delta) {
-        // Clear screen
-        Gdx.gl.glClearColor(0.8f, 0.8f, 0.8f, 1);
-        Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT);
+        handleInput(delta);
+        Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT | GL20.GL_DEPTH_BUFFER_BIT);
 
-        camera.update();
-
-        // Render game elements
-        boardRenderer.render(game.getPlayers().toArray(new Player[0])); //TODO check
-
-        for (Player player : game.getPlayers()) {
-            pawnRenderer.render(player);
-        }
-        diceRenderer.render(lastDiceRoll, 700, 100);
-
-        // Update and render UI
+        renderer.render();
         stage.act(delta);
         stage.draw();
     }
 
-    // Methods called by handlers to update game state
-    public void updateDiceDisplay(int value) {
-        lastDiceRoll = value;
-        diceRenderer.updateValue(value);
-        canMove = true;
-        gameHUD.updateDiceRoll(value);
+    // GameView interface implementation
+    @Override
+    public void updateGameState(String state) {
+        hud.updateGameState(state);
     }
 
-    public void enablePawnSelection() {
-        canMove = true;
-        gameHUD.showMessage("Select a pawn to move");
+    @Override
+    public void setCurrentPlayer(String playerColor) {
+        for (Player player : ((LudoGame)game).getPlayers()) {
+            if (player.getColor().equals(playerColor)) {
+                currentPlayer = player;
+                hud.updateCurrentPlayer(player.getName());
+                break;
+            }
+        }
     }
 
+    @Override
+    public Player getCurrentPlayer() {
+        return currentPlayer;
+    }
+
+    @Override
     public void updatePawnPosition(int pawnIndex, int newPosition) {
         if (currentPlayer != null) {
             currentPlayer.getPawns().get(pawnIndex).setPosition(newPosition);
+            renderer.updatePawnPosition(
+                getGlobalPawnIndex(currentPlayer, pawnIndex),
+                newPosition
+            );
         }
-        canMove = false;
     }
 
+    @Override
     public void updatePlayerPawns(String color, List<Integer> positions) {
-        for (Player player : game.getPlayers()) {
+        for (Player player : ((LudoGame)game).getPlayers()) {
             if (player.getColor().equals(color)) {
                 for (int i = 0; i < positions.size(); i++) {
                     player.getPawns().get(i).setPosition(positions.get(i));
+                    renderer.updatePawnPosition(
+                        getGlobalPawnIndex(player, i),
+                        positions.get(i)
+                    );
                 }
                 break;
             }
         }
     }
 
-    public void setCurrentPlayer(String playerColor) {
-        for (Player player : game.getPlayers()) {
-            if (player.getColor().equals(playerColor)) {
-                currentPlayer = player;
-                isMyTurn = player.getName().equals(game.getCurrentPlayerName());
-                gameHUD.updateCurrentPlayer(player.getName());
-                break;
-            }
+    @Override
+    public void enablePawnSelection() {
+        canMove = true;
+        showMessage("Select a pawn to move");
+    }
+
+    @Override
+    public void playMoveAnimation(int pawnIndex, int newPosition) {
+        // For now, just update position directly
+        updatePawnPosition(pawnIndex, newPosition);
+        // TODO: Add smooth animation
+    }
+
+    @Override
+    public void addPlayer(Player player) {
+        ((LudoGame)game).addPlayer(player);
+        hud.updatePlayers(((LudoGame)game).getPlayers());
+        renderer.createPawnModels(
+            GameAssets.getInstance().getPawnModel(),
+            ((LudoGame)game).getPlayers().toArray(new Player[0])
+        );
+    }
+
+    @Override
+    public void removePlayer(String playerName) {
+        ((LudoGame)game).getPlayers().removeIf(p -> p.getName().equals(playerName));
+        hud.updatePlayers(((LudoGame)game).getPlayers());
+    }
+
+    @Override
+    public void updateDiceDisplay(int value) {
+        lastDiceRoll = value;
+        hud.updateDiceRoll(value);
+    }
+
+    @Override
+    public void enableControls() {
+        canMove = true;
+        hud.enableControls();
+    }
+
+    @Override
+    public void disableControls() {
+        canMove = false;
+        hud.disableControls();
+    }
+
+    @Override
+    public void showMessage(String message) {
+        hud.showMessage(message);
+    }
+
+    @Override
+    public void showError(String message) {
+        hud.showMessage("Error: " + message);
+    }
+
+    @Override
+    public void showWinnerScreen(String winner) {
+        hud.showWinnerScreen(winner);
+    }
+
+    @Override
+    public void showWaitingRoom() {
+        // TODO: Implement waiting room visualization
+    }
+
+    @Override
+    public void updateWaitingRoom() {
+        // TODO: Update waiting room state
+    }
+
+    private void handleInput(float delta) {
+        if (Gdx.input.isKeyPressed(Input.Keys.LEFT)) {
+            renderer.rotateCamera(delta * 2);
+        }
+        if (Gdx.input.isKeyPressed(Input.Keys.RIGHT)) {
+            renderer.rotateCamera(-delta * 2);
+        }
+
+        if (Gdx.input.justTouched() && canMove) {
+            handlePawnSelection(Gdx.input.getX(), Gdx.input.getY());
         }
     }
 
-    public void updateGameState(String state) {
-        gameHUD.updateGameState(state);
+    private void handlePawnSelection(int screenX, int screenY) {
+        // TODO: Implement ray casting for pawn selection
+        if (selectedPawnIndex != -1 && currentPlayer != null) {
+            gameManager.requestMove(selectedPawnIndex);
+        }
     }
 
-    public void showMessage(String message) {
-        gameHUD.showMessage(message);
-    }
-
-    public void addPlayer(Player player) {
-        game.addPlayer(player);
-        gameHUD.updatePlayers(game.getPlayers());
-    }
-
-    public void enableControls() {
-        isMyTurn = true;
-        canMove = false;
-        gameHUD.enableControls();
-    }
-
-    public Player getCurrentPlayer() {
-        return currentPlayer;
-    }
-
-    public void playMoveAnimation(int pawnIndex, int newPosition) {
-        // Implement pawn movement animation here
-        // This could use tweening or other animation techniques
-    }
-
-    public void showWinnerScreen(String winner) {
-        gameHUD.showWinnerScreen(winner);
+    private int getGlobalPawnIndex(Player player, int localIndex) {
+        int playerIndex = ((LudoGame)game).getPlayers().indexOf(player);
+        return playerIndex * 4 + localIndex;
     }
 
     @Override
     public void resize(int width, int height) {
-        stage.getViewport().update(width, height, true);
-        camera.viewportWidth = width;
-        camera.viewportHeight = height;
-        camera.update();
+        super.resize(width, height);
+        renderer.resize(width, height);
     }
-
-    @Override
-    public void show() {
-        Gdx.input.setInputProcessor(stage);
-    }
-
-    @Override
-    public void hide() {}
-
-    @Override
-    public void pause() {}
-
-    @Override
-    public void resume() {}
 
     @Override
     public void dispose() {
-        stage.dispose();
-        boardRenderer.dispose();
-        diceRenderer.dispose();
-        pawnRenderer.dispose();
-        gameStateManager.dispose();
-    }
-
-    public void disableControls() {
-    }
-
-    public void updateWaitingRoom() {
-    }
-
-    public void removePlayer(String playerName) {
-    }
-
-    public void showWaitingRoom() {
-    }
-
-    public void showError(String message) {
-
+        super.dispose();
+        renderer.dispose();
     }
 }
 
+//private void handlePawnSelection(int screenX, int screenY) {
+//    if (!canMove || currentPlayer == null) {
+//        return;
+//    }
+//
+//    // TODO: Implement proper ray casting for pawn selection
+//    // For now, we'll use a simple selection method
+//    for (int i = 0; i < currentPlayer.getPawns().size(); i++) {
+//        // Check if pawn is clicked (simplified)
+//        Pawn pawn = currentPlayer.getPawns().get(i);
+//        if (isClickNearPawn(screenX, screenY, pawn.getPosition())) {
+//            gameStateManager.requestMove(i);
+//            canMove = false;
+//            break;
+//        }
+//    }
+//}
+//
+//private boolean isClickNearPawn(int screenX, int screenY, int pawnPosition) {
+//    // Convert screen coordinates to world coordinates
+//    // This is a simplified version - you'll need to implement proper 3D picking
+//    // using ray casting with the camera
+//
+//    // For now, return true if click is near where we think the pawn should be
+//    float x = (pawnPosition % 10) - 5f;
+//    float z = (pawnPosition / 10) - 5f;
+//
+//    // Convert world coordinates to screen coordinates
+//    // This is very simplified and needs proper implementation
+//    return true; // TODO: Implement proper click detection
+//}
