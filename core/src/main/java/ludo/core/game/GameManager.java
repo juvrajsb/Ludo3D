@@ -50,6 +50,10 @@ public class GameManager {
         return true;
     }
 
+    public synchronized boolean removePlayer(String playerName) {
+        return players.removeIf(player -> player.getName().equals(playerName));
+    }
+
     public synchronized void startGame() {
         if (players.size() >= 2) {
             gameStarted = true;
