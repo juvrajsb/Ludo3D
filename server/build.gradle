@@ -7,12 +7,17 @@ dependencies {
   implementation project(":core")
 }
 
-jar {
-  duplicatesStrategy(DuplicatesStrategy.EXCLUDE)
+application {
+  mainClass = 'ludo.server.ServerLauncher'
+}
 
-  from { configurations.compileClasspath.collect { it.isDirectory() ? it : zipTree(it) } }
+jar {
+  duplicatesStrategy = DuplicatesStrategy.EXCLUDE
   manifest {
     attributes 'Main-Class': application.mainClass
+  }
+  from {
+    configurations.runtimeClasspath.collect { it.isDirectory() ? it : zipTree(it) }
   }
 }
 
