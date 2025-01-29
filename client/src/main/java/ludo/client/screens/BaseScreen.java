@@ -1,23 +1,32 @@
 package ludo.client.screens;
 
 import com.badlogic.gdx.Game;
+import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.Screen;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.scenes.scene2d.Stage;
+import com.badlogic.gdx.scenes.scene2d.ui.Skin;
 import com.badlogic.gdx.utils.viewport.ScreenViewport;
 import com.badlogic.gdx.utils.viewport.Viewport;
+import ludo.client.LudoGame;
 
+/**
+ * This class is responsible for the base screen.
+ * It is an abstract class that implements the Screen interface.
+ */
 public abstract class BaseScreen implements Screen {
-    protected final Game game;
+    protected final LudoGame game;
     protected Stage stage;
     protected Viewport viewport;
     protected SpriteBatch batch;
+    protected Skin skin;
 
-    public BaseScreen(Game game) {
+    public BaseScreen(LudoGame game) {
         this.game = game;
         this.viewport = new ScreenViewport();
         this.stage = new Stage(viewport);
         this.batch = new SpriteBatch();
+        this.skin = new Skin(Gdx.files.internal("ui/uiskin.json"));
     }
 
     @Override
