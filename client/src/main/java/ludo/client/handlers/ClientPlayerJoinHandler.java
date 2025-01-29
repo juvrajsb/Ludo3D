@@ -3,7 +3,9 @@ package ludo.client.handlers;
 import ludo.client.screens.GameScreen;
 import ludo.core.entities.Player;
 
-// Client-side player join handlers
+/**
+ * This class is responsible for handling the player join events.
+ */
 public class ClientPlayerJoinHandler {
     private final GameScreen gameScreen;
 

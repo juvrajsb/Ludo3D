@@ -2,9 +2,11 @@ package ludo.client.networking;
 
 import ludo.core.network.*;
 import java.io.IOException;
-import java.util.Timer;
+// import java.util.Timer;
 import java.util.logging.Logger;
-
+/**
+ * This class is responsible for handling the client network.
+ */
 public class ClientNetworkHandler implements NetworkHandler {
     private static final Logger LOGGER = Logger.getLogger(ClientNetworkHandler.class.getName());
     private static final int RECONNECT_ATTEMPTS = 3;

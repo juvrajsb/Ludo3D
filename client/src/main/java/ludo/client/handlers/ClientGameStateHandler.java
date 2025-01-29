@@ -2,7 +2,9 @@ package ludo.client.handlers;
 
 import ludo.core.events.serverToClient.GameStateUpdateEvent;
 import ludo.client.screens.GameScreen;
-
+/**
+ * This class is responsible for handling the game state updates.
+ */
 // Client-side game state handlers
 public class ClientGameStateHandler {
     private final GameScreen gameScreen;

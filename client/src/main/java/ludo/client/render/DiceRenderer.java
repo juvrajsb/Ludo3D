@@ -3,7 +3,9 @@ package ludo.client.render;
 import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
 import com.badlogic.gdx.math.Rectangle;
-
+/**
+ * This class is responsible for rendering the dice.
+ */
 public class DiceRenderer {
     private ShapeRenderer shapeRenderer;
     private static final float DICE_SIZE = 50f;

@@ -2,6 +2,9 @@ package ludo.client.assets;
 
 import com.badlogic.gdx.assets.AssetManager;
 import com.badlogic.gdx.graphics.g3d.Model;
+/**
+ * This class is responsible for loading all the assets for the game.
+ */
 
 public class AssetLoader {
     private static AssetManager manager;

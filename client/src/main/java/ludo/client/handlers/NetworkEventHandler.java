@@ -3,7 +3,9 @@ package ludo.client.handlers;
 import ludo.client.networking.ClientNetworkHandler;
 import ludo.core.events.clientToServer.*;
 import ludo.core.network.Connection;
-
+/**
+ * This class is responsible for handling the network events.
+ */
 public class NetworkEventHandler {
     private final ClientNetworkHandler client;
     private final Connection serverConnection;

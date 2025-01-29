@@ -6,7 +6,9 @@ import ludo.core.events.clientToServer.PongEvent;
 import java.util.Timer;
 import java.util.TimerTask;
 import java.util.logging.Logger;
-
+/**
+ * This class is responsible for sending ping events to the server.
+ */
 public class ClientPingSender implements PingSender {
     private static final Logger LOGGER = Logger.getLogger(ClientPingSender.class.getName());
     private final Connection connection;

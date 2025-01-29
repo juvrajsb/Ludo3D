@@ -6,7 +6,9 @@ import ludo.core.events.serverToClient.DiceRollResultEvent;
 import ludo.core.events.serverToClient.GameStartEvent;
 import ludo.core.events.serverToClient.GameStateUpdateEvent;
 import ludo.core.events.serverToClient.MoveResultEvent;
-
+/**
+ * This class is responsible for handling the game events.
+ */
 public class GameEventHandler {
     private final GameScreen gameScreen;
 

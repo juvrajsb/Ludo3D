@@ -4,7 +4,9 @@ import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
 import ludo.core.entities.Pawn;
 import ludo.core.entities.Player;
-
+/**
+ * This class is responsible for rendering the pawns.
+ */
 public class PawnRenderer {
     private final ShapeRenderer shapeRenderer;
     private static final float CELL_SIZE = 40f;

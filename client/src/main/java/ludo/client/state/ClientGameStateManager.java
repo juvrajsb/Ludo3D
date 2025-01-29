@@ -6,6 +6,10 @@ import ludo.core.network.NetworkHandler;
 import ludo.core.events.clientToServer.*;
 import java.util.*;
 
+/**
+ * This class is responsible for managing the game state.
+ * It is a singleton class.
+ */
 public class ClientGameStateManager {
     private final NetworkHandler networkHandler;
     private final Map<String, Player> players;

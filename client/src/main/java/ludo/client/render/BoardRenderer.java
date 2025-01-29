@@ -5,7 +5,9 @@ import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer.ShapeType;
 import ludo.core.entities.Pawn;
 import ludo.core.entities.Player;
-
+/**
+ * This class is responsible for rendering the board.
+ */
 public class BoardRenderer {
     private static final int CELL_SIZE = 40;
     private static final int BOARD_SIZE = 15; // 15x15 grid
