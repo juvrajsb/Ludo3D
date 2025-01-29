@@ -4,6 +4,8 @@ import ludo.core.network.*;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.Map;
 import java.util.logging.Logger;
@@ -13,15 +15,15 @@ public class ServerNetworkHandler {
     private static final int MAX_CLIENTS = 4;
 
     private final Map<String, Connection> clients;
-    private final int port;
+//    private final int port;
     private ServerSocket serverSocket;
     private volatile boolean running;
     private MessageListener messageListener;
 
-    public ServerNetworkHandler(int port) {
-        this.port = port;
+    public ServerNetworkHandler(ServerSocket serverSocket) {
+        this.serverSocket = serverSocket;
         this.clients = new ConcurrentHashMap<>();
-        this.running = false;
+//        this.running = false;
     }
 
     public void start() {
@@ -30,9 +32,10 @@ public class ServerNetworkHandler {
         }
 
         try {
-            serverSocket = new ServerSocket(port);
+//            serverSocket = new ServerSocket(port);
             running = true;
-            LOGGER.info("Server started on port " + port);
+//            LOGGER.info("Server started on port " + port);
+            LOGGER.info("Server started on port " + serverSocket.getLocalPort());
             acceptClients();
         } catch (Exception e) {
             LOGGER.severe("Failed to start server: " + e.getMessage());
@@ -157,5 +160,20 @@ public class ServerNetworkHandler {
 
     public int getClientCount() {
         return clients.size();
+    }
+
+//    public int getPort() {
+//        return port;
+//    }
+
+    public void handlePong(String connectionId) {
+        Connection connection = clients.get(connectionId);
+        if (connection != null) {
+            connection.resetPingFailure();
+        }
+    }
+
+    public List<Connection> getActiveConnections() {
+        return new ArrayList<>(clients.values());
     }
 }
