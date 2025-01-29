@@ -8,6 +8,10 @@ import com.badlogic.gdx.scenes.scene2d.utils.ChangeListener;
 import ludo.core.entities.Player;
 import java.util.List;
 
+/**
+ * This class is responsible for the game HUD.
+ * It extends the Table class.
+ */
 public class GameHUD extends Table {
     private final Label currentPlayerLabel;
     private final Label messageLabel;
@@ -18,7 +22,7 @@ public class GameHUD extends Table {
     private final Table controlsTable;
 
     public GameHUD() {
-        skin = new Skin(Gdx.files.internal("uiskin.json"));
+        skin = new Skin(Gdx.files.internal("ui/uiskin.json"));
 
         // Setup main layout
         setFillParent(true);
@@ -27,7 +31,7 @@ public class GameHUD extends Table {
         // Create UI components
         currentPlayerLabel = new Label("Current Player: ", skin);
         messageLabel = new Label("", skin);
-        diceValueLabel = new Label("Dice: ", skin);
+        diceValueLabel = new Label("ClientDice: ", skin);
         playerInfoTable = new Table(skin);
         controlsTable = new Table(skin);
 
@@ -58,7 +62,7 @@ public class GameHUD extends Table {
     }
 
     public void updateDiceRoll(int value) {
-        diceValueLabel.setText("Dice: " + value);
+        diceValueLabel.setText("ClientDice: " + value);
     }
 
     public void updateCurrentPlayer(String playerName) {
