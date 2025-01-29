@@ -8,15 +8,20 @@ import com.badlogic.gdx.scenes.scene2d.ui.Skin;
 import com.badlogic.gdx.scenes.scene2d.ui.Table;
 import com.badlogic.gdx.scenes.scene2d.ui.TextButton;
 import com.badlogic.gdx.scenes.scene2d.utils.ChangeListener;
+import ludo.client.LudoGame;
 
+/**
+ * This class is responsible for the menu screen.
+ * It extends the BaseScreen class.
+ */
 public class MenuScreen extends BaseScreen {
     private Skin skin;
     private Table mainTable;
 
-    public MenuScreen(Game game) {
+    public MenuScreen(LudoGame game) {
         super(game);
 
-        skin = new Skin(Gdx.files.internal("uiskin.json"));
+        skin = new Skin(Gdx.files.internal("ui/uiskin.json"));
 
         createUI();
     }
