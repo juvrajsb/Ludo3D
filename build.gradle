@@ -53,7 +53,7 @@ project(":client") {
   }
 
   application {
-    mainClass = 'ludo.lwjgl3.Lwjgl3Launcher'
+    mainClass = 'main.java.ludo.lwjgl3.Lwjgl3Launcher'
   }
 }
 
@@ -67,7 +67,7 @@ project(":client") {
     }
 
     application {
-        mainClass = 'ludo.lwjgl3.Lwjgl3Launcher'
+        mainClass = 'main.java.ludo.lwjgl3.Lwjgl3Launcher'
     }
 
   tasks.withType(JavaExec) {
@@ -93,6 +93,6 @@ project(":server") {
   }
 
   application {
-    mainClass = 'ludo.server.LudoServer'
+    mainClass = 'main.java.ludo.server.ServerLauncher'
   }
 }
