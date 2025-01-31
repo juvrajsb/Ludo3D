@@ -1,6 +1,7 @@
 package ludo.client;
 
 import com.badlogic.gdx.Game;
+import com.badlogic.gdx.Screen;
 import ludo.client.screens.*;
 import ludo.core.entities.Player;
 import java.util.ArrayList;
@@ -21,6 +22,19 @@ public class LudoGame extends Game {
         gameStateManager = new GameStateManager();
         // Start with connection screen instead of menu
         setScreen(new ConnectionScreen(this));
+    }
+
+    @Override
+    public void setScreen(Screen screen) {
+        if (this.screen != null) {
+            this.screen.dispose();
+        }
+        super.setScreen(screen);
+        if (screen instanceof GameScreen) {
+            gameStateManager.initialize((GameScreen) screen);
+        } else if (screen instanceof LobbyScreen) {
+            gameStateManager.setLobbyScreen((LobbyScreen) screen);
+        }
     }
 
     public GameStateManager getGameStateManager() {
