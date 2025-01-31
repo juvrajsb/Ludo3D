@@ -1,9 +1,13 @@
 package ludo.server.state;
 
 import ludo.core.entities.*;
+import ludo.core.events.Event;
+import ludo.core.events.clientToServer.*;
 import ludo.core.game.GameState;
 import ludo.core.game.GameManager;
 import ludo.core.network.Connection;
+import ludo.core.network.MessageListener;
+import ludo.core.network.NetworkMessage;
 import ludo.server.networking.ServerNetworkHandler;
 import ludo.server.session.SessionManager;
 import ludo.core.events.serverToClient.*;
@@ -12,23 +16,176 @@ import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.logging.Logger;
 
-public class ServerGameStateManager {
-    private static final Logger LOGGER = Logger.getLogger(ServerGameStateManager.class.getName());
+import static ludo.server.Server.LOGGER;
 
+public class ServerGameStateManager implements MessageListener {
     private final GameManager gameManager;
-    private final SessionManager sessionManager;
     private final ServerNetworkHandler networkHandler;
-    private final Map<String, String> connectionToPlayerMap; // Maps connectionIds to playerNames
+    private final Map<String, String> connectionToPlayerMap;
 
     public ServerGameStateManager(ServerNetworkHandler networkHandler) {
-        this.gameManager = GameManager.getInstance();
-        this.sessionManager = SessionManager.getInstance();
         this.networkHandler = networkHandler;
+        this.gameManager = GameManager.getInstance();
         this.connectionToPlayerMap = new ConcurrentHashMap<>();
     }
 
-    // Player Management
-    public boolean handlePlayerJoin(String connectionId, String playerName, String desiredColor) {
+    @Override
+    public void onMessageReceived(NetworkMessage message) {
+        if (message instanceof Event) {
+            Event event = (Event) message;
+
+            switch (event.getType()) {
+                case "JOIN_GAME_REQUEST":
+                    handleJoinRequest((JoinGameRequestEvent) event);
+                    break;
+                case "LEAVE_GAME_REQUEST":
+                    handleLeaveRequest((LeaveGameRequestEvent) event);
+                    break;
+                case "DICE_ROLL_REQUEST":
+                    handleDiceRollRequest((DiceRollRequestEvent) event);
+                    break;
+                case "MOVE_REQUEST":
+                    handleMoveRequest((MoveRequestEvent) event);
+                    break;
+                case "START_GAME_REQUEST":
+                    handleStartGameRequest((StartGameRequestEvent) event);
+                    break;
+            }
+        }
+    }
+
+//    private void handleStartGameRequest(StartGameRequestEvent event) {
+//        if (gameManager.getPlayers().size() < 2) {
+//            networkHandler.sendToClient(
+//                event.getConnection().getConnectionID(),
+//                new StartGameResponseEvent(Response.NOT_ENOUGH_PLAYERS)
+//            );
+//            return;
+//        }
+//
+//        gameManager.startGame();
+//        networkHandler.broadcast(new GameStartedEvent());
+//
+//        // Send initial game state
+//        broadcastGameState();
+//    }
+    private void handleStartGameRequest(StartGameRequestEvent event) {
+        // First check if sender is the admin/first player
+        String connectionId = event.getConnection().getConnectionID();
+        if (!isFirstPlayer(connectionId)) {
+            networkHandler.sendToClient(
+                connectionId,
+                new StartGameResponseEvent(StartGameResponseEvent.Response.NOT_ADMIN)
+            );
+            return;
+        }
+
+        // Check minimum players requirement
+        if (gameManager.getPlayers().size() < 2) {
+            networkHandler.sendToClient(
+                connectionId,
+                new StartGameResponseEvent(StartGameResponseEvent.Response.NOT_ENOUGH_PLAYERS)
+            );
+            return;
+        }
+
+        // Check if game already started
+        if (gameManager.isGameStarted()) {
+            networkHandler.sendToClient(
+                connectionId,
+                new StartGameResponseEvent(StartGameResponseEvent.Response.GAME_ALREADY_STARTED)
+            );
+            return;
+        }
+
+        // Start the game
+        gameManager.startGame();
+
+        // Create and broadcast GameStartedEvent with required parameters
+        GameStartedEvent gameStartedEvent = new GameStartedEvent(
+            gameManager.getPlayers(),                  // List of all players
+            gameManager.getCurrentPlayer().getName(),   // Starting player
+            gameManager.getPlayers().size()            // Total number of players
+        );
+        networkHandler.broadcast(gameStartedEvent);
+
+        // Send success response to admin
+        networkHandler.sendToClient(
+            connectionId,
+            new StartGameResponseEvent(StartGameResponseEvent.Response.OK)
+        );
+
+        // Broadcast initial game state
+        broadcastGameState();
+    }
+
+    private boolean isFirstPlayer(String connectionId) {
+        return gameManager.getPlayers().size() > 0 &&
+            gameManager.getPlayers().get(0).getName().equals(
+                connectionToPlayerMap.get(connectionId)
+            );
+    }
+
+    private void handleMoveRequest(MoveRequestEvent event) {
+
+    }
+
+    private void handleDiceRollRequest(DiceRollRequestEvent event) {
+        String connectionId = event.getConnection().getConnectionID();
+        String playerName = connectionToPlayerMap.get(connectionId);
+        if (playerName != null && gameManager.isPlayerTurn(playerName)) {
+            int value = gameManager.rollDice();
+            DiceRollResultEvent resultEvent = new DiceRollResultEvent(
+                value,
+                gameManager.getCurrentPlayer().getColor()
+            );
+            networkHandler.broadcast(resultEvent);
+        }
+    }
+
+    private void handleLeaveRequest(LeaveGameRequestEvent event) {
+        String connectionId = event.getConnection().getConnectionID();
+        handlePlayerLeave(connectionId);
+    }
+
+    private void handlePlayerLeave(String connectionId) {
+        String playerName = connectionToPlayerMap.remove(connectionId);
+        if (playerName != null) {
+            if (!gameManager.isGameStarted()) {
+                gameManager.removePlayer(playerName);
+            }
+            broadcastGameState();
+        }
+    }
+
+    @Override
+    public void onConnectionError(Exception e) {
+        LOGGER.severe("Connection error: " + e.getMessage());
+    }
+
+    private void handleJoinRequest(JoinGameRequestEvent event) {
+        String connectionId = event.getConnection().getConnectionID();
+        boolean joined = handlePlayerJoin(
+            connectionId,
+            event.getPlayerName(),
+            event.getDesiredColor()
+        );
+
+        JoinGameResponseEvent response;
+        if (joined) {
+            response = new JoinGameResponseEvent(Response.OK);
+            if (gameManager.getPlayers().size() == 1) {
+                // First player
+                networkHandler.sendToClient(connectionId, new FirstPlayerEvent());
+            }
+        } else {
+            response = new JoinGameResponseEvent(Response.USERNAME_TAKEN);
+        }
+
+        networkHandler.sendToClient(connectionId, response);
+    }
+
+    private boolean handlePlayerJoin(String connectionId, String playerName, String desiredColor) {
         if (gameManager.getPlayers().size() >= 4 || gameManager.isGameStarted()) {
             return false;
         }
@@ -53,67 +210,6 @@ public class ServerGameStateManager {
         return false;
     }
 
-    public void handlePlayerLeave(String connectionId) {
-        String playerName = connectionToPlayerMap.get(connectionId);
-        if (playerName != null) {
-            connectionToPlayerMap.remove(connectionId);
-
-            // Notify other players
-            PlayerLeftEvent leaveEvent = new PlayerLeftEvent(playerName);
-            networkHandler.broadcast(leaveEvent);
-
-            if (!gameManager.isGameStarted()) {
-                // Only remove player if game hasn't started
-                gameManager.removePlayer(playerName);
-            }
-            broadcastGameState();
-        }
-    }
-
-    // Game Actions
-    public void handleDiceRoll(String connectionId) {
-        String playerName = connectionToPlayerMap.get(connectionId);
-        if (playerName != null && gameManager.isPlayerTurn(playerName)) {
-            int value = gameManager.rollDice();
-            DiceRollResultEvent event = new DiceRollResultEvent(
-                value,
-                gameManager.getCurrentPlayer().getColor()
-            );
-            networkHandler.broadcast(event);
-        }
-    }
-
-    public boolean handleMove(String connectionId, int pawnIndex, int steps) {
-        String playerName = connectionToPlayerMap.get(connectionId);
-        if (!gameManager.isPlayerTurn(playerName)) {
-            return false;
-        }
-
-        boolean moveSuccess = gameManager.movePawn(playerName, pawnIndex, steps);
-
-        // Create and broadcast move result
-        MoveResultEvent resultEvent = new MoveResultEvent(
-            moveSuccess,
-            moveSuccess ? "Move successful" : "Invalid move",
-            pawnIndex,
-            moveSuccess ? gameManager.getPawnPosition(playerName, pawnIndex) : -1
-        );
-        networkHandler.broadcast(resultEvent);
-
-        if (moveSuccess) {
-            // Check win condition
-            if (gameManager.hasPlayerWon(playerName)) {
-                handleGameOver(playerName);
-            } else {
-                gameManager.nextTurn();
-                broadcastGameState();
-            }
-        }
-
-        return moveSuccess;
-    }
-
-    // State Management
     private void broadcastGameState() {
         GameStateUpdateEvent stateEvent = new GameStateUpdateEvent(
             gameManager.getCurrentPawnPositions(),
@@ -123,68 +219,23 @@ public class ServerGameStateManager {
         networkHandler.broadcast(stateEvent);
     }
 
-    private void handleGameOver(String winner) {
-        GameOverEvent gameOverEvent = new GameOverEvent(winner);
-        networkHandler.broadcast(gameOverEvent);
-        // Update game state
-        gameManager.setGameState(GameState.GAME_OVER);
-        broadcastGameState();
-    }
-
-    // Connection Management
-    public void handleDisconnection(String connectionId) {
-        handlePlayerLeave(connectionId);
-        sessionManager.handleDisconnection(connectionId);
-    }
-
-    public void handleReconnection(String connectionId, Connection connection) {
-        String playerName = connectionToPlayerMap.get(connectionId);
-        if (playerName != null) {
-            sessionManager.handleReconnection(connection);
-            // Send current game state to reconnected player
-            GameStateUpdateEvent stateEvent = new GameStateUpdateEvent(
-                gameManager.getCurrentPawnPositions(),
-                gameManager.getCurrentPlayer().getColor(),
-                gameManager.getGameState()
-            );
-            networkHandler.sendToClient(connectionId, stateEvent);
-        }
-    }
-
-    // Utility Methods
-    private boolean isColorAvailable(String color) {
+    private boolean isColorAvailable(String desiredColor) {
         return gameManager.getPlayers().stream()
-            .noneMatch(p -> p.getColor().equals(color));
+            .noneMatch(p -> p.getColor().equals(desiredColor));
     }
 
-    public boolean isPlayerTurn(String connectionId) {
-        String playerName = connectionToPlayerMap.get(connectionId);
-        return playerName != null && gameManager.isPlayerTurn(playerName);
-    }
-
-    public GameState getGameState() {
-        return gameManager.getGameState();
-    }
-
-    public boolean isGameStarted() {
-        return gameManager.isGameStarted();
-    }
-
-    public String getPlayerName(String connectionId) {
-        return connectionToPlayerMap.get(connectionId);
-    }
 }
-
 //package ludo.server.state;
 //
-//import ludo.core.entities.Player;
-//import ludo.core.game.GameManager;
+//import ludo.core.entities.*;
 //import ludo.core.game.GameState;
+//import ludo.core.game.GameManager;
+//import ludo.core.network.Connection;
 //import ludo.server.networking.ServerNetworkHandler;
 //import ludo.server.session.SessionManager;
 //import ludo.core.events.serverToClient.*;
 //
-//    import java.util.Map;
+//import java.util.*;
 //import java.util.concurrent.ConcurrentHashMap;
 //import java.util.logging.Logger;
 //
@@ -194,7 +245,7 @@ public class ServerGameStateManager {
 //    private final GameManager gameManager;
 //    private final SessionManager sessionManager;
 //    private final ServerNetworkHandler networkHandler;
-//    private final Map<String, String> connectionToPlayerMap;
+//    private final Map<String, String> connectionToPlayerMap; // Maps connectionIds to playerNames
 //
 //    public ServerGameStateManager(ServerNetworkHandler networkHandler) {
 //        this.gameManager = GameManager.getInstance();
@@ -203,11 +254,26 @@ public class ServerGameStateManager {
 //        this.connectionToPlayerMap = new ConcurrentHashMap<>();
 //    }
 //
-//    // Only handle the mapping between connections and game state
-//    public boolean handlePlayerJoin(String connectionId, String playerName, String color) {
-//        Player newPlayer = new Player(playerName, color);
+//    // Player Management
+//    public boolean handlePlayerJoin(String connectionId, String playerName, String desiredColor) {
+//        if (gameManager.getPlayers().size() >= 4 || gameManager.isGameStarted()) {
+//            return false;
+//        }
+//
+//        // Check if color is available
+//        if (!isColorAvailable(desiredColor)) {
+//            return false;
+//        }
+//
+//        Player newPlayer = new Player(playerName, desiredColor);
 //        if (gameManager.addPlayer(newPlayer)) {
 //            connectionToPlayerMap.put(connectionId, playerName);
+//
+//            // Notify other players
+//            PlayerJoinedEvent joinEvent = new PlayerJoinedEvent(newPlayer);
+//            networkHandler.broadcast(joinEvent);
+//
+//            // Send updated game state
 //            broadcastGameState();
 //            return true;
 //        }
@@ -215,54 +281,215 @@ public class ServerGameStateManager {
 //    }
 //
 //    public void handlePlayerLeave(String connectionId) {
-//        String playerName = connectionToPlayerMap.remove(connectionId);
+//        String playerName = connectionToPlayerMap.get(connectionId);
 //        if (playerName != null) {
+//            connectionToPlayerMap.remove(connectionId);
+//
+//            // Notify other players
+//            PlayerLeftEvent leaveEvent = new PlayerLeftEvent(playerName);
+//            networkHandler.broadcast(leaveEvent);
+//
 //            if (!gameManager.isGameStarted()) {
+//                // Only remove player if game hasn't started
 //                gameManager.removePlayer(playerName);
 //            }
 //            broadcastGameState();
 //        }
 //    }
 //
+//    // Game Actions
 //    public void handleDiceRoll(String connectionId) {
 //        String playerName = connectionToPlayerMap.get(connectionId);
 //        if (playerName != null && gameManager.isPlayerTurn(playerName)) {
 //            int value = gameManager.rollDice();
-//            networkHandler.broadcast(new DiceRollResultEvent(value,
-//                gameManager.getCurrentPlayer().getColor()));
+//            DiceRollResultEvent event = new DiceRollResultEvent(
+//                value,
+//                gameManager.getCurrentPlayer().getColor()
+//            );
+//            networkHandler.broadcast(event);
 //        }
 //    }
 //
 //    public boolean handleMove(String connectionId, int pawnIndex, int steps) {
 //        String playerName = connectionToPlayerMap.get(connectionId);
-//        if (playerName != null && gameManager.movePawn(playerName, pawnIndex, steps)) {
-//            broadcastGameState();
+//        if (!gameManager.isPlayerTurn(playerName)) {
+//            return false;
+//        }
 //
+//        boolean moveSuccess = gameManager.movePawn(playerName, pawnIndex, steps);
+//
+//        // Create and broadcast move result
+//        MoveResultEvent resultEvent = new MoveResultEvent(
+//            moveSuccess,
+//            moveSuccess ? "Move successful" : "Invalid move",
+//            pawnIndex,
+//            moveSuccess ? gameManager.getPawnPosition(playerName, pawnIndex) : -1
+//        );
+//        networkHandler.broadcast(resultEvent);
+//
+//        if (moveSuccess) {
+//            // Check win condition
 //            if (gameManager.hasPlayerWon(playerName)) {
-//                networkHandler.broadcast(new GameOverEvent(playerName));
+//                handleGameOver(playerName);
 //            } else {
 //                gameManager.nextTurn();
+//                broadcastGameState();
 //            }
-//            return true;
 //        }
-//        return false;
+//
+//        return moveSuccess;
 //    }
 //
+//    // State Management
 //    private void broadcastGameState() {
-//        networkHandler.broadcast(new GameStateUpdateEvent(
+//        GameStateUpdateEvent stateEvent = new GameStateUpdateEvent(
 //            gameManager.getCurrentPawnPositions(),
 //            gameManager.getCurrentPlayer().getColor(),
 //            gameManager.getGameState()
-//        ));
+//        );
+//        networkHandler.broadcast(stateEvent);
 //    }
 //
+//    private void handleGameOver(String winner) {
+//        GameOverEvent gameOverEvent = new GameOverEvent(winner);
+//        networkHandler.broadcast(gameOverEvent);
+//        // Update game state
+//        gameManager.setGameState(GameState.GAME_OVER);
+//        broadcastGameState();
+//    }
+//
+//    // Connection Management
 //    public void handleDisconnection(String connectionId) {
 //        handlePlayerLeave(connectionId);
 //        sessionManager.handleDisconnection(connectionId);
 //    }
 //
-//    // For connection ID to player name mapping
+//    public void handleReconnection(String connectionId, Connection connection) {
+//        String playerName = connectionToPlayerMap.get(connectionId);
+//        if (playerName != null) {
+//            sessionManager.handleReconnection(connection);
+//            // Send current game state to reconnected player
+//            GameStateUpdateEvent stateEvent = new GameStateUpdateEvent(
+//                gameManager.getCurrentPawnPositions(),
+//                gameManager.getCurrentPlayer().getColor(),
+//                gameManager.getGameState()
+//            );
+//            networkHandler.sendToClient(connectionId, stateEvent);
+//        }
+//    }
+//
+//    // Utility Methods
+//    private boolean isColorAvailable(String color) {
+//        return gameManager.getPlayers().stream()
+//            .noneMatch(p -> p.getColor().equals(color));
+//    }
+//
+//    public boolean isPlayerTurn(String connectionId) {
+//        String playerName = connectionToPlayerMap.get(connectionId);
+//        return playerName != null && gameManager.isPlayerTurn(playerName);
+//    }
+//
+//    public GameState getGameState() {
+//        return gameManager.getGameState();
+//    }
+//
+//    public boolean isGameStarted() {
+//        return gameManager.isGameStarted();
+//    }
+//
 //    public String getPlayerName(String connectionId) {
 //        return connectionToPlayerMap.get(connectionId);
 //    }
 //}
+//
+////package ludo.server.state;
+////
+////import ludo.core.entities.Player;
+////import ludo.core.game.GameManager;
+////import ludo.core.game.GameState;
+////import ludo.server.networking.ServerNetworkHandler;
+////import ludo.server.session.SessionManager;
+////import ludo.core.events.serverToClient.*;
+////
+////    import java.util.Map;
+////import java.util.concurrent.ConcurrentHashMap;
+////import java.util.logging.Logger;
+////
+////public class ServerGameStateManager {
+////    private static final Logger LOGGER = Logger.getLogger(ServerGameStateManager.class.getName());
+////
+////    private final GameManager gameManager;
+////    private final SessionManager sessionManager;
+////    private final ServerNetworkHandler networkHandler;
+////    private final Map<String, String> connectionToPlayerMap;
+////
+////    public ServerGameStateManager(ServerNetworkHandler networkHandler) {
+////        this.gameManager = GameManager.getInstance();
+////        this.sessionManager = SessionManager.getInstance();
+////        this.networkHandler = networkHandler;
+////        this.connectionToPlayerMap = new ConcurrentHashMap<>();
+////    }
+////
+////    // Only handle the mapping between connections and game state
+////    public boolean handlePlayerJoin(String connectionId, String playerName, String color) {
+////        Player newPlayer = new Player(playerName, color);
+////        if (gameManager.addPlayer(newPlayer)) {
+////            connectionToPlayerMap.put(connectionId, playerName);
+////            broadcastGameState();
+////            return true;
+////        }
+////        return false;
+////    }
+////
+////    public void handlePlayerLeave(String connectionId) {
+////        String playerName = connectionToPlayerMap.remove(connectionId);
+////        if (playerName != null) {
+////            if (!gameManager.isGameStarted()) {
+////                gameManager.removePlayer(playerName);
+////            }
+////            broadcastGameState();
+////        }
+////    }
+////
+////    public void handleDiceRoll(String connectionId) {
+////        String playerName = connectionToPlayerMap.get(connectionId);
+////        if (playerName != null && gameManager.isPlayerTurn(playerName)) {
+////            int value = gameManager.rollDice();
+////            networkHandler.broadcast(new DiceRollResultEvent(value,
+////                gameManager.getCurrentPlayer().getColor()));
+////        }
+////    }
+////
+////    public boolean handleMove(String connectionId, int pawnIndex, int steps) {
+////        String playerName = connectionToPlayerMap.get(connectionId);
+////        if (playerName != null && gameManager.movePawn(playerName, pawnIndex, steps)) {
+////            broadcastGameState();
+////
+////            if (gameManager.hasPlayerWon(playerName)) {
+////                networkHandler.broadcast(new GameOverEvent(playerName));
+////            } else {
+////                gameManager.nextTurn();
+////            }
+////            return true;
+////        }
+////        return false;
+////    }
+////
+////    private void broadcastGameState() {
+////        networkHandler.broadcast(new GameStateUpdateEvent(
+////            gameManager.getCurrentPawnPositions(),
+////            gameManager.getCurrentPlayer().getColor(),
+////            gameManager.getGameState()
+////        ));
+////    }
+////
+////    public void handleDisconnection(String connectionId) {
+////        handlePlayerLeave(connectionId);
+////        sessionManager.handleDisconnection(connectionId);
+////    }
+////
+////    // For connection ID to player name mapping
+////    public String getPlayerName(String connectionId) {
+////        return connectionToPlayerMap.get(connectionId);
+////    }
+////}
