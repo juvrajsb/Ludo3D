@@ -12,6 +12,7 @@ application {
 }
 
 jar {
+  dependsOn(":core:jar")
   duplicatesStrategy = DuplicatesStrategy.EXCLUDE
   manifest {
     attributes 'Main-Class': application.mainClass
