@@ -18,14 +18,14 @@ public abstract class BaseScreen implements Screen {
     protected final LudoGame game;
     protected Stage stage;
     protected Viewport viewport;
-    protected SpriteBatch batch;
+//    protected SpriteBatch batch;
     protected Skin skin;
 
     public BaseScreen(LudoGame game) {
         this.game = game;
         this.viewport = new ScreenViewport();
         this.stage = new Stage(viewport);
-        this.batch = new SpriteBatch();
+//        this.batch = new SpriteBatch();
         this.skin = new Skin(Gdx.files.internal("ui/uiskin.json"));
     }
 
@@ -59,6 +59,6 @@ public abstract class BaseScreen implements Screen {
     @Override
     public void dispose() {
         stage.dispose();
-        batch.dispose();
+//        batch.dispose();
     }
 }
