@@ -1,5 +1,6 @@
 package ludo.server.networking;
 
+import ludo.core.events.Event;
 import ludo.core.network.*;
 import java.net.ServerSocket;
 import java.net.Socket;
@@ -13,12 +14,12 @@ import java.util.logging.Logger;
 public class ServerNetworkHandler {
     private static final Logger LOGGER = Logger.getLogger(ServerNetworkHandler.class.getName());
     private static final int MAX_CLIENTS = 4;
+    private MessageListener messageListener;
 
     private final Map<String, Connection> clients;
 //    private final int port;
     private ServerSocket serverSocket;
     private volatile boolean running;
-    private MessageListener messageListener;
 
     public ServerNetworkHandler(ServerSocket serverSocket) {
         this.serverSocket = serverSocket;
@@ -112,12 +113,21 @@ public class ServerNetworkHandler {
     }
 
     private void handleClientMessage(Connection client, NetworkMessage message) {
+        if (message instanceof Event) {
+            ((Event) message).setConnection(client);
+        }
+
         if (messageListener != null) {
             messageListener.onMessageReceived(message);
         }
     }
 
     private void handleClientError(Connection client) {
+        if (messageListener != null) {
+            messageListener.onConnectionError(
+                new IOException("Client disconnected: " + client.getConnectionID())
+            );
+        }
         try {
             client.close();
             clients.remove(client.getConnectionID());
