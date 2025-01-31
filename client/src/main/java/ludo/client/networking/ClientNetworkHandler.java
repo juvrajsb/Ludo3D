@@ -116,10 +116,11 @@ public class ClientNetworkHandler implements NetworkHandler {
 
     private void handleConnectionFailure(Exception error) {
         if (!isConnected) {
-            return; // Already handling disconnect
+            return;
         }
 
         LOGGER.warning("Connection failure: " + error.getMessage());
+        error.printStackTrace();
 
         if (listener != null) {
             listener.onConnectionError(error);
