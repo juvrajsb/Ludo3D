@@ -9,6 +9,8 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
 
+import static ludo.core.utils.Constants.*;
+
 public class LudoGame {
     private final List<Player> players;
     private final Board board;
@@ -23,7 +25,7 @@ public class LudoGame {
     }
 
     public void initializeGame(List<Player> players) {
-        if (players.size() > Constants.MAX_PLAYERS) {
+        if (players.size() > MAX_PLAYERS) {
             throw new IllegalArgumentException("Too many players");
         }
         this.players.clear();
@@ -44,12 +46,48 @@ public class LudoGame {
 
         Player player = players.get(playerIndex);
         Pawn pawn = player.getPawns().get(pawnIndex);
-
-        if (!isValidMove(player, pawn, steps)) {
+        // Handle pawn in home
+        if (pawn.isHome()) {
+            if (steps == 6) {
+                pawn.leaveHome(board);
+                return true;
+            }
             return false;
         }
 
-        executeMove(player, pawn, steps);
+        int currentPosition = pawn.getPosition();
+        int startPos = board.getStartPosition(player.getColor());
+        int entryPoint = (startPos + BOARD_SIZE - 1) % BOARD_SIZE;
+        int potentialNewPos = currentPosition + steps;
+
+        // Calculate new position
+        int newPosition;
+        if (currentPosition <= entryPoint && potentialNewPos > entryPoint) {
+            // Entering home column
+            int stepsAfterEntry = potentialNewPos - entryPoint - 1;
+
+            if (stepsAfterEntry >= HOME_COLUMN_SIZE) {
+                return false; // Would overshoot home
+            }
+
+            newPosition = BOARD_SIZE + (startPos / 13) * HOME_COLUMN_SIZE + stepsAfterEntry;
+        } else {
+            // Regular movement
+            newPosition = potentialNewPos % BOARD_SIZE;
+        }
+
+        // Check for collisions with own pawns
+        if (!board.isSafeSpot(newPosition)) {
+            for (Pawn otherPawn : player.getPawns()) {
+                if (otherPawn != pawn && otherPawn.getPosition() == newPosition) {
+                    return false;
+                }
+            }
+        }
+
+        // Execute move
+        pawn.setPosition(newPosition);
+        handleCaptures(player, newPosition);
         return true;
     }
 
@@ -57,7 +95,7 @@ public class LudoGame {
         if (playerIndex < 0 || playerIndex >= players.size()) {
             throw new IllegalArgumentException("Invalid player index");
         }
-        if (pawnIndex < 0 || pawnIndex >= Constants.PAWNS_PER_PLAYER) {
+        if (pawnIndex < 0 || pawnIndex >= PAWNS_PER_PLAYER) {
             throw new IllegalArgumentException("Invalid pawn index");
         }
         if (steps < 1 || steps > 6) {
@@ -74,12 +112,12 @@ public class LudoGame {
         // If pawn is in home column, check for overshooting
         if (player.isInHomeColumn(pawn.getPosition())) {
             int newPosition = pawn.getPosition() + steps;
-            return newPosition < Constants.BOARD_SIZE + Constants.HOME_COLUMN_SIZE;
+            return newPosition < BOARD_SIZE + HOME_COLUMN_SIZE;
         }
 
         // Check for collisions with own pawns on regular spaces
         int newPosition = calculateNewPosition(player, pawn.getPosition(), steps);
-        if (newPosition < Constants.BOARD_SIZE && !board.isSafeSpot(newPosition)) {
+        if (newPosition < BOARD_SIZE && !board.isSafeSpot(newPosition)) {
             for (Pawn otherPawn : player.getPawns()) {
                 if (otherPawn != pawn && otherPawn.getPosition() == newPosition) {
                     return false;
@@ -99,7 +137,7 @@ public class LudoGame {
         int newPosition = calculateNewPosition(player, pawn.getPosition(), steps);
 
         // Handle captures
-        if (newPosition < Constants.BOARD_SIZE && !board.isSafeSpot(newPosition)) {
+        if (newPosition < BOARD_SIZE && !board.isSafeSpot(newPosition)) {
             handleCaptures(player, newPosition);
         }
 
@@ -120,25 +158,25 @@ public class LudoGame {
 
     private int calculateNewPosition(Player player, int currentPosition, int steps) {
         // If in home column
-        if (currentPosition >= Constants.BOARD_SIZE) {
+        if (currentPosition >= BOARD_SIZE) {
             return currentPosition + steps;
         }
 
         int playerStart = board.getStartPosition(player.getColor());
-        int entryPoint = (playerStart + Constants.BOARD_SIZE - 1) % Constants.BOARD_SIZE;
+        int entryPoint = (playerStart + BOARD_SIZE - 1) % BOARD_SIZE;
         int newPosition = currentPosition + steps;
 
         // Check if entering home column
         if (currentPosition <= entryPoint && newPosition > entryPoint) {
             int stepsAfterEntry = newPosition - entryPoint - 1;
             if (stepsAfterEntry < Constants.HOME_COLUMN_SIZE) {
-                return Constants.BOARD_SIZE + (playerStart / 13) * Constants.HOME_COLUMN_SIZE + stepsAfterEntry;
+                return BOARD_SIZE + (playerStart / 13) * Constants.HOME_COLUMN_SIZE + stepsAfterEntry;
             }
             return -1; // Invalid move - would overshoot home
         }
 
         // Regular board movement with wraparound
-        return newPosition % Constants.BOARD_SIZE;
+        return newPosition % BOARD_SIZE;
     }
 
     public void nextTurn() {

@@ -53,15 +53,22 @@ public class Connection {
 
     public void send(NetworkMessage message) throws IOException {
         synchronized(out) {
-            out.writeObject(message.serialize());
-            out.flush();
-            out.reset();  // Reset object cache to prevent memory leaks
+            try {
+                out.writeObject(message);
+                out.flush();
+                out.reset();  // Reset object cache
+            } catch (IOException e) {
+                throw new IOException("Failed to send message: " + e.getMessage(), e);
+            }
         }
     }
 
     public NetworkMessage receive() throws IOException, ClassNotFoundException {
-        byte[] data = (byte[])in.readObject();
-        return NetworkMessage.deserialize(data);
+        try {
+            return (NetworkMessage) in.readObject();
+        } catch (IOException | ClassNotFoundException e) {
+            throw new IOException("Failed to receive message: " + e.getMessage(), e);
+        }
     }
 
     public String getConnectionID() {
