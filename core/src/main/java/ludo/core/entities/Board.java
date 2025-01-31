@@ -1,16 +1,19 @@
 package ludo.core.entities;
 
+import java.io.Serializable;
 import java.util.HashMap;
 import java.util.Map;
 
-public class Board {
+public class Board implements Serializable {
     private static final int BOARD_SIZE = 52;
     private static final int HOME_COLUMN_SIZE = 6;
     private Map<String, Integer> playerStartPositions;
     private Map<Integer, Boolean> safeSpots;
 
     public Board() {
+        playerStartPositions = new HashMap<>();
         initializePlayerStartPositions();
+        safeSpots = new HashMap<>();
         initializeSafeSpots();
     }
 
@@ -51,28 +54,46 @@ public class Board {
     }
 
     public boolean isHomeColumn(int position, String color) {
-        int startPosition = getStartPosition(color);
-
-        // Regular board positions
-        if (position < BOARD_SIZE) {
-            // Check if position is in the last 6 spaces before the next player's start
-            int homeStart = (startPosition + BOARD_SIZE - HOME_COLUMN_SIZE) % BOARD_SIZE;
-            int homeEnd = (startPosition + BOARD_SIZE - 1) % BOARD_SIZE;
-
-            // Handle wraparound case
-            if (homeStart > homeEnd) {
-                return position >= homeStart || position <= homeEnd;
-            }
+        // For positions in home column area (≥52)
+        if (position >= BOARD_SIZE) {
+            int playerIndex = getStartPosition(color) / 13;
+            int homeStart = BOARD_SIZE + playerIndex * HOME_COLUMN_SIZE;
+            int homeEnd = homeStart + HOME_COLUMN_SIZE - 1;
             return position >= homeStart && position <= homeEnd;
         }
 
-        // Home column positions (>=52)
-        if (position >= BOARD_SIZE) {
-            // Each player's home column starts at BOARD_SIZE + (their_start_position / 13) * HOME_COLUMN_SIZE
-            int homeColumnBaseIndex = BOARD_SIZE + (startPosition / 13) * HOME_COLUMN_SIZE;
-            return position >= homeColumnBaseIndex && position < homeColumnBaseIndex + HOME_COLUMN_SIZE;
-        }
-
-        return false;
+    // For positions on main board (<52), never consider them as home column
+    return false;
     }
 }
+//public boolean isHomeColumn(int position, String color) {
+//    int startPosition = getStartPosition(color);
+//
+//    // Check if position is on regular board spaces
+//    if (position < BOARD_SIZE) {
+//        // Logic for regular board positions
+//        int homeStart = (startPosition + BOARD_SIZE - HOME_COLUMN_SIZE) % BOARD_SIZE;
+//        int homeEnd = (startPosition + BOARD_SIZE - 1) % BOARD_SIZE;
+//
+//        if (homeStart > homeEnd) {
+//            return position >= homeStart || position <= homeEnd;
+//        }
+//        return position >= homeStart && position <= homeEnd;
+//    }
+//
+//    // Check home column positions (>=52)
+//    int homeColumnBaseIndex = BOARD_SIZE + (startPosition / 13) * HOME_COLUMN_SIZE;
+//    return position >= homeColumnBaseIndex && position < homeColumnBaseIndex + HOME_COLUMN_SIZE;
+//}
+//public boolean isHomeColumn(int position, String color) {
+//    // For positions in home column area (≥52)
+//    if (position >= BOARD_SIZE) {
+//        int playerIndex = getStartPosition(color) / 13;
+//        int homeStart = BOARD_SIZE + playerIndex * HOME_COLUMN_SIZE;
+//        int homeEnd = homeStart + HOME_COLUMN_SIZE - 1;
+//        return position >= homeStart && position <= homeEnd;
+//    }
+//
+//    // For positions on main board (<52), never consider them as home column
+//    return false;
+//}
