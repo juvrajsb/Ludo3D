@@ -1,4 +1,3 @@
-// PlayerTest.java
 package ludo.test;
 
 import ludo.core.entities.Player;

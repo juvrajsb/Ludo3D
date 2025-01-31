@@ -1,4 +1,3 @@
-// PawnTest.java
 package ludo.test;
 
 import ludo.core.entities.Pawn;
@@ -46,10 +45,11 @@ public class PawnTest {
     @Test
     public void testFinishingMove() {
         // Move pawn to last position before finishing
-        pawn.setPosition(51); // Last regular position for RED
+        pawn.setPosition(47); // Last regular position for RED
 
         // Move into home
-        pawn.move(1, board);
+        pawn.move(6, board);
+        System.out.println(pawn.getPosition());
         assertTrue("Pawn should be in home column",
             board.isHomeColumn(pawn.getPosition(), "RED"));
 

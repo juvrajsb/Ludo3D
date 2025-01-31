@@ -1,4 +1,4 @@
-package test.java.ludo;
-
-public class ClientTest {
-}
+//package test.java.ludo;
+//
+//public class ClientTest {
+//}

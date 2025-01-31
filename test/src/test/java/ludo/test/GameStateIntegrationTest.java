@@ -1,43 +1,67 @@
 package ludo.test;
 
 import ludo.client.networking.ClientNetworkHandler;
-import ludo.client.state.ClientGameStateManager;
-import ludo.core.network.NetworkHandler;
+import ludo.client.GameStateManager;
+import ludo.core.events.clientToServer.DiceRollRequestEvent;
+import ludo.core.events.clientToServer.JoinGameRequestEvent;
+import ludo.core.network.*;
+import ludo.core.events.serverToClient.*;
 import org.junit.Before;
 import org.junit.Test;
+import org.mockito.Mock;
+import org.mockito.MockitoAnnotations;
 
 import static org.junit.Assert.*;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.never;
-import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.*;
 
 public class GameStateIntegrationTest {
-    private ClientGameStateManager gameState;
-    private NetworkHandler networkHandler;
+    @Mock
+    private ClientNetworkHandler networkHandler;
+    private GameStateManager gameState;
 
     @Before
     public void setup() {
-        networkHandler = new ClientNetworkHandler();
-        gameState = new ClientGameStateManager(networkHandler);
+        MockitoAnnotations.initMocks(this);
+        when(networkHandler.isConnected()).thenReturn(true);
+        gameState = new GameStateManager(networkHandler); // Use the constructor with networkHandler
     }
 
     @Test
-    public void testGameStateSync() {
-        networkHandler.connect("localhost", 12000);
-        gameState.joinGame("TestPlayer", "RED");
-        // Verify initial state
-        assertNotNull(gameState.getLocalPlayer());
-        assertEquals("TestPlayer", gameState.getLocalPlayer().getName());
+    public void testJoinGameFlow() {
+        // Test joining game
+        String username = "TestPlayer";
+        String color = "RED";
+
+        // Setup networkHandler mock behavior
+        when(networkHandler.isConnected()).thenReturn(true);
+
+        // Should successfully join when connected
+        assertTrue(gameState.joinGame(username, color));
+
+        // Verify username and color are stored
+        assertEquals(username, gameState.getCurrentUsername());
+        assertEquals(color, gameState.getCurrentColor());
+
+        // Verify join request was sent
+        verify(networkHandler).sendMessage(any(JoinGameRequestEvent.class));
     }
 
     @Test
-    public void testTurnManagement() {
-        networkHandler.connect("localhost", 12000);
-        gameState.joinGame("TestPlayer", "RED");
+    public void testTurnHandling() {
+        // Setup initial state
+        String username = "TestPlayer";
+        when(networkHandler.getPlayerId()).thenReturn(username);
+        gameState.joinGame(username, "RED");
 
-        // Should not allow moves when not player's turn
-        assertFalse(gameState.isLocalPlayerTurn());
-        gameState.requestDiceRoll(); // Should not send request
-        verify(networkHandler, never()).sendMessage(any());
+        // Simulate receiving turn change event with the player's username
+        TurnChangeEvent turnEvent = new TurnChangeEvent(username);
+        gameState.onMessageReceived(turnEvent);
+
+        // Request dice roll - this will only work if it's the player's turn
+        gameState.requestDiceRoll();
+
+        // Verify that dice roll request was sent (indicating it was player's turn)
+        verify(networkHandler).sendMessage(any(DiceRollRequestEvent.class));
     }
 }

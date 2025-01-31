@@ -1,8 +1,8 @@
 package ludo.test;
 
+import ludo.client.GameStateManager;
 import ludo.client.networking.ClientNetworkHandler;
 import ludo.core.network.*;
-import ludo.client.state.ClientGameStateManager;
 import org.junit.Before;
 import org.junit.Test;
 import org.mockito.Mock;
@@ -13,14 +13,14 @@ import static org.junit.Assert.*;
 public class NetworkIntegrationTest {
     @Mock private MessageListener messageListener;
     private ClientNetworkHandler networkHandler;
-    private ClientGameStateManager gameState;
+    private GameStateManager gameState;
 
     @Before
     public void setup() {
         MockitoAnnotations.initMocks(this);
         networkHandler = new ClientNetworkHandler();
         networkHandler.setMessageListener(messageListener);
-        gameState = new ClientGameStateManager(networkHandler);
+        gameState = new GameStateManager();
     }
 
     @Test

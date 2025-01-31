@@ -41,4 +41,31 @@ public class BoardTest {
         assertTrue(board.isHomeColumn(58, "GREEN"));  // First green home position
         assertFalse(board.isHomeColumn(20, "RED"));  // Regular board position
     }
+
+    @Test
+    public void testHomeColumnForAllColors() {
+        // Test for RED (starts at 0)
+        assertTrue(board.isHomeColumn(52, "RED"));    // First home position
+        assertTrue(board.isHomeColumn(57, "RED"));    // Last home position
+        assertFalse(board.isHomeColumn(58, "RED"));  // After home
+        assertFalse(board.isHomeColumn(51, "RED"));  // Before home
+
+        // Test for GREEN (starts at 13)
+        assertTrue(board.isHomeColumn(58, "GREEN"));  // First home position
+        assertTrue(board.isHomeColumn(63, "GREEN"));  // Last home position
+        assertFalse(board.isHomeColumn(64, "GREEN")); // After home
+        assertFalse(board.isHomeColumn(12, "GREEN")); // Before home
+
+        // Test for BLUE (starts at 26)
+        assertTrue(board.isHomeColumn(64, "BLUE"));   // First home position
+        assertTrue(board.isHomeColumn(69, "BLUE"));   // Last home position
+        assertFalse(board.isHomeColumn(70, "BLUE"));  // After home
+        assertFalse(board.isHomeColumn(25, "BLUE"));  // Before home
+
+        // Test for YELLOW (starts at 39)
+        assertTrue(board.isHomeColumn(70, "YELLOW")); // First home position
+        assertTrue(board.isHomeColumn(75, "YELLOW")); // Last home position
+        assertFalse(board.isHomeColumn(76, "YELLOW")); // After home
+        assertFalse(board.isHomeColumn(38, "YELLOW")); // Before home
+    }
 }

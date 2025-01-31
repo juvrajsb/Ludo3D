@@ -33,7 +33,10 @@ public class BoardMovementTest {
 
         // Move pawn near home column
         pawn.setPosition(47);
-        assertTrue(game.movePawn(0, 0, 6));
+
+        boolean moveResult = game.movePawn(0, 0, 6);
+
+        assertTrue(moveResult);
         assertTrue(board.isHomeColumn(pawn.getPosition(), player.getColor()));
     }
 
@@ -61,14 +64,14 @@ public class BoardMovementTest {
         redPawn.leaveHome(game.getBoard());
         redPawn.setPosition(50);
 
-        System.out.println("Initial position: " + redPawn.getPosition());
-        System.out.println("Start position for RED: " + game.getBoard().getStartPosition("RED"));
-        System.out.println("Attempting to move 4 spaces");
+//        System.out.println("Initial position: " + redPawn.getPosition());
+//        System.out.println("Start position for RED: " + game.getBoard().getStartPosition("RED"));
+//        System.out.println("Attempting to move 4 spaces");
 
         boolean moveResult = game.movePawn(0, 0, 4);
-        System.out.println("Move result: " + moveResult);
-        System.out.println("New position: " + redPawn.getPosition());
-        System.out.println("Is in home column: " + board.isHomeColumn(redPawn.getPosition(), "RED"));
+//        System.out.println("Move result: " + moveResult);
+//        System.out.println("New position: " + redPawn.getPosition());
+//        System.out.println("Is in home column: " + board.isHomeColumn(redPawn.getPosition(), "RED"));
 
         assertTrue(moveResult);
         assertTrue(board.isHomeColumn(redPawn.getPosition(), "RED"));
@@ -81,13 +84,13 @@ public class BoardMovementTest {
         bluePawn.leaveHome(game.getBoard());
         bluePawn.setPosition(50);
 
-        System.out.println("Initial position: " + bluePawn.getPosition());
-        System.out.println("Start position for BLUE: " + game.getBoard().getStartPosition("BLUE"));
-        System.out.println("Attempting to move 4 spaces");
+//        System.out.println("Initial position: " + bluePawn.getPosition());
+//        System.out.println("Start position for BLUE: " + game.getBoard().getStartPosition("BLUE"));
+//        System.out.println("Attempting to move 4 spaces");
 
         boolean moveResult = game.movePawn(2, 0, 4);
-        System.out.println("Move result: " + moveResult);
-        System.out.println("New position: " + bluePawn.getPosition());
+//        System.out.println("Move result: " + moveResult);
+//        System.out.println("New position: " + bluePawn.getPosition());
 
         assertTrue(moveResult);
         assertEquals(2, bluePawn.getPosition());
