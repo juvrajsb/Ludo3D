@@ -1,5 +1,7 @@
 package ludo.client;
 
+import com.badlogic.gdx.Screen;
+import ludo.client.screens.LobbyScreen;
 import ludo.core.events.serverToClient.*;
 import ludo.core.events.clientToServer.*;
 import ludo.core.game.GameState;
@@ -18,9 +20,19 @@ public class GameStateManager implements MessageListener {
     private boolean gameStarted;
     private String currentUsername;
     private String currentColor;
+    private Screen currentScreen;
+    private LobbyScreen lobbyScreen;
 
     public GameStateManager() {
         this.networkHandler = new ClientNetworkHandler();
+        this.networkHandler.setMessageListener(this);
+        this.isFirstPlayer = false;
+        this.gameStarted = false;
+    }
+
+    //for testing
+    public GameStateManager(ClientNetworkHandler networkHandler) {
+        this.networkHandler = networkHandler;
         this.networkHandler.setMessageListener(this);
         this.isFirstPlayer = false;
         this.gameStarted = false;
@@ -75,13 +87,19 @@ public class GameStateManager implements MessageListener {
         return gameStarted;
     }
 
-    public void initialize(GameScreen gameScreen) {
-        this.gameScreen = gameScreen;
+    public void initialize(Screen screen) {
+        this.currentScreen = screen;
+        if (screen instanceof GameScreen) {
+            this.gameScreen = (GameScreen) screen;
+        }
     }
 
     @Override
     public void onMessageReceived(NetworkMessage message) {
         switch (message.getType()) {
+            case "FIRST_PLAYER":
+                handleFirstPlayer();
+                break;
             case "JOIN_GAME_RESPONSE":
                 handleJoinResponse((JoinGameResponseEvent) message);
                 break;
@@ -109,11 +127,28 @@ public class GameStateManager implements MessageListener {
         }
     }
 
+    private void handleFirstPlayer() {
+        if (currentScreen instanceof LobbyScreen) {
+            ((LobbyScreen) currentScreen).setFirstPlayer();
+        }
+    }
+
+    public void setCurrentScreen(Screen screen) {
+        this.currentScreen = screen;
+        if (screen instanceof GameScreen) {
+            this.gameScreen = (GameScreen) screen;
+        }
+    }
+
     @Override
     public void onConnectionError(Exception error) {
         if (gameScreen != null) {
             gameScreen.showMessage("Connection error: " + error.getMessage());
         }
+    }
+
+    public void setLobbyScreen(LobbyScreen screen) {
+        this.lobbyScreen = screen;
     }
 
     private void handleJoinResponse(JoinGameResponseEvent event) {
@@ -149,31 +184,42 @@ public class GameStateManager implements MessageListener {
     public void handleGameStateUpdate(NetworkMessage message) {
         GameStateUpdateEvent event = (GameStateUpdateEvent) message;
 
-        // Update pawn positions for all players
-        event.getPawnPositions().forEach((color, positions) ->
-            gameScreen.updatePlayerPawns(color, positions)
-        );
+        // Only process if we're in game screen
+        if (gameScreen != null) {
+            // Update pawn positions for all players
+            event.getPawnPositions().forEach((color, positions) ->
+                gameScreen.updatePlayerPawns(color, positions)
+            );
 
-        gameScreen.setCurrentPlayer(event.getCurrentPlayer());
-        gameScreen.updateGameState(event.getGameState().getDescription());
+            gameScreen.setCurrentPlayer(event.getCurrentPlayer());
+            gameScreen.updateGameState(event.getGameState().getDescription());
+        }
     }
 
     private void handlePlayerJoined(NetworkMessage message) {
         PlayerJoinedEvent event = (PlayerJoinedEvent) message;
         Player newPlayer = event.getPlayer();
-        gameScreen.addPlayer(newPlayer);
+
+        // Handle based on current screen
+        if (gameScreen != null) {
+            gameScreen.addPlayer(newPlayer);
+        } else if (lobbyScreen != null) {
+            lobbyScreen.addPlayer(newPlayer);
+        }
     }
 
     private void handleTurnChange(NetworkMessage message) {
         TurnChangeEvent event = (TurnChangeEvent) message;
-        isMyTurn = event.getCurrentPlayer().equals(networkHandler.getPlayerId());
+        isMyTurn = event.getCurrentPlayer().equals(currentUsername);
 
-        if (isMyTurn) {
-            gameScreen.enableControls();
-            gameScreen.showMessage("Your turn!");
-        } else {
-            gameScreen.disableControls();
-            gameScreen.showMessage("Waiting for " + event.getCurrentPlayer());
+        if (gameScreen != null) {
+            if (isMyTurn) {
+                gameScreen.enableControls();
+                gameScreen.showMessage("Your turn!");
+            } else {
+                gameScreen.disableControls();
+                gameScreen.showMessage("Waiting for " + event.getCurrentPlayer());
+            }
         }
     }
 
