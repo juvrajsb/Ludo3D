@@ -55,11 +55,14 @@ public class Server {
         }
 
         try {
+            networkHandler.setMessageListener(gameStateManager);
             networkHandler.start();
             running = true;
+
             // Start network listener and event receiver in separate threads
             new Thread(new NetworkListener(this), "NetworkListener").start();
             new Thread(eventReceiver, "EventReceiver").start();
+
             LOGGER.info("Server started on port " + welcomeSocket.getLocalPort());
         } catch (Exception e) {
             LOGGER.severe("Failed to start server: " + e.getMessage());
