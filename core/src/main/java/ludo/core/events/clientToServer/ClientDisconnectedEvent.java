@@ -5,6 +5,7 @@ import ludo.core.events.Event;
 
 public class ClientDisconnectedEvent extends Event {
 //    private static IConnectionManager connectionManager;
+    private static final long serialVersionUID = 1L;
 
     public ClientDisconnectedEvent() {
         super("CLIENT_DISCONNECTED");

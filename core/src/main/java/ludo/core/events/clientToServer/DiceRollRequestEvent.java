@@ -3,6 +3,8 @@ package ludo.core.events.clientToServer;
 import ludo.core.events.Event;
 
 public class DiceRollRequestEvent extends Event {
+    private static final long serialVersionUID = 1L;
+
     public DiceRollRequestEvent() {
         super("DICE_ROLL_REQUEST");
     }

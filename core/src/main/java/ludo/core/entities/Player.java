@@ -1,10 +1,14 @@
 package ludo.core.entities;
 
 import ludo.core.utils.Constants;
+
+import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.List;
 
-public class Player {
+public class Player implements Serializable {
+    private static final long serialVersionUID = 1L;
+
     private final String name;
     private final String color;
     private List<Pawn> pawns;

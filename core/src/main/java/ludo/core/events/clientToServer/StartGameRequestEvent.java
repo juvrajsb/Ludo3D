@@ -3,6 +3,8 @@ package ludo.core.events.clientToServer;
 import ludo.core.events.Event;
 
 public class StartGameRequestEvent extends Event {
+    private static final long serialVersionUID = 1L;
+
     public StartGameRequestEvent() {
         super("START_GAME_REQUEST");
     }
