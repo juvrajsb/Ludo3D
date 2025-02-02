@@ -52,7 +52,7 @@ public class GameRenderer {
 
     private void createBoard() {
         // Load board texture
-        boardTexture = new Texture(Gdx.files.internal("board.png"));
+        boardTexture = new Texture(Gdx.files.internal("images/board.png"));
         boardTexture.setFilter(Texture.TextureFilter.Linear, Texture.TextureFilter.Linear);
 
         ModelBuilder modelBuilder = new ModelBuilder();
@@ -162,6 +162,18 @@ public class GameRenderer {
             ModelInstance pawn = pawnInstances.get(pawnIndex);
             // Add highlight effect (e.g., glow or outline)
             // This would require additional shader implementation
+        }
+    }
+
+    public void updatePawnPositions() {
+        // Update all pawn positions based on current state
+        for (int i = 0; i < pawnInstances.size; i++) {
+            ModelInstance pawn = pawnInstances.get(i);
+            Vector3 position = pawnPositions.get(i);
+            if (position != null) {
+                pawn.transform.setToTranslation(position);
+                pawn.transform.scale(PAWN_SCALE, PAWN_SCALE, PAWN_SCALE);
+            }
         }
     }
 

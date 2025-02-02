@@ -23,21 +23,16 @@ public class GameAssets {
     private void loadAssets() {
         loadModels();
         loadTextures();
-
-        // Block until all assets are loaded
         assetManager.finishLoading();
     }
 
-    private void loadTextures() {
-        // Load textures
-        assetManager.load("images/board.png", Texture.class);
+    public void loadModels() {
+        assetManager.load("models/pawn.g3db", Model.class);
+        assetManager.load("models/dice.g3db", Model.class);
     }
 
-    private void loadModels() {
-        // Load pawn model
-        assetManager.load("models/pawn.g3db", Model.class);
-        // Load dice model
-        assetManager.load("models/dice.g3db", Model.class);
+    private void loadTextures() {
+        assetManager.load("images/board.png", Texture.class);
     }
 
     public Model getPawnModel() {

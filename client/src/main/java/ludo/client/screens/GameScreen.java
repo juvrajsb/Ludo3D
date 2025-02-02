@@ -80,12 +80,19 @@ public class GameScreen extends BaseScreen {
     }
 
     private void initializeGame() {
-//        GameAssets.getInstance().loadModels();
         renderer.createPawns(game.getPlayers());
         updateGameState();
     }
 
-    public void updateGameState() {
+    public void updateGameState(String state) {
+        if (currentPlayer != null) {
+            renderer.updatePawnPositions();
+            hud.updateCurrentPlayer(currentPlayer.getName());
+        }
+        hud.showMessage(state);
+    }
+
+    private void updateGameState() {
         if (currentPlayer != null) {
             renderer.updatePawnPositions();
             hud.updateCurrentPlayer(currentPlayer.getName());
@@ -149,6 +156,7 @@ public class GameScreen extends BaseScreen {
         // Could be enhanced with smooth animation later
         updatePawnPosition(pawnIndex, newPosition);
     }
+
 
     @Override
     public void render(float delta) {
