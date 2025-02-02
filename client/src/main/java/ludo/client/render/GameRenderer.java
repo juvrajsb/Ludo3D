@@ -1,181 +1,175 @@
 package ludo.client.render;
 
 import com.badlogic.gdx.Gdx;
-import com.badlogic.gdx.graphics.GL20;
+import com.badlogic.gdx.graphics.Camera;
 import com.badlogic.gdx.graphics.Color;
-import com.badlogic.gdx.graphics.PerspectiveCamera;
+import com.badlogic.gdx.graphics.GL20;
 import com.badlogic.gdx.graphics.Texture;
-import com.badlogic.gdx.graphics.VertexAttributes.Usage;
 import com.badlogic.gdx.graphics.g3d.*;
 import com.badlogic.gdx.graphics.g3d.attributes.ColorAttribute;
 import com.badlogic.gdx.graphics.g3d.attributes.TextureAttribute;
-import com.badlogic.gdx.graphics.g3d.environment.DirectionalLight;
 import com.badlogic.gdx.graphics.g3d.utils.ModelBuilder;
-import com.badlogic.gdx.math.Vector3;
+import com.badlogic.gdx.graphics.VertexAttributes.Usage;
+import com.badlogic.gdx.math.*;
+import com.badlogic.gdx.math.collision.Ray;
+import com.badlogic.gdx.utils.Array;
 import ludo.client.assets.GameAssets;
-import ludo.core.entities.*;
+import ludo.core.entities.Player;
+
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
 public class GameRenderer {
-    private final PerspectiveCamera camera;
-    private final ModelBatch modelBatch;
-    private final Environment environment;
-    private final ModelInstance boardInstance;
-    private final ModelInstance[] pawns;
-    private float rotationAngle = 0;
     private Model boardModel;
+    private ModelInstance boardInstance;
+    private Array<ModelInstance> pawnInstances;
+    private Map<Integer, Vector3> pawnPositions;
+    private Map<String, Color> playerColors;
+    private final float BOARD_SIZE = 8f;
+    private final float SQUARE_SIZE = BOARD_SIZE / 15f; // 15x15 grid
+    private final float PAWN_SCALE = 0.15f;
+    private final Ray ray;
+    private final Vector3 intersection;
     private Texture boardTexture;
 
     public GameRenderer(int width, int height) {
-        // Set up camera
-        camera = new PerspectiveCamera(60, width, height);
-        camera.position.set(0f, 10f, 10f); // Position camera above and behind the board
-        camera.lookAt(0, 0, 0);
-        camera.near = 0.1f;
-        camera.far = 300f;
-        camera.update();
+        pawnInstances = new Array<>();
+        pawnPositions = new HashMap<>();
+        ray = new Ray();
+        intersection = new Vector3();
+        initializePlayerColors();
+        createBoard();
+    }
 
-        // Set up lighting
-        modelBatch = new ModelBatch();
-        environment = new Environment();
-        environment.set(new ColorAttribute(ColorAttribute.AmbientLight, 0.6f, 0.6f, 0.6f, 1f));
+    private void initializePlayerColors() {
+        playerColors = new HashMap<>();
+        playerColors.put("RED", Color.RED);
+        playerColors.put("GREEN", Color.GREEN);
+        playerColors.put("BLUE", Color.BLUE);
+        playerColors.put("YELLOW", Color.YELLOW);
+    }
 
-        // Add directional lights from different angles
-        environment.add(new DirectionalLight().set(0.8f, 0.8f, 0.8f, -1f, -0.8f, -0.2f));
-        environment.add(new DirectionalLight().set(0.2f, 0.2f, 0.2f, 1f, -0.8f, -0.2f));
-
+    private void createBoard() {
         // Load board texture
-        try {
-            boardTexture = new Texture(Gdx.files.internal("images/board.png"));
-            boardTexture.setFilter(Texture.TextureFilter.Linear, Texture.TextureFilter.Linear);
-        } catch (Exception e) {
-            System.out.println("Failed to load board texture: " + e.getMessage());
-            // Create a default colored plane if texture fails to load
-            ModelBuilder modelBuilder = new ModelBuilder();
-            boardModel = modelBuilder.createBox(8f, 0.1f, 8f,
-                new Material(ColorAttribute.createDiffuse(Color.LIGHT_GRAY)),
-                Usage.Position | Usage.Normal);
-            boardInstance = new ModelInstance(boardModel);
-            boardInstance.transform.translate(0, 0, 0);
-            pawns = new ModelInstance[16];
-            return;
-        }
+        boardTexture = new Texture(Gdx.files.internal("board.png"));
+        boardTexture.setFilter(Texture.TextureFilter.Linear, Texture.TextureFilter.Linear);
 
-        // Create board model with texture
         ModelBuilder modelBuilder = new ModelBuilder();
-        boardModel = modelBuilder.createRect(
-            -4f, 0f, 4f,    // top left
-            4f, 0f, 4f,     // top right
-            4f, 0f, -4f,    // bottom right
-            -4f, 0f, -4f,   // bottom left
-            0f, 1f, 0f,     // normal (facing up)
+
+        // Create board model with UV coordinates for texture mapping
+        boardModel = modelBuilder.createBox(
+            BOARD_SIZE, 0.2f, BOARD_SIZE,
             new Material(TextureAttribute.createDiffuse(boardTexture)),
             Usage.Position | Usage.Normal | Usage.TextureCoordinates
         );
 
         boardInstance = new ModelInstance(boardModel);
-        pawns = new ModelInstance[16];
-
-        // Add a debug grid to help with orientation
-        addDebugGrid(modelBuilder);
+        boardInstance.transform.translate(0, -0.1f, 0); // Slightly below pawns
     }
 
-    private void addDebugGrid(ModelBuilder modelBuilder) {
-        // Add debug grid lines
-        Model gridModel = modelBuilder.createLineGrid(10, 10, 1f, 1f,
-            new Material(ColorAttribute.createDiffuse(Color.GRAY)),
-            Usage.Position | Usage.Normal);
-        ModelInstance gridInstance = new ModelInstance(gridModel);
-        gridInstance.transform.translate(0, -0.01f, 0); // Slightly below board
-    }
+    public void createPawns(List<Player> players) {
+        pawnInstances.clear();
+        pawnPositions.clear();
 
-    public void createPawnModels(Model pawnModel, Player[] players) {
-        if (pawnModel == null) {
-            System.err.println("Error: Pawn model not available!");
-            return;
-        }
+        Model pawnModel = GameAssets.getInstance().getPawnModel();
+        int pawnIndex = 0;
 
-        int index = 0;
         for (Player player : players) {
-            for (Pawn pawn : player.getPawns()) {
+            Color playerColor = playerColors.get(player.getColor());
+            Material pawnMaterial = new Material(ColorAttribute.createDiffuse(playerColor));
+
+            for (int i = 0; i < player.getPawns().size(); i++) {
                 ModelInstance pawnInstance = new ModelInstance(pawnModel);
-                // Apply player color to the pawn material
-                pawnInstance.materials.get(0).set(getPawnColor(player.getColor()));
-                // Scale the pawn to an appropriate size (adjust these values as needed)
-                pawnInstance.transform.scale(0.5f, 0.5f, 0.5f);
-                // Set initial position
-                updatePawnPosition(index, pawn.getPosition());
-                pawns[index++] = pawnInstance;
+                pawnInstance.materials.get(0).set(pawnMaterial);
+
+                // Scale and position the pawn
+                pawnInstance.transform.scale(PAWN_SCALE, PAWN_SCALE, PAWN_SCALE);
+                positionPawn(pawnInstance, player.getPawns().get(i).getPosition(), pawnIndex);
+
+                pawnInstances.add(pawnInstance);
+                pawnIndex++;
             }
         }
     }
 
-    public void render() {
-        // Set background color to light blue
-        Gdx.gl.glClearColor(0.5f, 0.5f, 0.7f, 1);
-        Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT | GL20.GL_DEPTH_BUFFER_BIT);
+    private void positionPawn(ModelInstance pawn, int boardPosition, int pawnIndex) {
+        Vector3 position = calculatePawnPosition(boardPosition);
+        pawn.transform.setTranslation(position);
+        pawnPositions.put(pawnIndex, position);
+    }
 
-        // Update camera
-        camera.update();
+    private Vector3 calculatePawnPosition(int boardPosition) {
+        if (boardPosition == -1) { // Pawn in home
+            return new Vector3(-BOARD_SIZE/2 + SQUARE_SIZE, 0.2f, -BOARD_SIZE/2 + SQUARE_SIZE);
+        }
 
-        modelBatch.begin(camera);
+        // Calculate grid position
+        float x = (boardPosition % 15 - 7) * SQUARE_SIZE;
+        float z = (boardPosition / 15 - 7) * SQUARE_SIZE;
+        return new Vector3(x, 0.2f, z);
+    }
 
+    public void render(ModelBatch modelBatch, Environment environment) {
         // Render board
         modelBatch.render(boardInstance, environment);
 
         // Render pawns
-        for (ModelInstance pawn : pawns) {
-            if (pawn != null) {
-                modelBatch.render(pawn, environment);
-            }
-        }
-
-        modelBatch.end();
-    }
-
-    public void updatePawnPosition(int index, int position) {
-        if (pawns[index] != null) {
-            if (position == -1) {
-                // Home position
-                pawns[index].transform.setToTranslation(-3, 0.5f, -3);
-            } else {
-                float x = (position % 10) - 4f;
-                float z = (position / 10) - 4f;
-                pawns[index].transform.setToTranslation(x, 0.5f, z);
-            }
+        for (ModelInstance pawn : pawnInstances) {
+            modelBatch.render(pawn, environment);
         }
     }
 
-    public void rotateCamera(float delta) {
-        rotationAngle += delta;
-        float radius = 12f;
-        camera.position.set(
-            (float) (radius * Math.cos(rotationAngle)),
-            10f,
-            (float) (radius * Math.sin(rotationAngle))
-        );
-        camera.lookAt(0, 0, 0);
-        camera.up.set(Vector3.Y);
-        camera.update();
+    public void updatePawnPosition(int pawnIndex, int newPosition) {
+        if (pawnIndex >= 0 && pawnIndex < pawnInstances.size) {
+            Vector3 newPos = calculatePawnPosition(newPosition);
+            ModelInstance pawn = pawnInstances.get(pawnIndex);
+
+            // Update transform and stored position
+            pawn.transform.setToTranslation(newPos);
+            pawn.transform.scale(PAWN_SCALE, PAWN_SCALE, PAWN_SCALE);
+            pawnPositions.put(pawnIndex, newPos);
+        }
     }
 
-    private ColorAttribute getPawnColor(String playerColor) {
-        switch (playerColor.toLowerCase()) {
-            case "red": return ColorAttribute.createDiffuse(0.8f, 0.1f, 0.1f, 1);
-            case "green": return ColorAttribute.createDiffuse(0.1f, 0.8f, 0.1f, 1);
-            case "blue": return ColorAttribute.createDiffuse(0.1f, 0.1f, 0.8f, 1);
-            case "yellow": return ColorAttribute.createDiffuse(0.8f, 0.8f, 0.1f, 1);
-            default: return ColorAttribute.createDiffuse(1, 1, 1, 1);
+    public int getPawnAtScreenCoords(int screenX, int screenY, Camera camera) {
+        // Convert screen coordinates to 3D ray
+        ray.set(camera.getPickRay(screenX, screenY));
+
+        // Check intersection with each pawn's bounding sphere
+        float minDist = Float.MAX_VALUE;
+        int selectedPawn = -1;
+        for (int i = 0; i < pawnInstances.size; i++) {
+            Vector3 pawnPos = pawnPositions.get(i);
+            if (pawnPos != null) {
+                // Use direct sphere intersection test
+                float radius = SQUARE_SIZE * 0.4f; // Adjust radius as needed
+                if (Intersector.intersectRaySphere(ray, pawnPos, radius, intersection)) {
+                    float dist = intersection.dst2(camera.position);
+                    if (dist < minDist) {
+                        minDist = dist;
+                        selectedPawn = i;
+                    }
+                }
+            }
+        }
+
+        return selectedPawn;
+    }
+
+    public void highlightPawn(int pawnIndex) {
+        if (pawnIndex >= 0 && pawnIndex < pawnInstances.size) {
+            ModelInstance pawn = pawnInstances.get(pawnIndex);
+            // Add highlight effect (e.g., glow or outline)
+            // This would require additional shader implementation
         }
     }
 
     public void resize(int width, int height) {
-        camera.viewportWidth = width;
-        camera.viewportHeight = height;
-        camera.update();
+        // Update any viewport-dependent calculations if needed
     }
 
     public void dispose() {
-        modelBatch.dispose();
         if (boardModel != null) boardModel.dispose();
         if (boardTexture != null) boardTexture.dispose();
     }
