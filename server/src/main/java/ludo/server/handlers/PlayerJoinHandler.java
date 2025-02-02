@@ -5,11 +5,12 @@ import ludo.server.networking.EventTransmitter;
 import ludo.server.Server;
 import ludo.core.entities.Player;
 import ludo.core.events.serverToClient.WaitingRoomUpdateEvent;
-import ludo.core.utils.Constants;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
+
+import static ludo.core.utils.Constants.*;
 
 public class PlayerJoinHandler {
     private final GameManager gameManager;
@@ -24,15 +25,15 @@ public class PlayerJoinHandler {
     }
 
     private void initializeAvailableColors() {
-        availableColors.add(Constants.RED);
-        availableColors.add(Constants.BLUE);
-        availableColors.add(Constants.GREEN);
-        availableColors.add(Constants.YELLOW);
+        availableColors.add(RED);
+        availableColors.add(BLUE);
+        availableColors.add(GREEN);
+        availableColors.add(YELLOW);
     }
 
     public boolean canPlayerJoin(String playerName) {
         // Check if game is full
-        if (gameManager.getPlayers().size() >= Constants.MAX_PLAYERS) {
+        if (gameManager.getPlayers().size() >= MAX_PLAYERS) {
             return false;
         }
 
@@ -100,8 +101,10 @@ public class PlayerJoinHandler {
 
         WaitingRoomUpdateEvent updateEvent = new WaitingRoomUpdateEvent(
             playerNames,
-            Constants.MAX_PLAYERS
-        );
+            gameManager.getPlayers().stream()
+                .collect(Collectors.toMap(Player::getName, Player::getColor)),
+            MAX_PLAYERS
+            );
 
         try {
             eventTransmitter.broadcast(updateEvent);

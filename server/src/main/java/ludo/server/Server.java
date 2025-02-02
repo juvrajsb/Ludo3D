@@ -18,6 +18,7 @@ public class Server {
     private static Server instance;
     private final ServerSocket welcomeSocket;
     private final ServerNetworkHandler networkHandler;
+    private final NetworkListener networkListener;
     private final ServerGameStateManager gameStateManager;
     private final EventReceiver eventReceiver;
     private final Map<Connection, Thread> connectedClients;
@@ -26,8 +27,10 @@ public class Server {
     private Server(int port) {
         try {
             this.welcomeSocket = new ServerSocket(port);
-            this.networkHandler = new ServerNetworkHandler(welcomeSocket);
+            this.networkHandler = new ServerNetworkHandler(this, welcomeSocket);
             this.gameStateManager = new ServerGameStateManager(networkHandler);
+            this.networkListener = new NetworkListener(this);
+            LOGGER.info("Server started on port " + welcomeSocket.getLocalPort());
             this.eventReceiver = new EventReceiver();
             this.connectedClients = new ConcurrentHashMap<>();
             this.running = false;
@@ -59,9 +62,9 @@ public class Server {
             networkHandler.start();
             running = true;
 
-            // Start network listener and event receiver in separate threads
-            new Thread(new NetworkListener(this), "NetworkListener").start();
-            new Thread(eventReceiver, "EventReceiver").start();
+            // Start network listener in separate thread
+            Thread listenerThread = new Thread(networkListener, "NetworkListener");
+            listenerThread.start();
 
             LOGGER.info("Server started on port " + welcomeSocket.getLocalPort());
         } catch (Exception e) {
@@ -75,24 +78,28 @@ public class Server {
             return;
         }
 
-        try {
-            running = false;
-            // Close all client connections
-            for (Map.Entry<Connection, Thread> entry : connectedClients.entrySet()) {
-                try {
-                    entry.getKey().close();
-                    entry.getValue().interrupt();
-                } catch (IOException e) {
-                    LOGGER.warning("Error closing client connection: " + e.getMessage());
-                }
+        running = false;
+
+        // Close all client connections
+        for (Map.Entry<Connection, Thread> entry : connectedClients.entrySet()) {
+            try {
+                entry.getKey().close();
+                entry.getValue().interrupt();
+            } catch (IOException e) {
+                LOGGER.warning("Error closing client connection: " + e.getMessage());
             }
-            connectedClients.clear();
-            networkHandler.stop();
+        }
+        connectedClients.clear();
+
+        networkHandler.stop();
+
+        try {
             welcomeSocket.close();
-            LOGGER.info("Server stopped");
-        } catch (Exception e) {
+        } catch (IOException e) {
             LOGGER.severe("Error stopping server: " + e.getMessage());
         }
+
+        LOGGER.info("Server stopped");
     }
 
     // Methods needed by NetworkListener
@@ -106,6 +113,7 @@ public class Server {
 
     public synchronized void addClient(Connection connection, Thread clientThread) {
         connectedClients.put(connection, clientThread);
+        LOGGER.info("Client fully initialized: " + connection.getConnectionID());
     }
 
     public synchronized void removeClient(Connection connection) {

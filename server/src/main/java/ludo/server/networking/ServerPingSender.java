@@ -10,6 +10,7 @@ import java.util.logging.Logger;
 public class ServerPingSender implements PingSender {
     private static final Logger LOGGER = Logger.getLogger(ServerPingSender.class.getName());
     private final Connection connection;
+    private volatile boolean running = false;
     private Timer timer;
     private TimerTask pingTask;
 
@@ -33,29 +34,39 @@ public class ServerPingSender implements PingSender {
 
     @Override
     public void start() {
-        if (timer != null) {
-            stop();
+        if (running) {
+            return;
         }
 
+        running = true;
         timer = new Timer("Server-Ping-" + connection.getConnectionID());
-        pingTask = new TimerTask() {
+
+        timer.scheduleAtFixedRate(new TimerTask() {
             @Override
             public void run() {
-                if (!sendPing() || connection.isFailed()) {
+                if (!running || connection.isFailed()) {
                     stop();
+                    return;
+                }
+
+                try {
+                    if (!sendPing()) {
+                        connection.incrementPingFailure();
+                    }
+                } catch (Exception e) {
+                    LOGGER.warning("Ping failed for " + connection.getConnectionID());
+                    connection.incrementPingFailure();
+                    if (connection.isFailed()) {
+                        stop();
+                    }
                 }
             }
-        };
-
-        timer.scheduleAtFixedRate(pingTask, 0, PING_PERIOD);
+        }, 0, PING_PERIOD);
     }
 
     @Override
     public void stop() {
-        if (pingTask != null) {
-            pingTask.cancel();
-            pingTask = null;
-        }
+        running = false;
         if (timer != null) {
             timer.cancel();
             timer.purge();

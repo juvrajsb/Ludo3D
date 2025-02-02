@@ -11,6 +11,8 @@ import java.util.Queue;
 import java.util.Timer;
 import java.util.TimerTask;
 
+import static ludo.server.Server.LOGGER;
+
 /**
  * Class that is used by the Server to listen for incoming connections
  */
@@ -29,39 +31,66 @@ public class NetworkListener implements Runnable {
      */
     @Override
     public void run() {
-        Queue<Event> eventsQueue = server.getEventReceiver().getEventsQueue();
-        Socket clientSocket;
-        Connection clientConnection = null;
-        Thread clientDedicatedThread;
-
-        while (true) {
+        while (server.isRunning()) {
             try {
-                clientSocket = server.getWelcomeSocket().accept();
-                Server.LOGGER.info("New Client connected!");
+                Socket clientSocket = server.getWelcomeSocket().accept();
+                LOGGER.info("New client socket accepted");
+
+                try {
+                    // Create and initialize connection
+                    Connection connection = Connection.createServerSide(clientSocket);
+
+                    // Register client through single path
+                    server.getNetworkHandler().addClient(connection);
+
+                } catch (Exception e) {
+                    LOGGER.severe("Failed to initialize client: " + e.getMessage());
+                    try {
+                        clientSocket.close();
+                    } catch (IOException ignored) {}
+                }
+
             } catch (IOException e) {
-                Server.LOGGER.info("Welcome socket was closed");
+                if (server.isRunning()) {
+                    LOGGER.severe("Error accepting client: " + e.getMessage());
+                }
                 break;
             }
-
-            try {
-                clientConnection = Connection.createServerSide(clientSocket);
-            } catch (IOException e) {
-                Server.LOGGER.severe("Connection with client failed: " + e.getMessage());
-                try {
-                    clientSocket.close();  // Clean up failed socket
-                } catch (IOException ignored) {}
-                continue;  // Continue to next iteration to accept new connections
-            }
-
-            clientDedicatedThread = getClientDedicatedThread(clientConnection, eventsQueue);
-            Server.LOGGER.info("Client dedicated thread started");
-            server.addClient(clientConnection, new Thread(clientDedicatedThread));
-
-            startPingRoutine(clientConnection);
         }
     }
 
-    private static void startPingRoutine(Connection clientConnection) {
+//    private Connection initializeClientConnection(Socket socket) throws IOException {
+//        // Create connection
+//        Connection connection = Connection.createServerSide(socket);
+//
+//        try {
+//            // Register with network handler
+//            server.getNetworkHandler().addClient(connection);
+//
+//            // Setup ping monitoring
+//            ServerPingSender pingSender = new ServerPingSender(connection);
+//            connection.setPingSender(pingSender);
+//            pingSender.start();
+//
+//            // Create and start event listener
+//            Thread clientThread = new Thread(
+//                new EventListener(connection, server.getEventReceiver().getEventsQueue(), true),
+//                "EventListener-" + connection.getConnectionID()
+//            );
+//            clientThread.start();
+//
+//            // Register with server
+//            server.addClient(connection, clientThread);
+//
+//            return connection;
+//        } catch (Exception e) {
+//            // Clean up on initialization failure
+//            connection.close();
+//            throw e;
+//        }
+//    }
+
+    private void startPingRoutine(Connection clientConnection) {
         ServerPingSender pingSender = new ServerPingSender(clientConnection);
         clientConnection.setPingSender(pingSender);
         pingSender.start();

@@ -2,6 +2,8 @@ package ludo.server.networking;
 
 import ludo.core.events.Event;
 import ludo.core.network.*;
+import ludo.server.Server;
+
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.io.IOException;
@@ -16,15 +18,16 @@ public class ServerNetworkHandler {
     private static final int MAX_CLIENTS = 4;
     private MessageListener messageListener;
 
-    private final Map<String, Connection> clients;
-//    private final int port;
+    private final Map<String, Connection> clients = new ConcurrentHashMap<>();
+    private final Object clientsLock = new Object(); // For thread-safe client operations
+    //    private final int port;
     private ServerSocket serverSocket;
     private volatile boolean running;
+    private final Server server;
 
-    public ServerNetworkHandler(ServerSocket serverSocket) {
+    public ServerNetworkHandler(Server server, ServerSocket serverSocket) {
+        this.server = server;
         this.serverSocket = serverSocket;
-        this.clients = new ConcurrentHashMap<>();
-//        this.running = false;
     }
 
     public void start() {
@@ -37,7 +40,7 @@ public class ServerNetworkHandler {
             running = true;
 //            LOGGER.info("Server started on port " + port);
             LOGGER.info("Server started on port " + serverSocket.getLocalPort());
-            acceptClients();
+//            acceptClients();
         } catch (Exception e) {
             LOGGER.severe("Failed to start server: " + e.getMessage());
             throw new RuntimeException("Server startup failed", e);
@@ -61,56 +64,50 @@ public class ServerNetworkHandler {
         }
     }
 
-    private void acceptClients() {
-        new Thread(() -> {
-            while (running && !serverSocket.isClosed()) {
-                try {
-                    Socket clientSocket = serverSocket.accept();
-                    if (clients.size() >= MAX_CLIENTS) {
-                        clientSocket.close();
-                        continue;
-                    }
-                    handleNewClient(clientSocket);
-                } catch (Exception e) {
-                    if (running) {
-                        LOGGER.severe("Error accepting client: " + e.getMessage());
-                    }
-                }
-            }
-        }, "ClientAcceptor").start();
-    }
+//    private void acceptClients() {
+//        new Thread(() -> {
+//            while (running && !serverSocket.isClosed()) {
+//                try {
+//                    Socket clientSocket = serverSocket.accept();
+//                    if (clients.size() >= MAX_CLIENTS) {
+//                        clientSocket.close();
+//                        continue;
+//                    }
+//                    handleNewClient(clientSocket);
+//                } catch (Exception e) {
+//                    if (running) {
+//                        LOGGER.severe("Error accepting client: " + e.getMessage());
+//                    }
+//                }
+//            }
+//        }, "ClientAcceptor").start();
+//    }
 
-    private void handleNewClient(Socket socket) {
-        try {
-            Connection client = Connection.createServerSide(socket);
-            clients.put(client.getConnectionID(), client);
+//    public void handleNewClient(Socket clientSocket) {
+//        try {
+//            Connection client = Connection.createServerSide(clientSocket);
+//            String clientId = client.getConnectionID();
+//
+//            synchronized(clientsLock) {
+//                if (clients.size() >= MAX_CLIENTS) {
+//                    client.close();
+//                    return;
+//                }
+//                clients.put(clientId, client);
+//                LOGGER.info("New client registered: " + clientId);
+//            }
+//
+//            // Start client message handling in new thread
+//            startClientMessageHandling(client);
+//
+//        } catch (Exception e) {
+//            LOGGER.severe("Error handling new client: " + e.getMessage());
+//            try {
+//                clientSocket.close();
+//            } catch (IOException ignored) {}
+//        }
+//    }
 
-            startClientMessageHandling(client);
-
-        } catch (Exception e) {
-            LOGGER.severe("Error handling new client: " + e.getMessage());
-            try {
-                socket.close();
-            } catch (IOException ignored) {}
-        }
-    }
-
-    private void startClientMessageHandling(Connection client) {
-        new Thread(() -> {
-            while (running && !serverSocket.isClosed()) {
-                try {
-                    NetworkMessage message = client.receive();
-                    handleClientMessage(client, message);
-                } catch (Exception e) {
-                    if (running) {
-                        LOGGER.warning("Client error: " + e.getMessage());
-                        handleClientError(client);
-                        break;
-                    }
-                }
-            }
-        }, "Client-" + client.getConnectionID()).start();
-    }
 
     private void handleClientMessage(Connection client, NetworkMessage message) {
         if (message instanceof Event) {
@@ -122,18 +119,150 @@ public class ServerNetworkHandler {
         }
     }
 
-    private void handleClientError(Connection client) {
-        if (messageListener != null) {
-            messageListener.onConnectionError(
-                new IOException("Client disconnected: " + client.getConnectionID())
-            );
+//    private void handleClientError(Connection client) {
+//        String clientId = client.getConnectionID();
+//
+//        synchronized(clientsLock) {
+//            if (clients.remove(clientId) != null) {
+//                LOGGER.info("Client removed: " + clientId);
+//
+//                // Stop ping sender first
+//                PingSender pingSender = client.getPingSender();
+//                if (pingSender != null) {
+//                    pingSender.stop();
+//                }
+//
+//                // Close connection
+//                try {
+//                    client.close();
+//                } catch (IOException e) {
+//                    LOGGER.warning("Error closing client connection: " + e.getMessage());
+//                }
+//
+//                // Notify message listener
+//                if (messageListener != null) {
+//                    messageListener.onConnectionError(
+//                        new IOException("Client disconnected: " + clientId)
+//                    );
+//                }
+//            }
+//        }
+//    }
+
+    public void addClient(Connection connection) throws IOException {
+        String clientId = connection.getConnectionID();
+
+        if (clients.size() >= MAX_CLIENTS) {
+            throw new IOException("Maximum clients reached");
         }
-        try {
-            client.close();
-            clients.remove(client.getConnectionID());
-            LOGGER.info("Client disconnected: " + client.getConnectionID());
-        } catch (IOException e) {
-            LOGGER.severe("Error closing client connection: " + e.getMessage());
+
+        // Register client
+        clients.put(clientId, connection);
+        LOGGER.info("New client registered: " + clientId);
+
+        // Start message handling thread
+        Thread clientThread = startClientMessageHandling(connection);
+
+        // Initialize ping monitoring
+        startPingMonitoring(connection);
+
+        // Register with server
+        server.addClient(connection, clientThread);
+    }
+
+    private Thread startClientMessageHandling(Connection connection) {
+        Thread thread = new Thread(() -> {
+            while (!Thread.interrupted() && !connection.isClosed()) {
+                try {
+                    NetworkMessage message = connection.receive();
+                    if (message instanceof Event) {
+                        ((Event) message).setConnection(connection);
+                        if (messageListener != null) {
+                            messageListener.onMessageReceived(message);
+                        }
+                    }
+                } catch (Exception e) {
+                    if (!connection.isClosed()) {
+                        handleClientError(connection);
+                    }
+                    break;
+                }
+            }
+        }, "MessageHandler-" + connection.getConnectionID());
+
+        thread.start();
+        return thread;
+    }
+
+    private void startPingMonitoring(Connection connection) {
+        ServerPingSender pingSender = new ServerPingSender(connection);
+        connection.setPingSender(pingSender);
+        pingSender.start();
+    }
+
+    private void handleClientError(Connection connection) {
+        String clientId = connection.getConnectionID();
+        if (clients.remove(clientId) != null) {
+            LOGGER.info("Client disconnected: " + clientId);
+
+            try {
+                connection.close();
+            } catch (IOException e) {
+                LOGGER.warning("Error closing client connection: " + e.getMessage());
+            }
+
+            server.removeClient(connection);
+
+            if (messageListener != null) {
+                messageListener.onConnectionError(
+                    new IOException("Client disconnected: " + clientId)
+                );
+            }
+        }
+    }
+
+    public void removeClient(String clientId) {
+        synchronized(clientsLock) {
+            Connection connection = clients.remove(clientId);
+            if (connection != null) {
+                LOGGER.info("Client unregistered: " + clientId);
+                try {
+                    if (connection.getPingSender() != null) {
+                        connection.getPingSender().stop();
+                    }
+                    connection.close();
+                } catch (IOException e) {
+                    LOGGER.warning("Error closing connection for " + clientId + ": " + e.getMessage());
+                }
+            }
+        }
+    }
+
+//    private void startClientMessageHandling(Connection client) {
+//        new Thread(() -> {
+//            while (running && !client.isClosed()) {
+//                try {
+//                    NetworkMessage message = client.receive();
+//                    if (message instanceof Event) {
+//                        ((Event) message).setConnection(client);
+//                    }
+//                    if (messageListener != null) {
+//                        messageListener.onMessageReceived(message);
+//                    }
+//                } catch (Exception e) {
+//                    if (running) {
+//                        LOGGER.warning("Client error: " + e.getMessage());
+//                        handleClientError(client);
+//                        break;
+//                    }
+//                }
+//            }
+//        }, "ClientHandler-" + client.getConnectionID()).start();
+//    }
+
+    public int getClientCount() {
+        synchronized(clientsLock) {
+            return clients.size();
         }
     }
 
@@ -168,9 +297,6 @@ public class ServerNetworkHandler {
         return clients.containsKey(clientId);
     }
 
-    public int getClientCount() {
-        return clients.size();
-    }
 
 //    public int getPort() {
 //        return port;
