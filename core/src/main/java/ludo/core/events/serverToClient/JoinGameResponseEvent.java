@@ -11,7 +11,7 @@ public class JoinGameResponseEvent extends Event {
     private boolean existsSavedGame;
 
     public JoinGameResponseEvent(Response response) {
-        super("JOIN_GAME_RESPONSE_EVENT");
+        super("JOIN_GAME_RESPONSE");
         this.response = response;
         this.existsSavedGame = false;
     }

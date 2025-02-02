@@ -4,6 +4,8 @@ import ludo.core.events.Event;
 //import ludo.server.handlers.WaitingRoomUpdateHandler;
 
 import java.util.List;
+import java.util.Map;
+import java.util.HashMap;
 
 /**
  * Event containing the updated list of the
@@ -12,11 +14,13 @@ import java.util.List;
  */
 public class WaitingRoomUpdateEvent extends Event {
     private final List<String> usernames;
+    private final Map<String, String> playerColors;
     private final int numberOfPlayers;
 
-    public WaitingRoomUpdateEvent(List<String> usernames, int numberOfPlayers) {
+    public WaitingRoomUpdateEvent(List<String> usernames, Map<String, String> colors, int numberOfPlayers) {
         super("WAITING_ROOM_UPDATE");
         this.usernames = usernames;
+        this.playerColors = colors;
         this.numberOfPlayers = numberOfPlayers;
     }
 
@@ -26,6 +30,10 @@ public class WaitingRoomUpdateEvent extends Event {
 
     public int getNumberOfPlayers() {
         return numberOfPlayers;
+    }
+
+    public String getColorForPlayer(String username) {
+        return playerColors.getOrDefault(username, "");
     }
 
     @Override
