@@ -15,6 +15,7 @@ public class Connection {
     private String connectionId;
     private PingSender pingSender;
     private final AtomicInteger pingFailureCount;
+    private volatile boolean closed = false;
 
     private static final int MAX_PING_FAILURES = 5;
     private static final int CONNECTION_TIMEOUT = 5000; // 5 seconds
@@ -52,22 +53,32 @@ public class Connection {
     }
 
     public void send(NetworkMessage message) throws IOException {
+        if (closed || !socket.isConnected() || socket.isClosed()) {
+            throw new IOException("Connection is closed");
+        }
+
         synchronized(out) {
             try {
                 out.writeObject(message);
                 out.flush();
-                out.reset();  // Reset object cache
+                out.reset();
             } catch (IOException e) {
-                throw new IOException("Failed to send message: " + e.getMessage(), e);
+                closed = true;
+                throw e;
             }
         }
     }
 
     public NetworkMessage receive() throws IOException, ClassNotFoundException {
+        if (closed || !socket.isConnected() || socket.isClosed()) {
+            throw new IOException("Connection is closed");
+        }
+
         try {
             return (NetworkMessage) in.readObject();
-        } catch (IOException | ClassNotFoundException e) {
-            throw new IOException("Failed to receive message: " + e.getMessage(), e);
+        } catch (IOException e) {
+            closed = true;
+            throw e;
         }
     }
 
@@ -115,12 +126,25 @@ public class Connection {
     }
 
     public void close() throws IOException {
-        if (pingSender != null) {
-            pingSender.stop();
+        if (!closed) {
+            closed = true;
+            if (pingSender != null) {
+                pingSender.stop();
+            }
+            try {
+                out.close();
+            } finally {
+                try {
+                    in.close();
+                } finally {
+                    socket.close();
+                }
+            }
         }
-        out.close();
-        in.close();
-        socket.close();
+    }
+
+    public boolean isClosed() {
+        return closed || socket.isClosed() || !socket.isConnected();
     }
 
     public boolean isConnected() {
