@@ -61,8 +61,8 @@ public class GameHUD extends Table {
         add(controlsTable).expandX().fillX().pad(10);
     }
 
-    public void updateDiceRoll(int value) {
-        diceValueLabel.setText("ClientDice: " + value);
+    public void updateDiceValue(int value) {
+        diceValueLabel.setText("Dice: " + value);
     }
 
     public void updateCurrentPlayer(String playerName) {
