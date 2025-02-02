@@ -11,10 +11,17 @@ import ludo.client.LudoGame;
 public class UsernameScreen extends BaseScreen {
     private TextField usernameField;
     private Label errorLabel;
-    private final SelectBox<String> colorSelect;
+    private SelectBox<String> colorSelect;
+    private SelectBox<Integer> playerCountSelect;
+    private Table playerCountTable;
 
     public UsernameScreen(final LudoGame game) {
         super(game);
+
+        if (!game.getGameStateManager().isConnected()) {
+            game.setScreen(new ConnectionScreen(game));
+            return;
+        }
 
         Table mainTable = new Table();
         mainTable.setFillParent(true);
@@ -22,27 +29,23 @@ public class UsernameScreen extends BaseScreen {
 
         // Title
         Label titleLabel = new Label("Choose Your Name", skin, "default");
-        mainTable.add(titleLabel).colspan(2).pad(50);
-        mainTable.row();
+        mainTable.add(titleLabel).colspan(2).pad(50).row();
 
         // Username field
         mainTable.add(new Label("Username:", skin)).align(Align.right);
         usernameField = new TextField("", skin);
-        mainTable.add(usernameField).align(Align.left);
-        mainTable.row();
+        mainTable.add(usernameField).align(Align.left).row();
 
         // Color selection
         mainTable.add(new Label("Color:", skin)).align(Align.right);
         colorSelect = new SelectBox<>(skin);
         colorSelect.setItems("Red", "Blue", "Green", "Yellow");
-        mainTable.add(colorSelect).align(Align.left);
-        mainTable.row();
+        mainTable.add(colorSelect).align(Align.left).row();
 
         // Error label
         errorLabel = new Label("", skin);
         errorLabel.setColor(1, 0, 0, 1);
-        mainTable.add(errorLabel).colspan(2).pad(20);
-        mainTable.row();
+        mainTable.add(errorLabel).colspan(2).pad(20).row();
 
         // Join button
         TextButton joinButton = new TextButton("Join Game", skin);
@@ -55,6 +58,16 @@ public class UsernameScreen extends BaseScreen {
         mainTable.add(joinButton).colspan(2).pad(20);
 
         stage.addActor(mainTable);
+
+        // Check if first player to show player count selection
+        if (game.getGameStateManager().isFirstPlayer()) {
+            playerCountTable = new Table();
+            playerCountTable.add(new Label("Number of Players:", skin)).align(Align.right);
+            playerCountSelect = new SelectBox<>(skin);
+            playerCountSelect.setItems(2, 3, 4);
+            playerCountTable.add(playerCountSelect).align(Align.left);
+            mainTable.add(playerCountTable).colspan(2).row();
+        }
     }
 
     private void attemptJoin() {
@@ -64,12 +77,11 @@ public class UsernameScreen extends BaseScreen {
             return;
         }
 
-        // Attempt to join with selected username and color
+        // Attempt to join
         if (game.getGameStateManager().joinGame(username, colorSelect.getSelected())) {
-            // Move to lobby screen
             game.setScreen(new LobbyScreen(game));
         } else {
-            errorLabel.setText("Username or color already taken");
+            errorLabel.setText("Failed to join game. Name or color might be taken.");
         }
     }
 
