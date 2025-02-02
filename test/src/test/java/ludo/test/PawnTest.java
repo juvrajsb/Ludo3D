@@ -49,7 +49,7 @@ public class PawnTest {
 
         // Move into home
         pawn.move(6, board);
-        System.out.println(pawn.getPosition());
+//        System.out.println(pawn.getPosition());
         assertTrue("Pawn should be in home column",
             board.isHomeColumn(pawn.getPosition(), "RED"));
 
