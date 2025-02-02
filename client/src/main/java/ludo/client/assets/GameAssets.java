@@ -21,18 +21,31 @@ public class GameAssets {
     }
 
     private void loadAssets() {
-        // Load pawn model
-        assetManager.load("models/pawn.g3db", Model.class);
-
-        // Load textures
-        assetManager.load("images/board.png", Texture.class);
+        loadModels();
+        loadTextures();
 
         // Block until all assets are loaded
         assetManager.finishLoading();
     }
 
+    private void loadTextures() {
+        // Load textures
+        assetManager.load("images/board.png", Texture.class);
+    }
+
+    private void loadModels() {
+        // Load pawn model
+        assetManager.load("models/pawn.g3db", Model.class);
+        // Load dice model
+        assetManager.load("models/dice.g3db", Model.class);
+    }
+
     public Model getPawnModel() {
         return assetManager.get("models/pawn.g3db", Model.class);
+    }
+
+    public Model getDiceModel() {
+        return assetManager.get("models/dice.g3db", Model.class);
     }
 
     public Texture getBoardTexture() {
