@@ -3,6 +3,7 @@ package ludo.client;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.Screen;
 import ludo.client.screens.LobbyScreen;
+import ludo.client.screens.UsernameScreen;
 import ludo.core.events.serverToClient.*;
 import ludo.core.events.clientToServer.*;import ludo.core.game.GameState;
 import ludo.core.network.*;
@@ -28,6 +29,7 @@ public class GameStateManager implements MessageListener {
     private String currentColor;
     private Screen currentScreen;
     private LobbyScreen lobbyScreen;
+    private UsernameScreen usernameScreen;
     private final LudoGame game;
     private static final Logger LOGGER = Logger.getLogger(GameStateManager.class.getName());
     private List<Player> currentPlayers = new ArrayList<>();
@@ -252,6 +254,8 @@ public class GameStateManager implements MessageListener {
         this.currentScreen = screen;
         if (screen instanceof GameScreen) {
             this.gameScreen = (GameScreen) screen;
+        } else if (screen instanceof UsernameScreen) {
+            this.usernameScreen = (UsernameScreen) screen;
         }
     }
 
@@ -273,13 +277,18 @@ public class GameStateManager implements MessageListener {
     }
 
     private void handleJoinResponse(JoinGameResponseEvent event) {
+        LOGGER.info("Join response received: " + event.getResponse());
+
         if (event.getResponse() == Response.FIRST_PLAYER) {
-            LOGGER.info("Setting first player flag from join response");
             isFirstPlayer = true;
-            // If we're already in lobby screen, update it
-            if (lobbyScreen != null) {
-                lobbyScreen.setFirstPlayer();
-            }
+        }
+
+        // Handle response in the username screen
+        if (currentScreen instanceof UsernameScreen) {
+            Gdx.app.postRunnable(() -> {
+                UsernameScreen screen = (UsernameScreen) currentScreen;
+                screen.onJoinResponse(event.getResponse());
+            });
         }
     }
 
@@ -287,18 +296,11 @@ public class GameStateManager implements MessageListener {
         LOGGER.info("Game started event received");
         LOGGER.info("Current players in GameStateManager: " + currentPlayers.size());
 
-        // Store event players
         final List<Player> eventPlayers = event.getPlayers();
         LOGGER.info("Players received in event: " + eventPlayers.size());
 
-        // Print details of each player
-        for (Player p : eventPlayers) {
-            LOGGER.info("Event player: " + p.getName() + " Color: " + p.getColor());
-        }
-
         Gdx.app.postRunnable(() -> {
             LOGGER.info("Creating GameScreen with " + currentPlayers.size() + " players");
-
             GameScreen gameScreen = new GameScreen(game);
 
             // Transfer players
@@ -307,12 +309,37 @@ public class GameStateManager implements MessageListener {
                 gameScreen.addPlayer(player);
             }
 
-            LOGGER.info("GameScreen created with " + gameScreen.getPlayerCount() + " players");
+            // Set initial current player
+            String startingPlayer = event.getStartingPlayer();
+            gameScreen.setCurrentPlayer(startingPlayer);
+            isMyTurn = startingPlayer.equals(currentUsername);
+
+            // Enable/disable controls based on turn
+            if (isMyTurn) {
+                gameScreen.enableControls();
+                gameScreen.showMessage("Your turn!");
+            } else {
+                gameScreen.disableControls();
+                gameScreen.showMessage("Waiting for " + startingPlayer);
+            }
 
             game.setScreen(gameScreen);
             this.gameScreen = gameScreen;
-            LOGGER.info("Screen transition complete");
+            LOGGER.info("Screen transition complete. Current player: " + startingPlayer + ", isMyTurn: " + isMyTurn);
         });
+    }
+
+    public void requestDiceRoll() {
+        LOGGER.info("Dice roll requested - isMyTurn: " + isMyTurn + ", currentUsername: " +
+            currentUsername + ", current player: " + (gameScreen != null && gameScreen.getCurrentPlayer() != null ?
+            gameScreen.getCurrentPlayer().getName() : "null"));
+
+        if (isMyTurn) {
+            LOGGER.info("Requesting dice roll");
+            networkHandler.sendMessage(new DiceRollRequestEvent());
+        } else {
+            LOGGER.warning("Attempted to roll dice when not player's turn");
+        }
     }
 
     public List<Player> getCurrentPlayers() {
@@ -416,16 +443,6 @@ public class GameStateManager implements MessageListener {
 
     public String getCurrentColor() {
         return currentColor;
-    }
-
-    // Methods called by GameScreen
-    public void requestDiceRoll() {
-        if (isMyTurn) {
-            LOGGER.info("Requesting dice roll");
-            networkHandler.sendMessage(new DiceRollRequestEvent());
-        } else {
-            LOGGER.warning("Attempted to roll dice when not player's turn");
-        }
     }
 
     public void requestMove(int pawnIndex) {

@@ -14,6 +14,7 @@ import com.badlogic.gdx.scenes.scene2d.Actor;
 import com.badlogic.gdx.scenes.scene2d.ui.*;
 import com.badlogic.gdx.scenes.scene2d.utils.ChangeListener;
 import com.badlogic.gdx.math.Vector3;
+import ludo.client.GameStateManager;
 import ludo.client.LudoGame;
 import ludo.client.assets.GameAssets;
 import ludo.client.render.GameRenderer;
@@ -23,16 +24,18 @@ import ludo.core.entities.*;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.logging.Logger;
 
 public class GameScreen extends BaseScreen {
     private static final String TAG = "GameScreen";
     private final GameHUD hud;
     private final GameRenderer renderer;
     private final ModelBatch modelBatch;
+    private static final Logger LOGGER = Logger.getLogger(GameStateManager.class.getName());
     private final Environment environment;
     private final PerspectiveCamera camera;
     private final TextButton rollButton;
-    private List<Player> players = new CopyOnWriteArrayList<>();
+    private List<Player> players;
 
     // Game state
     private Player currentPlayer;
@@ -66,24 +69,27 @@ public class GameScreen extends BaseScreen {
         modelBatch = new ModelBatch();
         environment = new Environment();
         setupLighting();
-//        environment.set(new ColorAttribute(ColorAttribute.AmbientLight, 0.4f, 0.4f, 0.4f, 1f));
-//        environment.add(new DirectionalLight().set(0.8f, 0.8f, 0.8f, -1f, -0.8f, -0.2f));
 
         // Set up camera
         camera = new PerspectiveCamera(67, Gdx.graphics.getWidth(), Gdx.graphics.getHeight());
-//        updateCameraPosition();
-//        camera.near = 1f;
-//        camera.far = 300f;
-//        camera.update();
         setupCamera();
 
-        // Initialize UI components
-        this.hud = new GameHUD();
+        // Initialize HUD
+        hud = new GameHUD();
+        stage.addActor(hud);
 
         // Create roll button
         rollButton = new TextButton("Roll Dice", skin);
         rollButton.setSize(100, 50);
         rollButton.setPosition(Gdx.graphics.getWidth() - 120, 20);
+        rollButton.addListener(new com.badlogic.gdx.scenes.scene2d.utils.ChangeListener() {
+            @Override
+            public void changed(ChangeEvent event, Actor actor) {
+                if (!isRolling) {
+                    requestDiceRoll();
+                }
+            }
+        });
         stage.addActor(rollButton);
 
         // Initialize renderer with correct dimensions
@@ -120,19 +126,35 @@ public class GameScreen extends BaseScreen {
 
     private void setupInputHandling() {
         InputMultiplexer multiplexer = new InputMultiplexer();
+
+        // Add stage first for UI elements
         multiplexer.addProcessor(stage);
+
+        // Add camera controller
         multiplexer.addProcessor(new InputAdapter() {
+            private float startX, startY;
+            private boolean isDragging = false;
+
             @Override
             public boolean touchDown(int screenX, int screenY, int pointer, int button) {
-                lastTouchX = screenX;
-                lastTouchY = screenY;
+                startX = screenX;
+                startY = screenY;
                 isDragging = true;
-                Gdx.app.log(TAG, "TouchDown event: x=" + screenX + ", y=" + screenY);
                 return true;
             }
 
             @Override
             public boolean touchUp(int screenX, int screenY, int pointer, int button) {
+                if (!isDragging) {
+                    // Handle pawn selection
+                    if (canMove) {
+                        int selectedPawn = renderer.getPawnAtScreenCoords(screenX, screenY, camera);
+                        if (selectedPawn != -1) {
+                            game.getGameStateManager().requestMove(selectedPawn);
+                            canMove = false;
+                        }
+                    }
+                }
                 isDragging = false;
                 return true;
             }
@@ -140,55 +162,41 @@ public class GameScreen extends BaseScreen {
             @Override
             public boolean touchDragged(int screenX, int screenY, int pointer) {
                 if (isDragging) {
-                    float deltaX = (screenX - lastTouchX) * rotationSpeed;
-                    float deltaY = (screenY - lastTouchY) * rotationSpeed;
+                    float deltaX = (screenX - startX) * 0.5f;
+                    float deltaY = (screenY - startY) * 0.5f;
 
-                    // Rotate camera
-                    cameraRotation += deltaX;
-
-                    // Adjust camera height
-                    cameraHeight = Math.max(minHeight, Math.min(maxHeight, cameraHeight - deltaY * 0.1f));
+                    cameraRotation += deltaX * 0.2f;
+                    cameraHeight = Math.max(minHeight,
+                        Math.min(maxHeight, cameraHeight + deltaY * 0.1f));
 
                     updateCameraPosition();
-                    lastTouchX = screenX;
-                    lastTouchY = screenY;
+                    startX = screenX;
+                    startY = screenY;
+                    return true;
                 }
-                return true;
+                return false;
             }
 
             @Override
             public boolean scrolled(float amountX, float amountY) {
-                // Zoom with scroll wheel
-                Gdx.app.log(TAG, "Scroll event: amountY=" + amountY);
                 cameraDistance = Math.max(minZoom,
-                    Math.min(maxZoom, cameraDistance + amountY * zoomSpeed * 2.0f));
-                updateCameraPosition();
-                return true;
-            }
-
-            @Override
-            public boolean keyDown(int keycode) {
-                // Additional keyboard controls
-                Gdx.app.log(TAG, "Key pressed: " + keycode);
-                switch(keycode) {
-                    case Input.Keys.LEFT:
-                        cameraRotation += 15f;
-                        break;
-                    case Input.Keys.RIGHT:
-                        cameraRotation -= 15f;
-                        break;
-                    case Input.Keys.UP:
-                        cameraHeight = Math.min(maxHeight, cameraHeight + 2f);
-                        break;
-                    case Input.Keys.DOWN:
-                        cameraHeight = Math.max(minHeight, cameraHeight - 2f);
-                        break;
-                }
+                    Math.min(maxZoom, cameraDistance + amountY));
                 updateCameraPosition();
                 return true;
             }
         });
+
         Gdx.input.setInputProcessor(multiplexer);
+    }
+
+    // Add visual feedback for selectable pawns
+    public void updatePawnHighlights() {
+        if (canMove && currentPlayer != null &&
+            currentPlayer.getName().equals(game.getGameStateManager().getCurrentUsername())) {
+            renderer.highlightSelectablePawns(currentPlayer, lastDiceRoll);
+        } else {
+            renderer.clearHighlights();
+        }
     }
 
     private void handleContinuousInput(float delta) {
@@ -246,16 +254,13 @@ public class GameScreen extends BaseScreen {
 
     @Override
     public void render(float delta) {
-        // Clear screen
         handleContinuousInput(delta);
 
         Gdx.gl.glClearColor(0.2f, 0.2f, 0.3f, 1);
         Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT | GL20.GL_DEPTH_BUFFER_BIT);
 
-        //depth testing for proper 3D rendering
         Gdx.gl.glEnable(GL20.GL_DEPTH_TEST);
 
-        // Update camera
         camera.update();
 
         // Debug logging periodically
@@ -283,11 +288,12 @@ public class GameScreen extends BaseScreen {
     }
 
 //    @Override
-    public void addPlayer(Player player) {
+    public void addPlayer(Player player) { // TODO is this correct are players supposed to enter the game like this?
         Gdx.app.log(TAG, "Adding player to GameScreen: " + player.getName());
         if (!players.contains(player)) {
             players.add(player);
             renderer.createPawns(players);
+            hud.updatePlayers(players);
             Gdx.app.log(TAG, "Players after add: " + players.size());
         }
     }
@@ -312,9 +318,14 @@ public class GameScreen extends BaseScreen {
     }
 
     public void updateGameState(String state) {
+        LOGGER.info("Updating game state: " + state);
         if (currentPlayer != null) {
+            LOGGER.info("Current player in update: " + currentPlayer.getName() +
+                " (" + currentPlayer.getColor() + ")");
             renderer.updateAllPawnPositions();
-            hud.updateCurrentPlayer(currentPlayer.getName());
+            hud.updateCurrentPlayer(currentPlayer.getColor());  // Use color instead of name
+        } else {
+            LOGGER.warning("Current player is null in updateGameState");
         }
         hud.showMessage(state);
     }
@@ -335,11 +346,17 @@ public class GameScreen extends BaseScreen {
     }
 
     public void setCurrentPlayer(String playerName) {
+        LOGGER.info("Setting current player to: " + playerName);
         for (Player player : players) {
             if (player.getName().equals(playerName)) {
                 currentPlayer = player;
-                hud.updateCurrentPlayer(player.getName());
-                rollButton.setDisabled(!player.getName().equals(game.getGameStateManager().getCurrentUsername()));
+                hud.updateCurrentPlayer(player.getColor());  // Note: Changed to use color instead of name
+                boolean isMyTurn = player.getName().equals(game.getGameStateManager().getCurrentUsername());
+                rollButton.setDisabled(!isMyTurn);
+
+                LOGGER.info("Current player set - Name: " + player.getName() +
+                    ", Color: " + player.getColor() +
+                    ", isMyTurn: " + isMyTurn);
                 break;
             }
         }
@@ -354,8 +371,13 @@ public class GameScreen extends BaseScreen {
 
     public void updateDiceDisplay(int value) {
         lastDiceRoll = value;
+
+        // Update the HUD display
         hud.updateDiceValue(value);
-        isRolling = false;
+
+        // Trigger the 3D dice roll animation
+        renderer.updateDiceValue(value);
+
         if (currentPlayer != null && currentPlayer.getName().equals(game.getGameStateManager().getCurrentUsername())) {
             rollButton.setDisabled(false);
             canMove = true;
@@ -399,10 +421,7 @@ public class GameScreen extends BaseScreen {
     }
 
     public void showWinnerScreen(String winner) {
-        Dialog winnerDialog = new Dialog("Game Over", skin);
-        winnerDialog.text(winner + " wins!");
-        winnerDialog.button("OK");
-        winnerDialog.show(stage);
+        hud.showWinnerScreen(winner);
     }
 
     public void playMoveAnimation(int pawnIndex, int newPosition) {

@@ -1,129 +1,142 @@
 package ludo.client.ui;
 
-import com.badlogic.gdx.scenes.scene2d.ui.*;
+import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.scenes.scene2d.Actor;
-import com.badlogic.gdx.Gdx;
-import com.badlogic.gdx.scenes.scene2d.utils.ChangeListener;
+import com.badlogic.gdx.scenes.scene2d.ui.*;
+import com.badlogic.gdx.utils.Align;
 import ludo.core.entities.Player;
-import java.util.List;
 
-/**
- * This class is responsible for the game HUD.
- * It extends the Table class.
- */
 public class GameHUD extends Table {
     private final Label currentPlayerLabel;
-    private final Label messageLabel;
     private final Label diceValueLabel;
+    private final Label messageLabel;
     private final Table playerInfoTable;
+    private final Table topPanel;
+    private final Table bottomPanel;
+    private final Window gameOverWindow;
     private final Skin skin;
-    private final Window winnerWindow;
-    private final Table controlsTable;
 
     public GameHUD() {
+        super();
         skin = new Skin(Gdx.files.internal("ui/uiskin.json"));
 
-        // Setup main layout
+        // Make the HUD fill the screen
         setFillParent(true);
-        pad(20);
 
-        // Create UI components
-        currentPlayerLabel = new Label("Current Player: ", skin);
-        messageLabel = new Label("", skin);
-        diceValueLabel = new Label("ClientDice: ", skin);
+        // Create top panel for player info and game status
+        topPanel = new Table(skin);
+        topPanel.setBackground(skin.newDrawable("white"));
+        topPanel.getBackground().setMinHeight(60);
+        topPanel.setColor(0, 0, 0, 0.7f);
+
+        // Create player info panel
         playerInfoTable = new Table(skin);
-        controlsTable = new Table(skin);
+        playerInfoTable.pad(5);
 
-        // Setup winner window (initially hidden)
-        winnerWindow = new Window("Game Over", skin);
-        winnerWindow.setVisible(false);
-        winnerWindow.setModal(true);
-        winnerWindow.setMovable(false);
+        // Create labels with larger font size
+        Label.LabelStyle labelStyle = new Label.LabelStyle(skin.get("default", Label.LabelStyle.class));
+        labelStyle.font.getData().setScale(1.5f);
 
-        setupLayout();
+        currentPlayerLabel = new Label("Current Player: ", labelStyle);
+        currentPlayerLabel.setColor(Color.WHITE);
+
+        diceValueLabel = new Label("Dice: ", labelStyle);
+        diceValueLabel.setColor(Color.WHITE);
+
+        messageLabel = new Label("", labelStyle);
+        messageLabel.setColor(Color.WHITE);
+        messageLabel.setAlignment(Align.center);
+
+        // Add elements to top panel
+        topPanel.add(playerInfoTable).expandX().left().pad(10);
+        topPanel.add(currentPlayerLabel).pad(10);
+        topPanel.add(diceValueLabel).pad(10);
+
+        // Create bottom panel
+        bottomPanel = new Table(skin);
+        bottomPanel.setBackground(skin.newDrawable("white"));
+        bottomPanel.getBackground().setMinHeight(50);
+        bottomPanel.setColor(0, 0, 0, 0.7f);
+
+        // Add message label to bottom panel
+        bottomPanel.add(messageLabel).expand().fill().pad(10);
+
+        // Create game over window (initially hidden)
+        gameOverWindow = new Window("Game Over", skin);
+        gameOverWindow.setVisible(false);
+        gameOverWindow.setModal(true);
+        gameOverWindow.setMovable(false);
+
+        // Add panels to main table
+        add(topPanel).expandX().fillX().height(60).top().row();
+        add().expand().row(); // This pushes the bottom panel to the bottom
+        add(bottomPanel).expandX().fillX().height(50).bottom();
+
+        // Add game over window
+        addActor(gameOverWindow);
     }
 
-    private void setupLayout() {
-        // Add player info section at top
-        add(playerInfoTable).expandX().fillX().pad(10).row();
+    public void updateCurrentPlayer(String playerName) {
+        if (playerName == null) return;
+        currentPlayerLabel.setText("Current Player: " + playerName);
 
-        // Add current player and dice info
-        Table infoTable = new Table();
-        infoTable.add(currentPlayerLabel).pad(5);
-        infoTable.add(diceValueLabel).pad(5);
-        add(infoTable).expandX().fillX().pad(10).row();
-
-        // Add message display in middle
-        add(messageLabel).expandX().fillX().pad(10).row();
-
-        // Add controls at bottom
-        add(controlsTable).expandX().fillX().pad(10);
+        // Update color based on player
+        switch(playerName.toUpperCase()) {
+            case "RED": currentPlayerLabel.setColor(Color.RED); break;
+            case "BLUE": currentPlayerLabel.setColor(Color.BLUE); break;
+            case "GREEN": currentPlayerLabel.setColor(Color.GREEN); break;
+            case "YELLOW": currentPlayerLabel.setColor(Color.YELLOW); break;
+            default: currentPlayerLabel.setColor(Color.WHITE);
+        }
     }
 
     public void updateDiceValue(int value) {
         diceValueLabel.setText("Dice: " + value);
     }
 
-    public void updateCurrentPlayer(String playerName) {
-        currentPlayerLabel.setText("Current Player: " + playerName);
-    }
-
-    public void updateGameState(String state) {
-        messageLabel.setText(state);
-    }
-
     public void showMessage(String message) {
         messageLabel.setText(message);
     }
 
-    public void updatePlayers(List<Player> players) {
+    public void updatePlayers(java.util.List<Player> players) {
         playerInfoTable.clear();
         for (Player player : players) {
-            Label playerLabel = new Label(player.getName() + " (" + player.getColor() + ")", skin);
-            playerLabel.setColor(getColorForPlayer(player.getColor()));
+            Label playerLabel = new Label(player.getName(), skin);
+            switch(player.getColor().toUpperCase()) {
+                case "RED": playerLabel.setColor(Color.RED); break;
+                case "BLUE": playerLabel.setColor(Color.BLUE); break;
+                case "GREEN": playerLabel.setColor(Color.GREEN); break;
+                case "YELLOW": playerLabel.setColor(Color.YELLOW); break;
+            }
             playerInfoTable.add(playerLabel).pad(5);
         }
     }
 
-    public void enableControls() {
-        controlsTable.setVisible(true);
-    }
-
-    public void disableControls() {
-        controlsTable.setVisible(false);
-    }
-
     public void showWinnerScreen(String winner) {
-        winnerWindow.clear();
+        gameOverWindow.clear();
 
-        Label winnerLabel = new Label(winner + " wins!", skin);
+        Table content = new Table(skin);
+        Label winnerLabel = new Label(winner + " Wins!", skin);
+        winnerLabel.setFontScale(2.0f);
+
         TextButton okButton = new TextButton("OK", skin);
-
-        winnerWindow.add(winnerLabel).pad(20).row();
-        winnerWindow.add(okButton).pad(10);
-
-        okButton.addListener(new ChangeListener() {
+        okButton.addListener(new com.badlogic.gdx.scenes.scene2d.utils.ChangeListener() {
             @Override
             public void changed(ChangeEvent event, Actor actor) {
-                winnerWindow.setVisible(false);
+                gameOverWindow.setVisible(false);
             }
         });
 
-        winnerWindow.setVisible(true);
-        winnerWindow.setPosition(
-            (Gdx.graphics.getWidth() - winnerWindow.getWidth()) / 2,
-            (Gdx.graphics.getHeight() - winnerWindow.getHeight()) / 2
-        );
-    }
+        content.add(winnerLabel).pad(20).row();
+        content.add(okButton).pad(10).width(100);
 
-    private Color getColorForPlayer(String colorName) {
-        switch (colorName.toLowerCase()) {
-            case "red": return Color.RED;
-            case "blue": return Color.BLUE;
-            case "green": return Color.GREEN;
-            case "yellow": return Color.YELLOW;
-            default: return Color.WHITE;
-        }
+        gameOverWindow.add(content);
+        gameOverWindow.pack();
+        gameOverWindow.setPosition(
+            (Gdx.graphics.getWidth() - gameOverWindow.getWidth()) / 2,
+            (Gdx.graphics.getHeight() - gameOverWindow.getHeight()) / 2
+        );
+        gameOverWindow.setVisible(true);
     }
 }

@@ -13,6 +13,7 @@ import com.badlogic.gdx.graphics.VertexAttributes.Usage;
 import com.badlogic.gdx.math.*;
 import com.badlogic.gdx.math.collision.Ray;
 import com.badlogic.gdx.utils.Array;
+import com.badlogic.gdx.utils.Timer;
 import ludo.client.assets.GameAssets;
 import ludo.core.entities.Player;
 
@@ -26,6 +27,9 @@ public class GameRenderer {
     private ModelInstance boardInstance;
     private Array<ModelInstance> pawnInstances;
     private Map<Integer, Vector3> pawnPositions;
+    private Map<Integer, Boolean> highlightedPawns = new HashMap<>();
+    private static final Color HIGHLIGHT_COLOR = new Color(1, 1, 0, 0.5f);
+    private final Vector3 tempVector = new Vector3();
     private Map<String, Color> playerColors;
     private final float BOARD_SIZE = 8f;
     private final float PAWN_SCALE = 2f;
@@ -33,6 +37,7 @@ public class GameRenderer {
     private final Vector3 intersection;
     private Texture boardTexture;
     private final float SQUARE_SIZE = BOARD_SIZE / 15f; // 15x15 grid
+    private DiceRenderer diceRenderer;
 
     public GameRenderer(int width, int height) {
         Gdx.app.log(TAG, "Initializing GameRenderer");
@@ -40,6 +45,7 @@ public class GameRenderer {
         pawnPositions = new HashMap<>();
         ray = new Ray();
         intersection = new Vector3();
+        diceRenderer = new DiceRenderer();
         initializePlayerColors();
         createBoard();
     }
@@ -48,21 +54,23 @@ public class GameRenderer {
         return pawnInstances.size;
     }
 
+    public void updateDiceValue(int value) {
+        diceRenderer.startRoll(value);
+    }
+
     public void render(ModelBatch modelBatch, Environment environment) {
-        // Render board
+        // Render board and pawns
         if (boardInstance != null) {
             modelBatch.render(boardInstance, environment);
         }
 
-        // Render pawns with position logging
-        if (pawnInstances.size == 0) {
-            Gdx.app.debug(TAG, "No pawns to render");
-        } else {
-            for (ModelInstance pawn : pawnInstances) {
-                modelBatch.render(pawn, environment);
-            }
-            Gdx.app.debug(TAG, "Rendered " + pawnInstances.size + " pawns");
+        for (ModelInstance pawn : pawnInstances) {
+            modelBatch.render(pawn, environment);
         }
+
+        // Update and render dice
+        diceRenderer.update(Gdx.graphics.getDeltaTime());
+        diceRenderer.render(modelBatch);
     }
 
     private void createBoard() {
@@ -97,8 +105,8 @@ public class GameRenderer {
     private Vector3 calculatePawnPosition(int boardPosition, String playerColor) {
         float BOARD_SCALE = 8f;  // Board size in world units
         float CELL_SIZE = BOARD_SCALE / 15f;  // Size of each cell (15x15 grid)
-        float BOARD_HEIGHT = 0.2f;  // Height of the board
-        float PAWN_HEIGHT = 0.4f;   // Height to place pawn above board
+        float BOARD_HEIGHT = 0.1f;  // Height of the board
+        float PAWN_HEIGHT = 0.2f;   // Height to place pawn above board
         float halfBoard = BOARD_SCALE / 2;
         float cornerOffset = (BOARD_SCALE / 2) - CELL_SIZE;
 
@@ -109,38 +117,31 @@ public class GameRenderer {
 
             switch (playerColor.toUpperCase()) {
                 case "RED":
-                    // Bottom right corner
-                    homePosition.x = cornerOffset;
-                    homePosition.z = cornerOffset;
+                    homePosition.x = cornerOffset - 1.0f;  // Offset to place in red corner
+                    homePosition.z = cornerOffset - 1.0f;
                     break;
                 case "GREEN":
-                    // Bottom left corner
-                    homePosition.x = -cornerOffset;
-                    homePosition.z = cornerOffset;
+                    homePosition.x = -cornerOffset + 1.0f;
+                    homePosition.z = cornerOffset - 1.0f;
                     break;
                 case "BLUE":
-                    // Top right corner
-                    homePosition.x = cornerOffset;
-                    homePosition.z = -cornerOffset;
+                    homePosition.x = cornerOffset - 1.0f;
+                    homePosition.z = -cornerOffset + 1.0f;
                     break;
                 case "YELLOW":
-                    // Top left corner
-                    homePosition.x = -cornerOffset;
-                    homePosition.z = -cornerOffset;
+                    homePosition.x = -cornerOffset + 1.0f;
+                    homePosition.z = -cornerOffset + 1.0f;
                     break;
-                default:
-                    Gdx.app.error("GameRenderer", "Unknown player color: " + playerColor);
-                    return new Vector3(0, BOARD_HEIGHT + PAWN_HEIGHT, 0);
             }
             return homePosition;
         }
 
-        // Regular board position calculation
+        // Calculate position on board
         int row = boardPosition / 15;
         int col = boardPosition % 15;
 
-        float x = (col * CELL_SIZE) - halfBoard + (CELL_SIZE / 2);
-        float z = (row * CELL_SIZE) - halfBoard + (CELL_SIZE / 2);
+        float x = (col * CELL_SIZE) - halfBoard;
+        float z = (row * CELL_SIZE) - halfBoard;
         float y = BOARD_HEIGHT + PAWN_HEIGHT;
 
         return new Vector3(x, y, z);
@@ -150,7 +151,7 @@ public class GameRenderer {
         Vector3 position = calculatePawnPosition(boardPosition, playerColor);
 
         // Add small offset for multiple pawns in same position
-        float offset = PAWN_SCALE * (pawnIndex % 4) * 0.25f;
+        float offset = 0.2f * (pawnIndex % 4);  // Reduced offset
         position.x += offset;
         position.z += offset;
 
@@ -201,6 +202,48 @@ public class GameRenderer {
         Gdx.app.log(TAG, "Finished creating pawns. Total: " + pawnInstances.size);
     }
 
+    public void highlightSelectablePawns(Player player, int diceRoll) {
+        highlightedPawns.clear();
+        int playerStartIdx = player.getPawns().get(0).getPosition();
+
+        for (int i = 0; i < player.getPawns().size(); i++) {
+            Pawn pawn = player.getPawns().get(i);
+            boolean canMove = false;
+
+            if (pawn.isHome() && diceRoll == 6) {
+                canMove = true;
+            } else if (!pawn.isHome() && !pawn.isFinished()) {
+                // Add logic to check if move is valid
+                canMove = true;
+            }
+
+            if (canMove) {
+                int pawnIdx = playerStartIdx + i;
+                highlightedPawns.put(pawnIdx, true);
+                ModelInstance pawnInstance = pawnInstances.get(pawnIdx);
+                // Add glow effect or outline
+                Material mat = pawnInstance.materials.get(0);
+                mat.set(ColorAttribute.createDiffuse(HIGHLIGHT_COLOR));
+            }
+        }
+    }
+
+    public void clearHighlights() {
+        for (Map.Entry<Integer, Boolean> entry : highlightedPawns.entrySet()) {
+            int pawnIdx = entry.getKey();
+            ModelInstance pawnInstance = pawnInstances.get(pawnIdx);
+            // Reset material to original color
+            Material mat = pawnInstance.materials.get(0);
+            mat.set(ColorAttribute.createDiffuse(
+                playerColors.get(pawnInstance.userData.toString())));
+        }
+        highlightedPawns.clear();
+    }
+
+    public boolean isPawnHighlighted(int pawnIndex) {
+        return highlightedPawns.containsKey(pawnIndex);
+    }
+
 //    public void updatePawnPosition(int pawnIndex, int newPosition) {
 //        if (pawnIndex >= 0 && pawnIndex < pawnInstances.size) {
 //            ModelInstance pawn = pawnInstances.get(pawnIndex);
@@ -249,6 +292,7 @@ public class GameRenderer {
     public void dispose() {
         if (boardModel != null) boardModel.dispose();
         if (boardTexture != null) boardTexture.dispose();
+        if (diceRenderer != null) diceRenderer.dispose();
         Gdx.app.log(TAG, "GameRenderer disposed");
     }
 
@@ -261,18 +305,18 @@ public class GameRenderer {
     }
 
     public int getPawnAtScreenCoords(int screenX, int screenY, Camera camera) {
-        // Convert screen coordinates to 3D ray
-        ray.set(camera.getPickRay(screenX, screenY));
-
-        // Check intersection with each pawn's bounding sphere
+        Ray ray = camera.getPickRay(screenX, screenY);
         float minDist = Float.MAX_VALUE;
         int selectedPawn = -1;
+
+        // Larger selection radius for easier clicking
+        float selectionRadius = 0.5f;  // Increased radius
+
         for (int i = 0; i < pawnInstances.size; i++) {
             Vector3 pawnPos = pawnPositions.get(i);
             if (pawnPos != null) {
-                // Use direct sphere intersection test
-                float radius = SQUARE_SIZE * 0.4f; // Adjust radius as needed
-                if (Intersector.intersectRaySphere(ray, pawnPos, radius, intersection)) {
+                // Create a sphere around the pawn for selection
+                if (Intersector.intersectRaySphere(ray, pawnPos, selectionRadius, intersection)) {
                     float dist = intersection.dst2(camera.position);
                     if (dist < minDist) {
                         minDist = dist;
@@ -282,7 +326,29 @@ public class GameRenderer {
             }
         }
 
+        // If we found a pawn, provide visual feedback
+        if (selectedPawn != -1) {
+            highlightPawn(selectedPawn);
+            Gdx.app.log("GameRenderer", "Selected pawn: " + selectedPawn);
+        }
+
         return selectedPawn;
+    }
+
+    private void highlightPawn(int pawnIndex) {
+        ModelInstance pawn = pawnInstances.get(pawnIndex);
+        // Add temporary highlight effect
+        Material mat = pawn.materials.get(0);
+        mat.set(ColorAttribute.createDiffuse(Color.YELLOW));
+
+        // Reset highlight after a short delay
+        Timer.schedule(new Timer.Task() {
+            @Override
+            public void run() {
+                String color = (String) pawn.userData;
+                mat.set(ColorAttribute.createDiffuse(playerColors.get(color)));
+            }
+        }, 0.2f);  // Reset after 0.2 seconds
     }
 
 //    public void highlightPawn(int pawnIndex) {

@@ -1,96 +1,144 @@
 package ludo.client.render;
 
-import com.badlogic.gdx.graphics.Color;
-import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
-import com.badlogic.gdx.math.Rectangle;
-/**
- * This class is responsible for rendering the dice.
- */
+import com.badlogic.gdx.graphics.g3d.*;
+import com.badlogic.gdx.graphics.g3d.attributes.ColorAttribute;
+import com.badlogic.gdx.math.Matrix4;
+import com.badlogic.gdx.math.Quaternion;
+import com.badlogic.gdx.math.Vector3;
+import ludo.client.assets.GameAssets;
+
 public class DiceRenderer {
-    private ShapeRenderer shapeRenderer;
-    private static final float DICE_SIZE = 50f;
-    private static final float DOT_RADIUS = 5f;
-    private Rectangle bounds;
+    private ModelInstance diceInstance;
+    private final Vector3 position;
+    private final Vector3 rotation;
+    private final Quaternion quaternion;
+    private float animationTime;
+    private boolean isRolling;
     private int currentValue;
+    private int targetValue;
+    private static final float ROLL_DURATION = 1.0f;
+    private static final float DICE_SCALE = 5f;
+
+    private final Matrix4[] valueFaceRotations = new Matrix4[6];
+    private final Vector3 tempPosition = new Vector3();
+    private final Quaternion tempRotation = new Quaternion();
 
     public DiceRenderer() {
-        shapeRenderer = new ShapeRenderer();
-        bounds = new Rectangle();
+        Model diceModel = GameAssets.getInstance().getDiceModel();
+        diceInstance = new ModelInstance(diceModel);
+        position = new Vector3(5f, 2f, 5f); // Position the dice on the board
+        rotation = new Vector3();
+        quaternion = new Quaternion();
+        initializeFaceRotations();
+
+        // Set initial material for the dice
+        Material material = new Material(ColorAttribute.createDiffuse(1f, 1f, 1f, 1f));
+        diceInstance.materials.get(0).set(material);
+
+        reset();
+        updateTransform();
     }
 
-    public void render(int value, float x, float y) {
-        currentValue = value;
-        bounds.set(x, y, DICE_SIZE, DICE_SIZE);
-
-        // Draw dice outline
-        shapeRenderer.begin(ShapeRenderer.ShapeType.Filled);
-        shapeRenderer.setColor(Color.WHITE);
-        shapeRenderer.rect(x, y, DICE_SIZE, DICE_SIZE);
-
-        // Draw border
-        shapeRenderer.setColor(Color.BLACK);
-        shapeRenderer.rect(x, y, DICE_SIZE, DICE_SIZE); //TODO: check
-
-        // Draw dots based on value
-        shapeRenderer.setColor(Color.BLACK);
-        drawDots(value, x, y);
-
-        shapeRenderer.end();
+    private void initializeFaceRotations() {
+        // Define rotations for each face to show correct number
+        valueFaceRotations[0] = new Matrix4().setToRotation(Vector3.X, 0);  // 1
+        valueFaceRotations[1] = new Matrix4().setToRotation(Vector3.X, 90); // 2
+        valueFaceRotations[2] = new Matrix4().setToRotation(Vector3.Y, 90); // 3
+        valueFaceRotations[3] = new Matrix4().setToRotation(Vector3.Y, -90); // 4
+        valueFaceRotations[4] = new Matrix4().setToRotation(Vector3.X, -90); // 5
+        valueFaceRotations[5] = new Matrix4().setToRotation(Vector3.X, 180); // 6
     }
 
-    private void drawDots(int value, float x, float y) {
-        switch (value) {
-            case 1:
-                drawDot(x + DICE_SIZE/2, y + DICE_SIZE/2);
-                break;
-            case 2:
-                drawDot(x + DICE_SIZE/4, y + DICE_SIZE/4);
-                drawDot(x + 3*DICE_SIZE/4, y + 3*DICE_SIZE/4);
-                break;
-            case 3:
-                drawDot(x + DICE_SIZE/4, y + DICE_SIZE/4);
-                drawDot(x + DICE_SIZE/2, y + DICE_SIZE/2);
-                drawDot(x + 3*DICE_SIZE/4, y + 3*DICE_SIZE/4);
-                break;
-            case 4:
-                drawDot(x + DICE_SIZE/4, y + DICE_SIZE/4);
-                drawDot(x + 3*DICE_SIZE/4, y + DICE_SIZE/4);
-                drawDot(x + DICE_SIZE/4, y + 3*DICE_SIZE/4);
-                drawDot(x + 3*DICE_SIZE/4, y + 3*DICE_SIZE/4);
-                break;
-            case 5:
-                drawDot(x + DICE_SIZE/4, y + DICE_SIZE/4);
-                drawDot(x + 3*DICE_SIZE/4, y + DICE_SIZE/4);
-                drawDot(x + DICE_SIZE/2, y + DICE_SIZE/2);
-                drawDot(x + DICE_SIZE/4, y + 3*DICE_SIZE/4);
-                drawDot(x + 3*DICE_SIZE/4, y + 3*DICE_SIZE/4);
-                break;
-            case 6:
-                drawDot(x + DICE_SIZE/4, y + DICE_SIZE/4);
-                drawDot(x + 3*DICE_SIZE/4, y + DICE_SIZE/4);
-                drawDot(x + DICE_SIZE/4, y + DICE_SIZE/2);
-                drawDot(x + 3*DICE_SIZE/4, y + DICE_SIZE/2);
-                drawDot(x + DICE_SIZE/4, y + 3*DICE_SIZE/4);
-                drawDot(x + 3*DICE_SIZE/4, y + 3*DICE_SIZE/4);
-                break;
+    public void update(float deltaTime) {
+        if (isRolling) {
+            animationTime += deltaTime;
+
+            if (animationTime >= ROLL_DURATION) {
+                // Animation finished
+                isRolling = false;
+                currentValue = targetValue;
+                setFaceRotation(currentValue);
+            } else {
+                // During animation
+                float progress = animationTime / ROLL_DURATION;
+
+                // Random rotation during roll
+                rotation.add(
+                    (float)(Math.random() * 30),
+                    (float)(Math.random() * 30),
+                    (float)(Math.random() * 30)
+                );
+
+                // Interpolate to target rotation near end of animation
+                if (progress > 0.8f) {
+                    float t = (progress - 0.8f) / 0.2f;
+                    interpolateToTargetRotation(t);
+                }
+
+                updateTransform();
+            }
         }
     }
 
-    private void drawDot(float x, float y) {
-        shapeRenderer.circle(x, y, DOT_RADIUS);
+    public void startRoll(int newValue) {
+        if (newValue < 1 || newValue > 6) return;
+
+        isRolling = true;
+        animationTime = 0;
+        targetValue = newValue;
+
+        // Add initial impulse rotation
+        rotation.set(
+            (float)(Math.random() * 360),
+            (float)(Math.random() * 360),
+            (float)(Math.random() * 360)
+        );
     }
 
-    public boolean isClicked(float x, float y) {
-        // Convert y coordinate since LibGDX uses bottom-left corner as origin
-        float flippedY = com.badlogic.gdx.Gdx.graphics.getHeight() - y;
-        return bounds.contains(x, flippedY);
+    private void interpolateToTargetRotation(float t) {
+        Matrix4 targetRotation = valueFaceRotations[targetValue - 1];
+        tempRotation.setFromMatrix(targetRotation);
+        quaternion.slerp(tempRotation, t);
     }
 
-    public void updateValue(int value) {
-        this.currentValue = value;
+    private void setFaceRotation(int value) {
+        if (value < 1 || value > 6) return;
+        diceInstance.transform.set(valueFaceRotations[value - 1]);
+        updateTransform();
+    }
+
+    private void updateTransform() {
+        if (diceInstance != null) {
+            diceInstance.transform.setToTranslation(position);
+            diceInstance.transform.rotate(quaternion);
+            diceInstance.transform.scale(DICE_SCALE, DICE_SCALE, DICE_SCALE);
+        }
+    }
+
+    public void render(ModelBatch modelBatch) {
+        if (diceInstance != null) {
+            modelBatch.render(diceInstance);
+        }
+    }
+
+    public void reset() {
+        isRolling = false;
+        animationTime = 0;
+        currentValue = 1;
+        rotation.set(0, 0, 0);
+        quaternion.idt();
+        setFaceRotation(currentValue);
+    }
+
+    public boolean isRolling() {
+        return isRolling;
+    }
+
+    public int getCurrentValue() {
+        return currentValue;
     }
 
     public void dispose() {
-        shapeRenderer.dispose();
+        // Model disposal is handled by GameAssets
     }
 }
