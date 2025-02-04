@@ -45,10 +45,16 @@ public class GameScreen extends BaseScreen {
     private float cameraRotation = 0;
     private float cameraDistance = 12f;
     private float cameraHeight = 8f;
-    private Vector3 cameraTarget = new Vector3(0, 0, 0);
+    private final Vector3 cameraTarget = new Vector3(0, 0, 0);
     private boolean isDragging = false;
     private float lastTouchX;
     private float lastTouchY;
+    private float rotationSpeed = 2f;
+    private float zoomSpeed = 2f;
+    private float minZoom = 5f;
+    private float maxZoom = 20f;
+    private float minHeight = 2f;
+    private float maxHeight = 20f;
 
     public GameScreen(final LudoGame game) {
         super(game);
@@ -59,15 +65,17 @@ public class GameScreen extends BaseScreen {
         // Initialize 3D rendering components
         modelBatch = new ModelBatch();
         environment = new Environment();
-        environment.set(new ColorAttribute(ColorAttribute.AmbientLight, 0.4f, 0.4f, 0.4f, 1f));
-        environment.add(new DirectionalLight().set(0.8f, 0.8f, 0.8f, -1f, -0.8f, -0.2f));
+        setupLighting();
+//        environment.set(new ColorAttribute(ColorAttribute.AmbientLight, 0.4f, 0.4f, 0.4f, 1f));
+//        environment.add(new DirectionalLight().set(0.8f, 0.8f, 0.8f, -1f, -0.8f, -0.2f));
 
         // Set up camera
         camera = new PerspectiveCamera(67, Gdx.graphics.getWidth(), Gdx.graphics.getHeight());
-        updateCameraPosition();
-        camera.near = 1f;
-        camera.far = 300f;
-        camera.update();
+//        updateCameraPosition();
+//        camera.near = 1f;
+//        camera.far = 300f;
+//        camera.update();
+        setupCamera();
 
         // Initialize UI components
         this.hud = new GameHUD();
@@ -90,13 +98,36 @@ public class GameScreen extends BaseScreen {
         Gdx.app.log(TAG, "GameScreen initialized");
     }
 
+    private void setupLighting() {
+        // Ambient light
+        environment.set(new ColorAttribute(ColorAttribute.AmbientLight, 0.4f, 0.4f, 0.4f, 1f));
+
+        // Main directional light
+        DirectionalLight mainLight = new DirectionalLight().set(0.8f, 0.8f, 0.8f, -1f, -0.8f, -0.2f);
+        environment.add(mainLight);
+
+        // Added a secondary light for better illumination
+        DirectionalLight fillLight = new DirectionalLight().set(0.3f, 0.3f, 0.3f, 1f, -0.4f, -0.2f);
+        environment.add(fillLight);
+    }
+
+    private void setupCamera() {
+        updateCameraPosition();
+        camera.near = 1f;
+        camera.far = 300f;
+        camera.update();
+    }
+
     private void setupInputHandling() {
-        Gdx.input.setInputProcessor(new InputMultiplexer(stage, new InputAdapter() {
+        InputMultiplexer multiplexer = new InputMultiplexer();
+        multiplexer.addProcessor(stage);
+        multiplexer.addProcessor(new InputAdapter() {
             @Override
             public boolean touchDown(int screenX, int screenY, int pointer, int button) {
                 lastTouchX = screenX;
                 lastTouchY = screenY;
                 isDragging = true;
+                Gdx.app.log(TAG, "TouchDown event: x=" + screenX + ", y=" + screenY);
                 return true;
             }
 
@@ -109,14 +140,16 @@ public class GameScreen extends BaseScreen {
             @Override
             public boolean touchDragged(int screenX, int screenY, int pointer) {
                 if (isDragging) {
-                    float deltaX = (screenX - lastTouchX) * 0.5f;
-                    float deltaY = (screenY - lastTouchY) * 0.5f;
+                    float deltaX = (screenX - lastTouchX) * rotationSpeed;
+                    float deltaY = (screenY - lastTouchY) * rotationSpeed;
 
+                    // Rotate camera
                     cameraRotation += deltaX;
-                    cameraHeight = Math.max(2f, Math.min(20f, cameraHeight - deltaY * 0.1f));
+
+                    // Adjust camera height
+                    cameraHeight = Math.max(minHeight, Math.min(maxHeight, cameraHeight - deltaY * 0.1f));
 
                     updateCameraPosition();
-
                     lastTouchX = screenX;
                     lastTouchY = screenY;
                 }
@@ -125,11 +158,78 @@ public class GameScreen extends BaseScreen {
 
             @Override
             public boolean scrolled(float amountX, float amountY) {
-                cameraDistance = Math.max(5f, Math.min(20f, cameraDistance + amountY));
+                // Zoom with scroll wheel
+                Gdx.app.log(TAG, "Scroll event: amountY=" + amountY);
+                cameraDistance = Math.max(minZoom,
+                    Math.min(maxZoom, cameraDistance + amountY * zoomSpeed * 2.0f));
                 updateCameraPosition();
                 return true;
             }
-        }));
+
+            @Override
+            public boolean keyDown(int keycode) {
+                // Additional keyboard controls
+                Gdx.app.log(TAG, "Key pressed: " + keycode);
+                switch(keycode) {
+                    case Input.Keys.LEFT:
+                        cameraRotation += 15f;
+                        break;
+                    case Input.Keys.RIGHT:
+                        cameraRotation -= 15f;
+                        break;
+                    case Input.Keys.UP:
+                        cameraHeight = Math.min(maxHeight, cameraHeight + 2f);
+                        break;
+                    case Input.Keys.DOWN:
+                        cameraHeight = Math.max(minHeight, cameraHeight - 2f);
+                        break;
+                }
+                updateCameraPosition();
+                return true;
+            }
+        });
+        Gdx.input.setInputProcessor(multiplexer);
+    }
+
+    private void handleContinuousInput(float delta) {
+        float rotationAmount = 100f * delta; // Faster rotation speed
+        float heightAmount = 5f * delta;     // Faster height change
+
+        // Check for continuous keyboard input
+        if (Gdx.input.isKeyPressed(Input.Keys.LEFT)) {
+            cameraRotation += rotationAmount;
+            updateCameraPosition();
+        }
+        if (Gdx.input.isKeyPressed(Input.Keys.RIGHT)) {
+            cameraRotation -= rotationAmount;
+            updateCameraPosition();
+        }
+        if (Gdx.input.isKeyPressed(Input.Keys.UP)) {
+            cameraHeight = Math.min(maxHeight, cameraHeight + heightAmount);
+            updateCameraPosition();
+        }
+        if (Gdx.input.isKeyPressed(Input.Keys.DOWN)) {
+            cameraHeight = Math.max(minHeight, cameraHeight - heightAmount);
+            updateCameraPosition();
+        }
+
+        // Alternative controls using WASD
+        if (Gdx.input.isKeyPressed(Input.Keys.A)) {
+            cameraRotation += rotationAmount;
+            updateCameraPosition();
+        }
+        if (Gdx.input.isKeyPressed(Input.Keys.D)) {
+            cameraRotation -= rotationAmount;
+            updateCameraPosition();
+        }
+        if (Gdx.input.isKeyPressed(Input.Keys.W)) {
+            cameraHeight = Math.min(maxHeight, cameraHeight + heightAmount);
+            updateCameraPosition();
+        }
+        if (Gdx.input.isKeyPressed(Input.Keys.S)) {
+            cameraHeight = Math.max(minHeight, cameraHeight - heightAmount);
+            updateCameraPosition();
+        }
     }
 
     private void updateCameraPosition() {
@@ -139,13 +239,21 @@ public class GameScreen extends BaseScreen {
         camera.lookAt(cameraTarget);
         camera.up.set(Vector3.Y);
         camera.update();
+
+        Gdx.app.log(TAG, "Camera Position - x:" + x + " y:" + cameraHeight + " z:" + z +
+            " rotation:" + cameraRotation + " distance:" + cameraDistance);
     }
 
     @Override
     public void render(float delta) {
         // Clear screen
+        handleContinuousInput(delta);
+
         Gdx.gl.glClearColor(0.2f, 0.2f, 0.3f, 1);
         Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT | GL20.GL_DEPTH_BUFFER_BIT);
+
+        //depth testing for proper 3D rendering
+        Gdx.gl.glEnable(GL20.GL_DEPTH_TEST);
 
         // Update camera
         camera.update();
@@ -163,6 +271,9 @@ public class GameScreen extends BaseScreen {
             renderer.render(modelBatch, environment);
             modelBatch.end();
         }
+
+        // Disable depth testing for UI
+        Gdx.gl.glDisable(GL20.GL_DEPTH_TEST);
 
         // Render UI
         if (stage != null) {
@@ -202,7 +313,7 @@ public class GameScreen extends BaseScreen {
 
     public void updateGameState(String state) {
         if (currentPlayer != null) {
-            renderer.updatePawnPositions();
+            renderer.updateAllPawnPositions();
             hud.updateCurrentPlayer(currentPlayer.getName());
         }
         hud.showMessage(state);
@@ -212,7 +323,7 @@ public class GameScreen extends BaseScreen {
         for (Player player : players) {
             if (player.getColor().equals(color)) {
                 for (int i = 0; i < positions.size(); i++) {
-                    renderer.updatePawnPosition(i, positions.get(i));
+                    renderer.updatePawnPosition(i, positions.get(i), color);
                 }
                 break;
             }
@@ -253,7 +364,7 @@ public class GameScreen extends BaseScreen {
 
     private void updateGameState() {
         if (currentPlayer != null) {
-            renderer.updatePawnPositions();
+            renderer.updateAllPawnPositions();
             hud.updateCurrentPlayer(currentPlayer.getName());
         }
     }
@@ -295,9 +406,17 @@ public class GameScreen extends BaseScreen {
     }
 
     public void playMoveAnimation(int pawnIndex, int newPosition) {
-        // For now just update position instantly
-        // Could be enhanced with smooth animation later
-        updatePawnPosition(pawnIndex, newPosition);
+        // Find the player color for this pawn
+        String color = null;
+        int playerIndex = pawnIndex / 4; // Each player has 4 pawns
+        if (playerIndex < players.size()) {
+            Player player = players.get(playerIndex);
+            color = player.getColor();
+        }
+
+        if (color != null) {
+            renderer.updatePawnPosition(pawnIndex, newPosition, color);
+        }
     }
 
 
@@ -336,6 +455,16 @@ public class GameScreen extends BaseScreen {
 
 
     public void updatePawnPosition(int pawnIndex, int newPosition) {
-        renderer.updatePawnPosition(pawnIndex, newPosition);
+        // Similar to playMoveAnimation
+        String color = null;
+        int playerIndex = pawnIndex / 4;
+        if (playerIndex < players.size()) {
+            Player player = players.get(playerIndex);
+            color = player.getColor();
+        }
+
+        if (color != null) {
+            renderer.updatePawnPosition(pawnIndex, newPosition, color);
+        }
     }
 }
