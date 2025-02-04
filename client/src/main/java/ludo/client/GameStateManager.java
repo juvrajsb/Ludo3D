@@ -1,16 +1,17 @@
 package ludo.client;
 
+import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.Screen;
 import ludo.client.screens.LobbyScreen;
 import ludo.core.events.serverToClient.*;
-import ludo.core.events.clientToServer.*;
-import ludo.core.game.GameState;
+import ludo.core.events.clientToServer.*;import ludo.core.game.GameState;
 import ludo.core.network.*;
 import ludo.client.networking.ClientNetworkHandler;
 import ludo.client.screens.GameScreen;
 import ludo.core.entities.Player;
 import ludo.core.events.*;
 
+import java.util.ArrayList;
 import java.util.Objects;
 import java.util.logging.Logger;
 import java.util.List;
@@ -27,10 +28,21 @@ public class GameStateManager implements MessageListener {
     private String currentColor;
     private Screen currentScreen;
     private LobbyScreen lobbyScreen;
+    private final LudoGame game;
     private static final Logger LOGGER = Logger.getLogger(GameStateManager.class.getName());
+    private List<Player> currentPlayers = new ArrayList<>();
 
+    public GameStateManager(LudoGame game) {
+        this.game = game;  // Initialize game
+        this.networkHandler = new ClientNetworkHandler();
+        this.networkHandler.setMessageListener(this);
+        this.isFirstPlayer = false;
+        this.gameStarted = false;
+    }
 
+    //for testing
     public GameStateManager() {
+        this.game = null;
         this.networkHandler = new ClientNetworkHandler();
         this.networkHandler.setMessageListener(this);
         this.isFirstPlayer = false;
@@ -39,6 +51,7 @@ public class GameStateManager implements MessageListener {
 
     //for testing
     public GameStateManager(ClientNetworkHandler networkHandler) {
+        this.game = null;
         this.networkHandler = networkHandler;
         this.networkHandler.setMessageListener(this);
         this.isFirstPlayer = false;
@@ -221,28 +234,17 @@ public class GameStateManager implements MessageListener {
         }
     }
 
-    private void handleStartGameResponse(StartGameResponseEvent event) {
-        LOGGER.info("Start game response received: " + event.getResponse());
+    public void handleWaitingRoomUpdate(WaitingRoomUpdateEvent event) {
+        LOGGER.info("Updating lobby with " + event.getUsernames().size() + " players");
 
-        if (event.isSuccess()) {
-            gameStarted = true;
-            LOGGER.info("Game successfully started");
-        } else {
-            LOGGER.warning("Failed to start game: " + event.getMessage());
-            if (lobbyScreen != null) {
-                lobbyScreen.showError("Failed to start game: " + event.getMessage());
-            }
+        // Store players in GameStateManager
+        currentPlayers.clear();
+        for (String username : event.getUsernames()) {
+            currentPlayers.add(new Player(username, event.getColorForPlayer(username)));
         }
-    }
 
-    private void handleWaitingRoomUpdate(WaitingRoomUpdateEvent event) {
         if (lobbyScreen != null) {
-            List<Player> players = event.getUsernames().stream()
-                .map(name -> new Player(name, event.getColorForPlayer(name)))
-                .collect(Collectors.toList());
-
-            LOGGER.info("Updating lobby with " + players.size() + " players");
-            lobbyScreen.updatePlayersList(players);
+            lobbyScreen.updatePlayersList(currentPlayers);
         }
     }
 
@@ -281,26 +283,63 @@ public class GameStateManager implements MessageListener {
         }
     }
 
-    private void handleGameStarted(GameStartedEvent event) {
+    public void handleGameStarted(GameStartedEvent event) {
         LOGGER.info("Game started event received");
-        gameStarted = true;
+        LOGGER.info("Current players in GameStateManager: " + currentPlayers.size());
 
-        // Initialize game with the provided players
-        if (gameScreen != null) {
-            List<Player> players = event.getPlayers();
-            LOGGER.info("Initializing game with " + players.size() + " players");
+        // Store event players
+        final List<Player> eventPlayers = event.getPlayers();
+        LOGGER.info("Players received in event: " + eventPlayers.size());
 
-            // Clear existing players and add new ones
-            for (Player player : players) {
-                LOGGER.info("Adding player: " + player.getName() + " (" + player.getColor() + ")");
+        // Print details of each player
+        for (Player p : eventPlayers) {
+            LOGGER.info("Event player: " + p.getName() + " Color: " + p.getColor());
+        }
+
+        Gdx.app.postRunnable(() -> {
+            LOGGER.info("Creating GameScreen with " + currentPlayers.size() + " players");
+
+            GameScreen gameScreen = new GameScreen(game);
+
+            // Transfer players
+            for (Player player : eventPlayers) {
+                LOGGER.info("Transferring player to GameScreen: " + player.getName());
                 gameScreen.addPlayer(player);
             }
 
-            // Set initial player
-            gameScreen.setCurrentPlayer(event.getStartingPlayer());
-            LOGGER.info("Set starting player: " + event.getStartingPlayer());
+            LOGGER.info("GameScreen created with " + gameScreen.getPlayerCount() + " players");
+
+            game.setScreen(gameScreen);
+            this.gameScreen = gameScreen;
+            LOGGER.info("Screen transition complete");
+        });
+    }
+
+    public List<Player> getCurrentPlayers() {
+        return new ArrayList<>(currentPlayers);
+    }
+
+    public void handleStartGameResponse(StartGameResponseEvent event) {
+        LOGGER.info("Start game response received: " + event.getResponse());
+
+        if (event.isSuccess()) {
+            LOGGER.info("Game successfully started");
+            gameStarted = true;
+
+            // If we're still in lobby screen, transition to game screen
+            if (currentScreen instanceof LobbyScreen) {
+                Gdx.app.postRunnable(() -> {
+                    GameScreen gameScreen = new GameScreen(game);
+                    game.setScreen(gameScreen);
+                    this.gameScreen = gameScreen;
+                    LOGGER.info("Transitioned from lobby to game screen");
+                });
+            }
         } else {
-            LOGGER.warning("GameScreen is null when handling game start event");
+            LOGGER.warning("Failed to start game: " + event.getMessage());
+            if (lobbyScreen != null) {
+                lobbyScreen.showError("Failed to start game: " + event.getMessage());
+            }
         }
     }
 

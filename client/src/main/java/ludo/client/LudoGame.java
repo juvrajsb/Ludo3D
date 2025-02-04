@@ -19,7 +19,7 @@ public class LudoGame extends Game {
 
     @Override
     public void create() {
-        gameStateManager = new GameStateManager();
+        gameStateManager = new GameStateManager(this);
         // Start with connection screen instead of menu
 //        setScreen(new ConnectionScreen(this));
         setScreen(new MenuScreen(this));

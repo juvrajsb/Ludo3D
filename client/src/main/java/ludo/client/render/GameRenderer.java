@@ -49,28 +49,19 @@ public class GameRenderer {
     }
 
     public void render(ModelBatch modelBatch, Environment environment) {
-        // Debug log for render call
-        Gdx.app.log(TAG, "Rendering " + pawnInstances.size + " pawns");
-
         // Render board
         if (boardInstance != null) {
             modelBatch.render(boardInstance, environment);
-        } else {
-            Gdx.app.error(TAG, "Board instance is null!");
         }
 
         // Render pawns with position logging
         if (pawnInstances.size == 0) {
             Gdx.app.debug(TAG, "No pawns to render");
-            return;
-        }
-
-        for (int i = 0; i < pawnInstances.size; i++) {
-            ModelInstance pawn = pawnInstances.get(i);
-            Vector3 position = new Vector3();
-            pawn.transform.getTranslation(position);
-            Gdx.app.debug(TAG, "Rendering pawn " + i + " at position: " + position);
-            modelBatch.render(pawn, environment);
+        } else {
+            for (ModelInstance pawn : pawnInstances) {
+                modelBatch.render(pawn, environment);
+            }
+            Gdx.app.debug(TAG, "Rendered " + pawnInstances.size + " pawns");
         }
     }
 
@@ -104,47 +95,38 @@ public class GameRenderer {
     }
 
     public void createPawns(List<Player> players) {
-        try {
-            Gdx.app.log(TAG, "Starting pawn creation for " + players.size() + " players");
-            pawnInstances.clear();
-            pawnPositions.clear();
+        Gdx.app.log(TAG, "Creating pawns for " + players.size() + " players");
+        pawnInstances.clear();
+        pawnPositions.clear();
 
-            Model pawnModel = GameAssets.getInstance().getPawnModel();
-            if (pawnModel == null) {
-                throw new RuntimeException("Pawn model is null!");
-            }
-
-            int pawnIndex = 0;
-            for (Player player : players) {
-                Gdx.app.log(TAG, "Creating pawns for player: " + player.getName() +
-                    " with color " + player.getColor());
-
-                Color playerColor = playerColors.get(player.getColor());
-                Material pawnMaterial = new Material(ColorAttribute.createDiffuse(playerColor));
-
-                List<Pawn> playerPawns = player.getPawns();
-                for (int i = 0; i < playerPawns.size(); i++) {
-                    ModelInstance pawnInstance = new ModelInstance(pawnModel);
-                    pawnInstance.materials.get(0).set(pawnMaterial);
-
-                    Pawn currentPawn = playerPawns.get(i);
-                    int position = currentPawn.getPosition();
-
-                    // Position the pawn and log its position
-                    positionPawn(pawnInstance, position, pawnIndex);
-                    Vector3 pos = new Vector3();
-                    pawnInstance.transform.getTranslation(pos);
-                    Gdx.app.log(TAG, "Positioned pawn " + pawnIndex + " at " + pos);
-
-                    pawnInstances.add(pawnInstance);
-                    pawnIndex++;
-                }
-            }
-            Gdx.app.log(TAG, "Pawn creation completed. Total pawns: " + pawnInstances.size);
-        } catch (Exception e) {
-            Gdx.app.error(TAG, "Error creating pawns: " + e.getMessage());
-            e.printStackTrace();
+        Model pawnModel = GameAssets.getInstance().getPawnModel();
+        if (pawnModel == null) {
+            Gdx.app.error(TAG, "Pawn model is null!");
+            return;
         }
+
+        int pawnIndex = 0;
+        for (Player player : players) {
+            Gdx.app.log(TAG, "Processing player: " + player.getName() +
+                " Color: " + player.getColor() +
+                " Pawns: " + player.getPawns().size());
+
+            Color playerColor = playerColors.get(player.getColor());
+            Material pawnMaterial = new Material(ColorAttribute.createDiffuse(playerColor));
+
+            for (Pawn pawn : player.getPawns()) {
+                ModelInstance pawnInstance = new ModelInstance(pawnModel);
+                pawnInstance.materials.get(0).set(pawnMaterial);
+
+                int position = pawn.getPosition();
+                positionPawn(pawnInstance, position, pawnIndex);
+
+                pawnInstances.add(pawnInstance);
+                Gdx.app.log(TAG, "Created pawn " + pawnIndex + " at position " + position);
+                pawnIndex++;
+            }
+        }
+        Gdx.app.log(TAG, "Finished creating pawns. Total: " + pawnInstances.size);
     }
 
     private Vector3 calculatePawnPosition(int boardPosition) {

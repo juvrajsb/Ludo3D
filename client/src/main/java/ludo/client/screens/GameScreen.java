@@ -20,7 +20,9 @@ import ludo.client.render.GameRenderer;
 import ludo.client.ui.GameHUD;
 import ludo.core.entities.*;
 
+import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.CopyOnWriteArrayList;
 
 public class GameScreen extends BaseScreen {
     private static final String TAG = "GameScreen";
@@ -30,7 +32,7 @@ public class GameScreen extends BaseScreen {
     private final Environment environment;
     private final PerspectiveCamera camera;
     private final TextButton rollButton;
-    private List<Player> players;
+    private List<Player> players = new CopyOnWriteArrayList<>();
 
     // Game state
     private Player currentPlayer;
@@ -51,6 +53,8 @@ public class GameScreen extends BaseScreen {
     public GameScreen(final LudoGame game) {
         super(game);
         Gdx.app.log(TAG, "Initializing GameScreen");
+        Gdx.app.log(TAG, "GameStateManager has " + game.getGameStateManager().getCurrentPlayers().size() + " players");
+        this.players = new ArrayList<>();
 
         // Initialize 3D rendering components
         modelBatch = new ModelBatch();
@@ -79,6 +83,8 @@ public class GameScreen extends BaseScreen {
 
         // Set up input handling
         setupInputHandling();
+
+        game.getGameStateManager().initialize(this);
 
         // Debug log for initialization
         Gdx.app.log(TAG, "GameScreen initialized");
@@ -144,29 +150,39 @@ public class GameScreen extends BaseScreen {
         // Update camera
         camera.update();
 
-        // Debug logging for camera position
+        // Debug logging periodically
         if (Gdx.input.isKeyJustPressed(Input.Keys.D)) {
             Gdx.app.log(TAG, "Camera Position: " + camera.position);
+            Gdx.app.log(TAG, "Number of players: " + players.size());
             Gdx.app.log(TAG, "Number of pawns: " + renderer.getNumberOfPawns());
         }
 
         // Render 3D scene
-        modelBatch.begin(camera);
-        renderer.render(modelBatch, environment);
-        modelBatch.end();
+        if (renderer != null && modelBatch != null && environment != null) {
+            modelBatch.begin(camera);
+            renderer.render(modelBatch, environment);
+            modelBatch.end();
+        }
 
         // Render UI
-        stage.act(delta);
-        stage.draw();
+        if (stage != null) {
+            stage.act(delta);
+            stage.draw();
+        }
     }
 
+//    @Override
     public void addPlayer(Player player) {
-        Gdx.app.log(TAG, "Adding player: " + player.getName() + " with color " + player.getColor());
-        players.add(player);
-        // Update renderer with new pawns
-        renderer.createPawns(players);
-        // Log current number of pawns
-        Gdx.app.log(TAG, "Current number of pawns: " + renderer.getNumberOfPawns());
+        Gdx.app.log(TAG, "Adding player to GameScreen: " + player.getName());
+        if (!players.contains(player)) {
+            players.add(player);
+            renderer.createPawns(players);
+            Gdx.app.log(TAG, "Players after add: " + players.size());
+        }
+    }
+
+    public int getPlayerCount() {
+        return players.size();
     }
 
     @Override
