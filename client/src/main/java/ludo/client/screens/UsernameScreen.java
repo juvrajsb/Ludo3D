@@ -7,6 +7,7 @@ import com.badlogic.gdx.scenes.scene2d.ui.*;
 import com.badlogic.gdx.scenes.scene2d.utils.ChangeListener;
 import com.badlogic.gdx.utils.Align;
 import ludo.client.LudoGame;
+import ludo.core.events.serverToClient.Response;
 
 public class UsernameScreen extends BaseScreen {
     private TextField usernameField;
@@ -14,6 +15,7 @@ public class UsernameScreen extends BaseScreen {
     private SelectBox<String> colorSelect;
     private SelectBox<Integer> playerCountSelect;
     private Table playerCountTable;
+    private boolean joinInProgress = false;
 
     public UsernameScreen(final LudoGame game) {
         super(game);
@@ -22,6 +24,8 @@ public class UsernameScreen extends BaseScreen {
             game.setScreen(new ConnectionScreen(game));
             return;
         }
+
+        game.getGameStateManager().setCurrentScreen(this);
 
         Table mainTable = new Table();
         mainTable.setFillParent(true);
@@ -71,17 +75,49 @@ public class UsernameScreen extends BaseScreen {
     }
 
     private void attemptJoin() {
+        if (joinInProgress) {
+            return;
+        }
+
         String username = usernameField.getText().trim();
         if (username.isEmpty()) {
             errorLabel.setText("Please enter a username");
             return;
         }
 
+        // Clear any previous error
+        errorLabel.setText("");
+        joinInProgress = true;
+
         // Attempt to join
-        if (game.getGameStateManager().joinGame(username, colorSelect.getSelected())) {
-            game.setScreen(new LobbyScreen(game));
-        } else {
-            errorLabel.setText("Failed to join game. Name or color might be taken.");
+        if (!game.getGameStateManager().joinGame(username, colorSelect.getSelected())) {
+            joinInProgress = false;
+            errorLabel.setText("Failed to send join request");
+        }
+    }
+
+    public void onJoinResponse(Response response) {
+        joinInProgress = false;
+
+        switch (response) {
+            case OK:
+                game.setScreen(new LobbyScreen(game));
+                break;
+            case FIRST_PLAYER:
+                game.setScreen(new LobbyScreen(game));
+                break;
+            case COLOR_TAKEN:
+                errorLabel.setText("This color is already taken. Please choose another color.");
+                break;
+            case USERNAME_TAKEN:
+                errorLabel.setText("This username is already taken. Please choose another name.");
+                break;
+            case GAME_FULL:
+                errorLabel.setText("The game is full. Please try again later.");
+                break;
+            default:
+                errorLabel.setText("Join failed: " + response);
+                break;
         }
     }
 

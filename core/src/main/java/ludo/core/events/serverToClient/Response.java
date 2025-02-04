@@ -27,6 +27,12 @@ public enum Response {
      * to controller.
      */
     USERNAME_TAKEN,
+    /**
+     * Connection refused because another player
+     * with the same color is already connected
+     * to controller.
+     */
+    COLOR_TAKEN,
 
     /**
      * Connection refused because the number of

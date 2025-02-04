@@ -280,9 +280,14 @@ public class ServerGameStateManager implements MessageListener {
             .noneMatch(p -> p.getColor().equals(desiredColor));
     }
 
-    private boolean isNameOrColorTaken(String playerName, String desiredColor) {
+    private boolean isNameTaken(String playerName, String desiredColor) {
         return gameManager.getPlayers().stream()
-            .anyMatch(p -> p.getName().equals(playerName) || p.getColor().equals(desiredColor));
+            .anyMatch(p -> p.getName().equals(playerName));
+    }
+
+    private boolean isColorTaken(String desiredColor) {
+        return gameManager.getPlayers().stream()
+            .anyMatch(p -> p.getColor().equals(desiredColor));
     }
 
     private void handleJoinRequest(JoinGameRequestEvent event) {
@@ -290,10 +295,16 @@ public class ServerGameStateManager implements MessageListener {
         String playerName = event.getPlayerName();
         String color = event.getDesiredColor();
 
-        // Validate name and color
-        if (isNameOrColorTaken(playerName, color)) {
+        // Validate name
+        if (isNameTaken(playerName, color)) {
             networkHandler.sendToClient(connectionId,
                 new JoinGameResponseEvent(Response.USERNAME_TAKEN));
+            return;
+        }
+        // Validate color
+        if (isColorTaken(color)) {
+            networkHandler.sendToClient(connectionId,
+                new JoinGameResponseEvent(Response.COLOR_TAKEN));
             return;
         }
 
