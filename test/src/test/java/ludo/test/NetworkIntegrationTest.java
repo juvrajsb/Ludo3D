@@ -20,7 +20,7 @@ public class NetworkIntegrationTest {
         MockitoAnnotations.initMocks(this);
         networkHandler = new ClientNetworkHandler();
         networkHandler.setMessageListener(messageListener);
-        gameState = new GameStateManager();
+        gameState = new GameStateManager(networkHandler);
     }
 
     @Test

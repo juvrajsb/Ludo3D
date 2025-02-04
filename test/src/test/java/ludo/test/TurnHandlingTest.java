@@ -31,7 +31,7 @@ public class TurnHandlingTest {
         // Mock network connection status
         when(networkHandler.isConnected()).thenReturn(true);
 
-        gameStateManager = new GameStateManager();
+        gameStateManager = new GameStateManager(networkHandler);
 
         // Inject mocks
         try {

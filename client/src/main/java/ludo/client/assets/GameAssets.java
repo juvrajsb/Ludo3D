@@ -1,14 +1,24 @@
 package ludo.client.assets;
 
+import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.assets.AssetManager;
-import com.badlogic.gdx.graphics.g3d.Model;
 import com.badlogic.gdx.graphics.Texture;
+import com.badlogic.gdx.graphics.g3d.Model;
+import com.badlogic.gdx.graphics.g3d.loader.G3dModelLoader;
+import com.badlogic.gdx.utils.UBJsonReader;
 
 public class GameAssets {
+    private static final String TAG = "GameAssets";
     private static GameAssets instance;
     private AssetManager assetManager;
+    private Model pawnModel;
+    private Model diceModel;
+    private Texture pawnBaseColorTexture;
+    private Texture pawnNormalTexture;
+    private Texture pawnRoughnessTexture;
 
     private GameAssets() {
+        Gdx.app.log(TAG, "Initializing GameAssets");
         assetManager = new AssetManager();
         loadAssets();
     }
@@ -21,34 +31,80 @@ public class GameAssets {
     }
 
     private void loadAssets() {
-        loadModels();
-        loadTextures();
-        assetManager.finishLoading();
-    }
+        try {
+            Gdx.app.log(TAG, "Loading game assets...");
 
-    public void loadModels() {
-        assetManager.load("models/pawn.g3db", Model.class);
-        assetManager.load("models/dice.g3db", Model.class);
-    }
+            // Load pawn model directly using G3dModelLoader
+            G3dModelLoader modelLoader = new G3dModelLoader(new UBJsonReader());
+            try {
+                pawnModel = modelLoader.loadModel(Gdx.files.internal("models/pawn.g3db"));
+                Gdx.app.log(TAG, "Pawn model loaded successfully");
+            } catch (Exception e) {
+                Gdx.app.error(TAG, "Failed to load pawn model: " + e.getMessage());
+                e.printStackTrace();
+            }
 
-    private void loadTextures() {
-        assetManager.load("images/board.png", Texture.class);
+            try {
+                diceModel = modelLoader.loadModel(Gdx.files.internal("models/dice.g3db"));
+                Gdx.app.log(TAG, "Dice model loaded successfully");
+            } catch (Exception e) {
+                Gdx.app.error(TAG, "Failed to load dice model: " + e.getMessage());
+                e.printStackTrace();
+            }
+
+            // Load textures
+            try {
+                pawnBaseColorTexture = new Texture(Gdx.files.internal("models/textures/Carpet_BaseColor.jpg"));
+                pawnNormalTexture = new Texture(Gdx.files.internal("models/textures/Carpet_Normal.jpg"));
+                pawnRoughnessTexture = new Texture(Gdx.files.internal("models/textures/Carpet_Roughness.jpg"));
+
+                pawnBaseColorTexture.setFilter(Texture.TextureFilter.Linear, Texture.TextureFilter.Linear);
+                pawnNormalTexture.setFilter(Texture.TextureFilter.Linear, Texture.TextureFilter.Linear);
+                pawnRoughnessTexture.setFilter(Texture.TextureFilter.Linear, Texture.TextureFilter.Linear);
+
+                Gdx.app.log(TAG, "Textures loaded successfully");
+            } catch (Exception e) {
+                Gdx.app.error(TAG, "Failed to load textures: " + e.getMessage());
+                e.printStackTrace();
+            }
+
+        } catch (Exception e) {
+            Gdx.app.error(TAG, "Error loading assets: " + e.getMessage());
+            e.printStackTrace();
+        }
     }
 
     public Model getPawnModel() {
-        return assetManager.get("models/pawn.g3db", Model.class);
+        if (pawnModel == null) {
+            Gdx.app.error(TAG, "Pawn model is null!");
+        }
+        return pawnModel;
     }
 
     public Model getDiceModel() {
-        return assetManager.get("models/dice.g3db", Model.class);
+        return diceModel;
     }
 
-    public Texture getBoardTexture() {
-        return assetManager.get("images/board.png", Texture.class);
+    public Texture getPawnBaseColorTexture() {
+        return pawnBaseColorTexture;
+    }
+
+    public Texture getPawnNormalTexture() {
+        return pawnNormalTexture;
+    }
+
+    public Texture getPawnRoughnessTexture() {
+        return pawnRoughnessTexture;
     }
 
     public void dispose() {
-        assetManager.dispose();
+        Gdx.app.log(TAG, "Disposing GameAssets");
+        if (assetManager != null) assetManager.dispose();
+        if (pawnModel != null) pawnModel.dispose();
+        if (diceModel != null) diceModel.dispose();
+        if (pawnBaseColorTexture != null) pawnBaseColorTexture.dispose();
+        if (pawnNormalTexture != null) pawnNormalTexture.dispose();
+        if (pawnRoughnessTexture != null) pawnRoughnessTexture.dispose();
         instance = null;
     }
 }

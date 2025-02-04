@@ -90,10 +90,10 @@ public class ClientNetworkHandler implements NetworkHandler {
 //            connection = null;
 //        }
 //    }
-//
-//    public String getPlayerId() {
-//        return null;
-//    }
+//for testing
+    public String getPlayerId() {
+        return null;
+    }
 //
 //
 //    public void stop() {

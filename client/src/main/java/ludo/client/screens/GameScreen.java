@@ -2,6 +2,8 @@ package ludo.client.screens;
 
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.Input;
+import com.badlogic.gdx.InputAdapter;
+import com.badlogic.gdx.InputMultiplexer;
 import com.badlogic.gdx.graphics.GL20;
 import com.badlogic.gdx.graphics.PerspectiveCamera;
 import com.badlogic.gdx.graphics.g3d.Environment;
@@ -21,15 +23,14 @@ import ludo.core.entities.*;
 import java.util.List;
 
 public class GameScreen extends BaseScreen {
+    private static final String TAG = "GameScreen";
     private final GameHUD hud;
     private final GameRenderer renderer;
     private final ModelBatch modelBatch;
     private final Environment environment;
     private final PerspectiveCamera camera;
     private final TextButton rollButton;
-    private float cameraRotation = 0;
-    private float cameraDistance = 12f;
-    private Vector3 cameraTarget = new Vector3(0, 0, 0);
+    private List<Player> players;
 
     // Game state
     private Player currentPlayer;
@@ -38,8 +39,18 @@ public class GameScreen extends BaseScreen {
     private int lastDiceRoll;
     private boolean isRolling = false;
 
-    public GameScreen(LudoGame game) {
+    // Camera control variables
+    private float cameraRotation = 0;
+    private float cameraDistance = 12f;
+    private float cameraHeight = 8f;
+    private Vector3 cameraTarget = new Vector3(0, 0, 0);
+    private boolean isDragging = false;
+    private float lastTouchX;
+    private float lastTouchY;
+
+    public GameScreen(final LudoGame game) {
         super(game);
+        Gdx.app.log(TAG, "Initializing GameScreen");
 
         // Initialize 3D rendering components
         modelBatch = new ModelBatch();
@@ -50,7 +61,6 @@ public class GameScreen extends BaseScreen {
         // Set up camera
         camera = new PerspectiveCamera(67, Gdx.graphics.getWidth(), Gdx.graphics.getHeight());
         updateCameraPosition();
-        camera.lookAt(0, 0, 0);
         camera.near = 1f;
         camera.far = 300f;
         camera.update();
@@ -62,26 +72,116 @@ public class GameScreen extends BaseScreen {
         rollButton = new TextButton("Roll Dice", skin);
         rollButton.setSize(100, 50);
         rollButton.setPosition(Gdx.graphics.getWidth() - 120, 20);
-        rollButton.addListener(new ChangeListener() {
-            @Override
-            public void changed(ChangeEvent event, Actor actor) {
-                if (!isRolling && game.getGameStateManager().getCurrentUsername().equals(currentPlayer.getName())) {
-                    requestDiceRoll();
-                }
-            }
-        });
         stage.addActor(rollButton);
 
-        // Initialize renderer
+        // Initialize renderer with correct dimensions
         this.renderer = new GameRenderer(Gdx.graphics.getWidth(), Gdx.graphics.getHeight());
 
-        // Load initial game state
-        initializeGame();
+        // Set up input handling
+        setupInputHandling();
+
+        // Debug log for initialization
+        Gdx.app.log(TAG, "GameScreen initialized");
     }
 
-    private void initializeGame() {
-        renderer.createPawns(game.getPlayers());
-        updateGameState();
+    private void setupInputHandling() {
+        Gdx.input.setInputProcessor(new InputMultiplexer(stage, new InputAdapter() {
+            @Override
+            public boolean touchDown(int screenX, int screenY, int pointer, int button) {
+                lastTouchX = screenX;
+                lastTouchY = screenY;
+                isDragging = true;
+                return true;
+            }
+
+            @Override
+            public boolean touchUp(int screenX, int screenY, int pointer, int button) {
+                isDragging = false;
+                return true;
+            }
+
+            @Override
+            public boolean touchDragged(int screenX, int screenY, int pointer) {
+                if (isDragging) {
+                    float deltaX = (screenX - lastTouchX) * 0.5f;
+                    float deltaY = (screenY - lastTouchY) * 0.5f;
+
+                    cameraRotation += deltaX;
+                    cameraHeight = Math.max(2f, Math.min(20f, cameraHeight - deltaY * 0.1f));
+
+                    updateCameraPosition();
+
+                    lastTouchX = screenX;
+                    lastTouchY = screenY;
+                }
+                return true;
+            }
+
+            @Override
+            public boolean scrolled(float amountX, float amountY) {
+                cameraDistance = Math.max(5f, Math.min(20f, cameraDistance + amountY));
+                updateCameraPosition();
+                return true;
+            }
+        }));
+    }
+
+    private void updateCameraPosition() {
+        float x = (float)(cameraDistance * Math.cos(Math.toRadians(cameraRotation)));
+        float z = (float)(cameraDistance * Math.sin(Math.toRadians(cameraRotation)));
+        camera.position.set(x, cameraHeight, z);
+        camera.lookAt(cameraTarget);
+        camera.up.set(Vector3.Y);
+        camera.update();
+    }
+
+    @Override
+    public void render(float delta) {
+        // Clear screen
+        Gdx.gl.glClearColor(0.2f, 0.2f, 0.3f, 1);
+        Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT | GL20.GL_DEPTH_BUFFER_BIT);
+
+        // Update camera
+        camera.update();
+
+        // Debug logging for camera position
+        if (Gdx.input.isKeyJustPressed(Input.Keys.D)) {
+            Gdx.app.log(TAG, "Camera Position: " + camera.position);
+            Gdx.app.log(TAG, "Number of pawns: " + renderer.getNumberOfPawns());
+        }
+
+        // Render 3D scene
+        modelBatch.begin(camera);
+        renderer.render(modelBatch, environment);
+        modelBatch.end();
+
+        // Render UI
+        stage.act(delta);
+        stage.draw();
+    }
+
+    public void addPlayer(Player player) {
+        Gdx.app.log(TAG, "Adding player: " + player.getName() + " with color " + player.getColor());
+        players.add(player);
+        // Update renderer with new pawns
+        renderer.createPawns(players);
+        // Log current number of pawns
+        Gdx.app.log(TAG, "Current number of pawns: " + renderer.getNumberOfPawns());
+    }
+
+    @Override
+    public void resize(int width, int height) {
+        super.resize(width, height);
+        camera.viewportWidth = width;
+        camera.viewportHeight = height;
+        camera.update();
+    }
+
+    @Override
+    public void dispose() {
+        super.dispose();
+        modelBatch.dispose();
+        renderer.dispose();
     }
 
     public void updateGameState(String state) {
@@ -90,6 +190,49 @@ public class GameScreen extends BaseScreen {
             hud.updateCurrentPlayer(currentPlayer.getName());
         }
         hud.showMessage(state);
+    }
+
+    public void updatePlayerPawns(String color, List<Integer> positions) {
+        for (Player player : players) {
+            if (player.getColor().equals(color)) {
+                for (int i = 0; i < positions.size(); i++) {
+                    renderer.updatePawnPosition(i, positions.get(i));
+                }
+                break;
+            }
+        }
+    }
+
+    public Player getCurrentPlayer() {
+        return currentPlayer;
+    }
+
+    public void setCurrentPlayer(String playerName) {
+        for (Player player : players) {
+            if (player.getName().equals(playerName)) {
+                currentPlayer = player;
+                hud.updateCurrentPlayer(player.getName());
+                rollButton.setDisabled(!player.getName().equals(game.getGameStateManager().getCurrentUsername()));
+                break;
+            }
+        }
+    }
+
+
+    private void requestDiceRoll() {
+        isRolling = true;
+        rollButton.setDisabled(true);
+        game.getGameStateManager().requestDiceRoll();
+    }
+
+    public void updateDiceDisplay(int value) {
+        lastDiceRoll = value;
+        hud.updateDiceValue(value);
+        isRolling = false;
+        if (currentPlayer != null && currentPlayer.getName().equals(game.getGameStateManager().getCurrentUsername())) {
+            rollButton.setDisabled(false);
+            canMove = true;
+        }
     }
 
     private void updateGameState() {
@@ -106,22 +249,6 @@ public class GameScreen extends BaseScreen {
     public void enablePawnSelection() {
         canMove = true;
         showMessage("Select a pawn to move");
-    }
-
-    public void updatePlayerPawns(String color, List<Integer> positions) {
-        for (Player player : game.getPlayers()) {
-            if (player.getColor().equals(color)) {
-                for (int i = 0; i < positions.size(); i++) {
-                    renderer.updatePawnPosition(player.getPawns().get(i).getPosition(), positions.get(i));
-                }
-                break;
-            }
-        }
-    }
-
-    public void addPlayer(Player player) {
-        game.addPlayer(player);
-        renderer.createPawns(game.getPlayers());
     }
 
     public void removePlayer(String playerName) {
@@ -158,28 +285,6 @@ public class GameScreen extends BaseScreen {
     }
 
 
-    @Override
-    public void render(float delta) {
-        handleInput(delta);
-
-        // Clear screen
-        Gdx.gl.glClearColor(0.2f, 0.2f, 0.3f, 1);
-        Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT | GL20.GL_DEPTH_BUFFER_BIT);
-
-        // Update camera
-        updateCameraPosition();
-        camera.update();
-
-        // Render 3D scene
-        modelBatch.begin(camera);
-        renderer.render(modelBatch, environment);
-        modelBatch.end();
-
-        // Render UI
-        stage.act(delta);
-        stage.draw();
-    }
-
     private void handleInput(float delta) {
         // Camera rotation with arrow keys
         if (Gdx.input.isKeyPressed(Input.Keys.LEFT)) {
@@ -203,14 +308,6 @@ public class GameScreen extends BaseScreen {
         }
     }
 
-    private void updateCameraPosition() {
-        float x = (float)(cameraDistance * Math.cos(Math.toRadians(cameraRotation)));
-        float z = (float)(cameraDistance * Math.sin(Math.toRadians(cameraRotation)));
-        camera.position.set(x, cameraDistance * 0.7f, z);
-        camera.lookAt(cameraTarget);
-        camera.up.set(Vector3.Y);
-    }
-
     private void handlePawnSelection(int screenX, int screenY) {
         if (currentPlayer != null && currentPlayer.getName().equals(game.getGameStateManager().getCurrentUsername())) {
             int selectedPawn = renderer.getPawnAtScreenCoords(screenX, screenY, camera);
@@ -221,49 +318,8 @@ public class GameScreen extends BaseScreen {
         }
     }
 
-    private void requestDiceRoll() {
-        isRolling = true;
-        rollButton.setDisabled(true);
-        game.getGameStateManager().requestDiceRoll();
-    }
-
-    public void updateDiceDisplay(int value) {
-        lastDiceRoll = value;
-        hud.updateDiceValue(value);
-        isRolling = false;
-        if (currentPlayer != null && currentPlayer.getName().equals(game.getGameStateManager().getCurrentUsername())) {
-            rollButton.setDisabled(false);
-            canMove = true;
-        }
-    }
 
     public void updatePawnPosition(int pawnIndex, int newPosition) {
         renderer.updatePawnPosition(pawnIndex, newPosition);
-    }
-
-    public void setCurrentPlayer(String playerColor) {
-        for (Player player : game.getPlayers()) {
-            if (player.getColor().equals(playerColor)) {
-                currentPlayer = player;
-                hud.updateCurrentPlayer(player.getName());
-                rollButton.setDisabled(!player.getName().equals(game.getGameStateManager().getCurrentUsername()));
-                break;
-            }
-        }
-    }
-
-    @Override
-    public void resize(int width, int height) {
-        super.resize(width, height);
-        camera.viewportWidth = width;
-        camera.viewportHeight = height;
-        camera.update();
-    }
-
-    @Override
-    public void dispose() {
-        super.dispose();
-        modelBatch.dispose();
-        renderer.dispose();
     }
 }

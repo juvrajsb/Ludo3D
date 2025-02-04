@@ -285,12 +285,22 @@ public class GameStateManager implements MessageListener {
         LOGGER.info("Game started event received");
         gameStarted = true;
 
-        // Initialize game with the provided players and starting player
+        // Initialize game with the provided players
         if (gameScreen != null) {
-            for (Player player : event.getPlayers()) {
+            List<Player> players = event.getPlayers();
+            LOGGER.info("Initializing game with " + players.size() + " players");
+
+            // Clear existing players and add new ones
+            for (Player player : players) {
+                LOGGER.info("Adding player: " + player.getName() + " (" + player.getColor() + ")");
                 gameScreen.addPlayer(player);
             }
+
+            // Set initial player
             gameScreen.setCurrentPlayer(event.getStartingPlayer());
+            LOGGER.info("Set starting player: " + event.getStartingPlayer());
+        } else {
+            LOGGER.warning("GameScreen is null when handling game start event");
         }
     }
 
