@@ -2,7 +2,6 @@ package ludo.client.networking;
 
 import ludo.core.network.*;
 import java.io.IOException;
-// import java.util.Timer;
 import java.util.Objects;
 import java.util.logging.Logger;
 import ludo.core.events.serverToClient.PingEvent;
@@ -14,8 +13,6 @@ import java.util.concurrent.atomic.AtomicBoolean;
  */
 public class ClientNetworkHandler implements NetworkHandler {
     private static final Logger LOGGER = Logger.getLogger(ClientNetworkHandler.class.getName());
-    private static final int RECONNECT_ATTEMPTS = 3;
-    private static final int RECONNECT_DELAY = 5000; // 5 seconds
 
     private Connection connection;
     private MessageListener listener;
@@ -27,108 +24,10 @@ public class ClientNetworkHandler implements NetworkHandler {
         this.isConnected = new AtomicBoolean(false);
     }
 
-//    private void handleConnectionFailure(Exception error) {
-//        if (!isConnected) {
-//            return;
-//        }
-//
-//        LOGGER.warning("Connection failure: " + error.getMessage());
-//        error.printStackTrace();
-//
-//        if (listener != null) {
-//            listener.onConnectionError(error);
-//        }
-//
-//        // Try to recover connection
-//        attemptReconnect();
-//    }
-//
-//    private void attemptReconnect() {
-//        for (int attempt = 0; attempt < RECONNECT_ATTEMPTS && isConnected; attempt++) {
-//            try {
-//                LOGGER.info("Attempting reconnect: " + (attempt + 1) + "/" + RECONNECT_ATTEMPTS);
-//                Thread.sleep(RECONNECT_DELAY);
-//
-//                // Stop existing services but maintain isConnected flag
-//                stopAllServices();
-//
-//                // Try to reconnect
-//                connection = Connection.createClientSide(connection.getHost(), connection.getPort());
-//                startPingMonitoring();
-//                startListening();
-//
-//                LOGGER.info("Reconnected successfully!");
-//                return;
-//
-//            } catch (Exception e) {
-//                LOGGER.warning("Reconnect attempt failed: " + e.getMessage());
-//            }
-//        }
-//
-//        // If we get here, all reconnect attempts failed
-//        LOGGER.severe("Failed to reconnect after " + RECONNECT_ATTEMPTS + " attempts");
-//        disconnect();
-//    }
-//
-//    private void stopAllServices() {
-//        if (pingSender != null) {
-//            pingSender.stop();
-//            pingSender = null;
-//        }
-//
-//        if (listenerThread != null) {
-//            listenerThread.interrupt();
-//            listenerThread = null;
-//        }
-//
-//        if (connection != null) {
-//            try {
-//                connection.close();
-//            } catch (Exception e) {
-//                LOGGER.warning("Error closing connection: " + e.getMessage());
-//            }
-//            connection = null;
-//        }
-//    }
 //for testing
     public String getPlayerId() {
         return null;
     }
-//
-//
-//    public void stop() {
-//        // Add necessary logic to stop the network handler
-//        if (pingSender != null) {
-//            pingSender.stop();
-//            pingSender = null;
-//        }
-//
-//        if (connection != null) {
-//            try {
-//                connection.close();
-//            } catch (IOException e) {
-//                LOGGER.severe("Error closing connection: " + e.getMessage());
-//            }
-//        }
-//        if (listenerThread != null) {
-//            listenerThread.interrupt();
-//        }
-//        isConnected = false;
-//    }
-//
-//    public void start(String connectionID, int port) {
-//        // Add necessary logic to start the network handler
-//        try {
-//            connection = Connection.createClientSide(connectionID, port);
-//            startPingMonitoring();
-//            startListening();
-//            isConnected = true;
-//            LOGGER.info("Started network handler with connection ID: " + connectionID);
-//        } catch (Exception e) {
-//            LOGGER.severe("Failed to start network handler: " + e.getMessage());
-//            handleConnectionFailure(e);
-//        }
-//    }
 
     @Override
     public synchronized void connect(String host, int port) {

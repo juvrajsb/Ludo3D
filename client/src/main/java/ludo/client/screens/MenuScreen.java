@@ -16,7 +16,6 @@ public class MenuScreen extends BaseScreen {
     public MenuScreen(final LudoGame game) {
         super(game);
 
-        // Load logo texture
 //        logoTexture = new Texture(Gdx.files.internal("images/iconw.png"));
 //        logoImage = new Image(logoTexture);
 
@@ -28,7 +27,6 @@ public class MenuScreen extends BaseScreen {
         mainTable.setFillParent(true);
         mainTable.defaults().pad(10).width(200);
 
-        // Create title label with custom style
         Label.LabelStyle titleStyle = new Label.LabelStyle(skin.get("default", Label.LabelStyle.class));
         titleStyle.font = skin.getFont("default");
         titleStyle.fontColor = Color.WHITE;
@@ -36,20 +34,17 @@ public class MenuScreen extends BaseScreen {
         Label titleLabel = new Label("LUDO 3D", titleStyle);
         titleLabel.setFontScale(3.0f); // Make the text larger
 
-        // Add title at the top with extra padding
         mainTable.add(titleLabel).pad(50).row();
 
         // Add logo at the top
 //        mainTable.add(logoImage).width(400).height(200).padBottom(50).row();
 
-        // Main menu buttons
         TextButton playButton = new TextButton("Play", skin);
         TextButton exitButton = new TextButton("Exit", skin);
 
         mainTable.add(playButton).row();
         mainTable.add(exitButton).row();
 
-        // Button listeners
         playButton.addListener(new ChangeListener() {
             @Override
             public void changed(ChangeEvent event, Actor actor) {

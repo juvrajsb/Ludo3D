@@ -9,6 +9,7 @@ import java.util.List;
  * Immediately after closing connections with all players.
  * */
 public class WinnerProclamationEvent extends Event {
+    private static final long serialVersionUID = 1L;
     private final List<String> winners;
 
     public WinnerProclamationEvent(List<String> winners) {

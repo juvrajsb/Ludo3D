@@ -6,6 +6,7 @@ import java.util.List;
 import java.util.Map;
 
 public class GameStateUpdateEvent extends Event {
+    private static final long serialVersionUID = 1L;
     private final Map<String, List<Integer>> pawnPositions;
     private final String currentPlayer;
     private final GameState gameState;

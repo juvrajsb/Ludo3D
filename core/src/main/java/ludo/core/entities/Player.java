@@ -51,7 +51,7 @@ public class Player implements Serializable {
         return board.isHomeColumn(pawns.get(pawnIndex).getPosition(), color);
     }
 
-    public int getPawnsInHomeColumn(Board board) {
+    public int getPawnsInHomeColumn(Board board) {//TODO check usage not used currently
         int count = 0;
         for (int i = 0; i < pawns.size(); i++) {
             if (isInHomeColumn(i, board)) {
@@ -61,11 +61,11 @@ public class Player implements Serializable {
         return count;
     }
 
-    public void setUseSingleDie(boolean useSingleDie) {
+    public void setUseSingleDie(boolean useSingleDie) {//TODO check usage not used currently
         this.useSingleDie = useSingleDie;
     }
 
-    public boolean isUseSingleDie() {
+    public boolean isUseSingleDie() {//TODO check usage not used currently
         return useSingleDie;
     }
 

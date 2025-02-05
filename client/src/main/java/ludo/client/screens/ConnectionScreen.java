@@ -5,17 +5,16 @@ import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.scenes.scene2d.Actor;
 import com.badlogic.gdx.scenes.scene2d.ui.*;
 import com.badlogic.gdx.scenes.scene2d.utils.ChangeListener;
-import com.badlogic.gdx.utils.Align;
 import com.badlogic.gdx.utils.Timer;
 import ludo.client.LudoGame;
 import com.badlogic.gdx.graphics.GL20;
 
 public class ConnectionScreen extends BaseScreen {
-    private TextField ipField;
-    private TextField portField;
-    private Label errorLabel;
-    private Label statusLabel;
-    private TextButton connectButton;
+    private final TextField ipField;
+    private final TextField portField;
+    private final Label errorLabel;
+    private final Label statusLabel;
+    private final TextButton connectButton;
     private boolean isConnected = false;
 
     public ConnectionScreen(final LudoGame game) {
@@ -69,7 +68,6 @@ public class ConnectionScreen extends BaseScreen {
         mainTable.add(backButton).colspan(2).padTop(20).width(150).height(50).row();
 
         stage.addActor(mainTable);
-//        Gdx.input.setInputProcessor(stage);
     }
 
     private void tryConnect() {
@@ -129,7 +127,7 @@ public class ConnectionScreen extends BaseScreen {
         stage.draw();
     }
 
-    public boolean isConnected() {
+    public boolean isConnected() {//TODO check usage not used currently
         return isConnected;
     }
 

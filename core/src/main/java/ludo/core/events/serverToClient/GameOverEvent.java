@@ -1,10 +1,10 @@
-// GameOverEvent.java
 package ludo.core.events.serverToClient;
 
 import ludo.core.events.Event;
 
 public class GameOverEvent extends Event {
     private final String winner;
+    private static final long serialVersionUID = 1L;
 
     public GameOverEvent(String winner) {
         super("GAME_OVER");

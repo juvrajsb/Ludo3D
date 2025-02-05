@@ -51,7 +51,7 @@ public class ConnectionManager{
         }
     }
 
-    public void broadcastEvent(Event event) {
+    public void broadcastEvent(Event event) {//TODO check usage not used currently
         List<String> failedConnections = new ArrayList<>();
 
         for (Map.Entry<String, Connection> entry : connections.entrySet()) {
@@ -67,7 +67,7 @@ public class ConnectionManager{
         failedConnections.forEach(this::removeConnection);
     }
 
-    public void sendToPlayer(String playerId, Event event) {
+    public void sendToPlayer(String playerId, Event event) {//TODO check usage not used currently
         Connection connection = connections.get(playerId);
         if (connection != null) {
             try {
@@ -79,21 +79,21 @@ public class ConnectionManager{
         }
     }
 
-    public boolean isConnected(String playerId) {
+    public boolean isConnected(String playerId) {//TODO check usage not used currently
         return connections.containsKey(playerId);
     }
 
-    public List<Connection> getAllConnections() {
+    public List<Connection> getAllConnections() {//TODO check usage not used currently
         return new ArrayList<>(connections.values());
     }
 
-    public void handleReconnection(String playerId, Connection newConnection) {
+    public void handleReconnection(String playerId, Connection newConnection) {//TODO check usage not used currently
         removeConnection(playerId);
         addConnection(newConnection);
         errorHandler.handleReconnection(playerId, newConnection);
     }
 
-    public void shutdown() {
+    public void shutdown() {//TODO check usage not used currently
         for (Connection connection : connections.values()) {
             try {
                 connection.close();
@@ -105,7 +105,7 @@ public class ConnectionManager{
         errorHandler.shutdown();
     }
 
-    public EventTransmitter getEventTransmitter() {
+    public EventTransmitter getEventTransmitter() {//TODO check usage not used currently
         return eventTransmitter;
     }
 

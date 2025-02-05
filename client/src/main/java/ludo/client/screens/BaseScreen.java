@@ -1,10 +1,8 @@
 package ludo.client.screens;
 
-import com.badlogic.gdx.Game;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.InputMultiplexer;
 import com.badlogic.gdx.Screen;
-import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.scenes.scene2d.Stage;
 import com.badlogic.gdx.scenes.scene2d.ui.Skin;
 import com.badlogic.gdx.utils.viewport.ScreenViewport;
@@ -20,7 +18,6 @@ public abstract class BaseScreen implements Screen {
     protected Stage stage;
     protected InputMultiplexer inputMultiplexer;
     protected Viewport viewport;
-//    protected SpriteBatch batch;
     protected Skin skin;
 
     public BaseScreen(LudoGame game) {
@@ -28,7 +25,6 @@ public abstract class BaseScreen implements Screen {
         this.viewport = new ScreenViewport();
         this.stage = new Stage(viewport);
         this.inputMultiplexer = new InputMultiplexer(stage);
-//        this.batch = new SpriteBatch();
         this.skin = new Skin(Gdx.files.internal("ui/uiskin.json"));
     }
 
@@ -62,6 +58,5 @@ public abstract class BaseScreen implements Screen {
     @Override
     public void dispose() {
         stage.dispose();
-//        batch.dispose();
     }
 }

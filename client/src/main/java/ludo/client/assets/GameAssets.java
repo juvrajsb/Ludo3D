@@ -10,7 +10,7 @@ import com.badlogic.gdx.utils.UBJsonReader;
 public class GameAssets {
     private static final String TAG = "GameAssets";
     private static GameAssets instance;
-    private AssetManager assetManager;
+    private final AssetManager assetManager;
     private Model pawnModel;
     private Model diceModel;
     private Texture pawnBaseColorTexture;
@@ -34,7 +34,6 @@ public class GameAssets {
         try {
             Gdx.app.log(TAG, "Loading game assets...");
 
-            // Load pawn model directly using G3dModelLoader
             G3dModelLoader modelLoader = new G3dModelLoader(new UBJsonReader());
             try {
                 pawnModel = modelLoader.loadModel(Gdx.files.internal("models/pawn.g3db"));
@@ -85,15 +84,15 @@ public class GameAssets {
         return diceModel;
     }
 
-    public Texture getPawnBaseColorTexture() {
+    public Texture getPawnBaseColorTexture() { //TODO check usage not used currently
         return pawnBaseColorTexture;
     }
 
-    public Texture getPawnNormalTexture() {
+    public Texture getPawnNormalTexture() {//TODO check usage not used currently
         return pawnNormalTexture;
     }
 
-    public Texture getPawnRoughnessTexture() {
+    public Texture getPawnRoughnessTexture() {//TODO check usage not used currently
         return pawnRoughnessTexture;
     }
 

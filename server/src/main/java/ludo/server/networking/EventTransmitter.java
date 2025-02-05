@@ -21,7 +21,7 @@ public class EventTransmitter {
      * @param username player to send the event to
      * @param event BaseEvent object to send
      */
-    public void sendTo(String username, Event event) {
+    public void sendTo(String username, Event event) { //TODO check usage not used currently
         for(Connection connection: connections) {
             if(connection.getConnectionID().equals(username)) {
                 try {

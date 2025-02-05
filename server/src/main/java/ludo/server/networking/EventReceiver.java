@@ -54,7 +54,7 @@ public class EventReceiver implements Runnable {
     /**
      * Method used to stop the EventReceiver
      */
-    public synchronized void stop() {
+    public synchronized void stop() { //TODO check usage not used currently
         notifyAll();
         this.stop = true;
         synchronized (EventReceiver.class) {

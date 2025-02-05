@@ -22,21 +22,17 @@ public class GameHUD extends Table {
         super();
         skin = new Skin(Gdx.files.internal("ui/uiskin.json"));
 
-        // Make the HUD fill the screen
         setFillParent(true);
         setTouchable(Touchable.childrenOnly);
 
-        // Create top panel for player info and game status
         topPanel = new Table(skin);
         topPanel.setBackground(skin.newDrawable("white"));
         topPanel.getBackground().setMinHeight(60);
         topPanel.setColor(0, 0, 0, 0.7f);
 
-        // Create player info panel
         playerInfoTable = new Table(skin);
         playerInfoTable.pad(5);
 
-        // Create labels with larger font size
         Label.LabelStyle labelStyle = new Label.LabelStyle(skin.get("default", Label.LabelStyle.class));
         labelStyle.font.getData().setScale(1.5f);
 
@@ -50,12 +46,10 @@ public class GameHUD extends Table {
         messageLabel.setColor(Color.WHITE);
         messageLabel.setAlignment(Align.center);
 
-        // Add elements to top panel
         topPanel.add(playerInfoTable).expandX().left().pad(10);
         topPanel.add(currentPlayerLabel).pad(10);
         topPanel.add(diceValueLabel).pad(10);
 
-        // Create bottom panel
         bottomPanel = new Table(skin);
         bottomPanel.setBackground(skin.newDrawable("white"));
         bottomPanel.getBackground().setMinHeight(50);

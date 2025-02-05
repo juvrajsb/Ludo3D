@@ -1,7 +1,5 @@
 package ludo.core.events.serverToClient;
 
-//import ludo.core.events.serverToClient.JoinGameResponseEvent;
-
 /**
  * Enum containing all the possible responses
  */

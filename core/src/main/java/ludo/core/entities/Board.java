@@ -8,7 +8,7 @@ import java.util.Objects;
 public class Board implements Serializable {
     private static final int BOARD_SIZE = 52;  // Total spaces on main track
     private static final int HOME_COLUMN_SIZE = 6;
-    private static final int GRID_SIZE = 15;   // 15x15 grid
+    private static final int GRID_SIZE = 15;   // 15x15 grid //TODO check usage not used currently
 
     private Map<String, Integer> playerStartPositions;
     private Map<Integer, Boolean> safeSpots;
@@ -138,7 +138,7 @@ public class Board implements Serializable {
         return positionToGrid.get(boardPosition);
     }
 
-    public Integer getBoardPosition(int gridX, int gridY) {
+    public Integer getBoardPosition(int gridX, int gridY) {//TODO check usage not used currently
         return gridToPosition.get(new GridPosition(gridX, gridY));
     }
 
@@ -158,7 +158,7 @@ public class Board implements Serializable {
         return HOME_COLUMN_SIZE;
     }
 
-    public boolean isHomeColumn(int position, String color) { //TODO check if correct
+    public boolean isHomeColumn(int position, String color) {
         // For positions in home column area (≥52)
         if (position >= BOARD_SIZE) {
             int playerIndex = getStartPosition(color) / 13;

@@ -1,7 +1,6 @@
 package ludo.core.events.serverToClient;
 
 import ludo.core.events.Event;
-//import ludo.server.handlers.WaitingRoomUpdateHandler;
 
 import java.util.List;
 import java.util.Map;
@@ -13,6 +12,7 @@ import java.util.HashMap;
  * waiting room.
  */
 public class WaitingRoomUpdateEvent extends Event {
+    private static final long serialVersionUID = 1L;
     private final List<String> usernames;
     private final Map<String, String> playerColors;
     private final int numberOfPlayers;
@@ -38,6 +38,6 @@ public class WaitingRoomUpdateEvent extends Event {
 
     @Override
     public void process() {
-//        new WaitingRoomUpdateHandler().handle(this);
+        // Will be processed by client handler
     }
 }

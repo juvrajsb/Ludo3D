@@ -7,6 +7,7 @@ import ludo.core.events.Event;
  * about the status of his joining request.
  */
 public class JoinGameResponseEvent extends Event {
+    private static final long serialVersionUID = 1L;
     private final Response response;
     private boolean existsSavedGame;
 
@@ -34,7 +35,7 @@ public class JoinGameResponseEvent extends Event {
 
     @Override
     public void process() {
-//        new JoinGameResponseHandler().handle(this);
+        // Will be processed by client handler
     }
 
 }

@@ -1,7 +1,6 @@
 package ludo.server.networking;
 
 import ludo.core.network.Connection;
-import ludo.core.network.PingSender;
 import ludo.server.Server;
 import ludo.core.events.Event;
 
@@ -9,7 +8,6 @@ import java.io.IOException;
 import java.net.Socket;
 import java.util.Queue;
 import java.util.Timer;
-import java.util.TimerTask;
 
 import static ludo.server.Server.LOGGER;
 
@@ -59,44 +57,13 @@ public class NetworkListener implements Runnable {
         }
     }
 
-//    private Connection initializeClientConnection(Socket socket) throws IOException {
-//        // Create connection
-//        Connection connection = Connection.createServerSide(socket);
-//
-//        try {
-//            // Register with network handler
-//            server.getNetworkHandler().addClient(connection);
-//
-//            // Setup ping monitoring
-//            ServerPingSender pingSender = new ServerPingSender(connection);
-//            connection.setPingSender(pingSender);
-//            pingSender.start();
-//
-//            // Create and start event listener
-//            Thread clientThread = new Thread(
-//                new EventListener(connection, server.getEventReceiver().getEventsQueue(), true),
-//                "EventListener-" + connection.getConnectionID()
-//            );
-//            clientThread.start();
-//
-//            // Register with server
-//            server.addClient(connection, clientThread);
-//
-//            return connection;
-//        } catch (Exception e) {
-//            // Clean up on initialization failure
-//            connection.close();
-//            throw e;
-//        }
-//    }
-
-    private void startPingRoutine(Connection clientConnection) {
+    private void startPingRoutine(Connection clientConnection) {//TODO check usage not used currently
         ServerPingSender pingSender = new ServerPingSender(clientConnection);
         clientConnection.setPingSender(pingSender);
         pingSender.start();
     }
 
-    private static Thread getClientDedicatedThread(Connection clientConnection, Queue<Event> eventsQueue) {
+    private static Thread getClientDedicatedThread(Connection clientConnection, Queue<Event> eventsQueue) {//TODO check usage not used currently
         Thread clientDedicatedThread;
         clientDedicatedThread = new Thread(
                 new EventListener(clientConnection, eventsQueue, true),

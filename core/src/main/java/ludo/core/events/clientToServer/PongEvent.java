@@ -1,4 +1,3 @@
-// PongEvent.java
 package ludo.core.events.clientToServer;
 
 import ludo.core.events.Event;

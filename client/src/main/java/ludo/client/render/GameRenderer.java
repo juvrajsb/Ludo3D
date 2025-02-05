@@ -34,15 +34,15 @@ public class GameRenderer {
     private final Vector3 intersection;
     private final float CELL_SIZE = BOARD_SIZE / 15f; // 15x15 grid
     private final Board gameBoard;
+    private final Array<ModelInstance> pawnInstances;
+    private final Map<Integer, Vector3> pawnPositions;
+    private final Map<Integer, Boolean> highlightedPawns = new HashMap<>();
+    private final DiceRenderer diceRenderer;
+    private final Map<Integer, PawnAnimation> pawnAnimations;
     private Model boardModel;
     private ModelInstance boardInstance;
-    private Array<ModelInstance> pawnInstances;
-    private Map<Integer, Vector3> pawnPositions;
-    private Map<Integer, Boolean> highlightedPawns = new HashMap<>();
     private Map<String, Color> playerColors;
     private Texture boardTexture;
-    private DiceRenderer diceRenderer;
-    private Map<Integer, PawnAnimation> pawnAnimations;
 
     public GameRenderer(int width, int height) {
         Gdx.app.log(TAG, "Initializing GameRenderer");
@@ -85,7 +85,6 @@ public class GameRenderer {
     public void render(ModelBatch modelBatch, Environment environment, float delta) {
         updateAnimations(delta);
 
-        // Render board and pawns
         if (boardInstance != null) {
             modelBatch.render(boardInstance, environment);
         }
@@ -94,7 +93,6 @@ public class GameRenderer {
             modelBatch.render(pawn, environment);
         }
 
-        // Update and render dice
         diceRenderer.update(delta);
         diceRenderer.render(modelBatch);
     }
@@ -108,7 +106,6 @@ public class GameRenderer {
 
             anim.progress += delta / ANIMATION_DURATION;
             if (anim.progress >= 1.0f) {
-                // Animation complete
                 updatePawnTransform(pawnIndex, anim.targetPos);
                 pawnPositions.put(pawnIndex, anim.targetPos);
                 it.remove();
@@ -179,7 +176,7 @@ public class GameRenderer {
         float x = 0, z = 0;
         float offset = BOARD_SIZE * 0.4f; // Distance from center for home areas
 
-        switch (playerColor.toUpperCase()) {
+        switch (playerColor.toUpperCase()) { //TODO check if this is correct colors
             case "RED":
                 x = offset;
                 z = offset;
@@ -258,24 +255,25 @@ public class GameRenderer {
 
     public void highlightSelectablePawns(Player player, int diceRoll) {
         highlightedPawns.clear();
-        int playerStartIdx = player.getPawns().get(0).getPosition();
 
+        // Only highlight pawns that can actually move
         for (int i = 0; i < player.getPawns().size(); i++) {
             Pawn pawn = player.getPawns().get(i);
             boolean canMove = false;
 
-            if (pawn.isHome() && diceRoll == 6) {
-                canMove = true;
-            } else if (!pawn.isHome() && !pawn.isFinished()) {
-                // Add logic to check if move is valid
+            if (pawn.isHome()) {
+                // Can only move out of home with a 6
+                canMove = (diceRoll == 6);
+            } else if (!pawn.isFinished()) {
+                // Already on board and not finished
                 canMove = true;
             }
 
             if (canMove) {
-                int pawnIdx = playerStartIdx + i;
+                int pawnIdx = i;
                 highlightedPawns.put(pawnIdx, true);
                 ModelInstance pawnInstance = pawnInstances.get(pawnIdx);
-                // Add glow effect or outline
+                // Add glow effect or highlight
                 Material mat = pawnInstance.materials.get(0);
                 mat.set(ColorAttribute.createDiffuse(HIGHLIGHT_COLOR));
             }
@@ -294,7 +292,7 @@ public class GameRenderer {
         highlightedPawns.clear();
     }
 
-    public boolean isPawnHighlighted(int pawnIndex) {
+    public boolean isPawnHighlighted(int pawnIndex) {//TODO check usage not used currently
         return highlightedPawns.containsKey(pawnIndex);
     }
 
@@ -339,17 +337,14 @@ public class GameRenderer {
         float minDist = Float.MAX_VALUE;
         int selectedPawn = -1;
 
-        // Debug logging
         Gdx.app.log(TAG, "Screen click at: " + screenX + ", " + screenY);
         Gdx.app.log(TAG, "Ray origin: " + ray.origin + ", direction: " + ray.direction);
 
-        // Larger selection radius for easier clicking
-        float selectionRadius = 1.0f;  // Increased radius further
+        float selectionRadius = 1.0f;
 
         for (int i = 0; i < pawnInstances.size; i++) {
             Vector3 pawnPos = pawnPositions.get(i);
             if (pawnPos != null) {
-                // Debug each pawn position
                 Gdx.app.log(TAG, "Testing pawn " + i + " at position: " + pawnPos);
 
                 // Create a sphere around the pawn for selection
@@ -365,7 +360,6 @@ public class GameRenderer {
             }
         }
 
-        // If we found a pawn, provide visual feedback
         if (selectedPawn != -1) {
             highlightPawn(selectedPawn);
             Gdx.app.log(TAG, "Selected pawn: " + selectedPawn + " at distance: " + minDist);

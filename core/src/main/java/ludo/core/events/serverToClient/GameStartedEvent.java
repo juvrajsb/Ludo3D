@@ -25,7 +25,7 @@ public class GameStartedEvent extends Event {
         return startingPlayer;
     }
 
-    public int getTotalPlayers() {
+    public int getTotalPlayers() {//TODO check usage not used currently
         return totalPlayers;
     }
 

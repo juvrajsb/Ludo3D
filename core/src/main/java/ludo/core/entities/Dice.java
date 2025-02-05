@@ -12,7 +12,7 @@ public class Dice {
         return this.currentValue;
     }
 
-    public int getCurrentValue() {
+    public int getCurrentValue() {//TODO check usage not used currently
         return this.currentValue;
     }
 }

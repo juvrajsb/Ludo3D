@@ -5,7 +5,7 @@ import ludo.core.utils.Constants;
 import ludo.core.entities.Pawn;
 import ludo.core.entities.Player;
 
-public class MoveValidator {
+public class MoveValidator { //TODO check usage not used currently used in an unused method
     public static boolean isValidMove(Player player, Pawn pawn, int steps, Board board) {
         // Basic validation
         if (player == null || pawn == null || steps < 1 || steps > 6) {

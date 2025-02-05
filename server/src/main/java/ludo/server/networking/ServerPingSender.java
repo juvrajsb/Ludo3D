@@ -12,7 +12,7 @@ public class ServerPingSender implements PingSender {
     private final Connection connection;
     private volatile boolean running = false;
     private Timer timer;
-    private TimerTask pingTask;
+    private final TimerTask pingTask;
 
     public ServerPingSender(Connection connection) {
         this.connection = connection;

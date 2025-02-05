@@ -8,20 +8,19 @@ import com.badlogic.gdx.math.Vector3;
 import ludo.client.assets.GameAssets;
 
 public class DiceRenderer {
-    private ModelInstance diceInstance;
+    private static final float ROLL_DURATION = 1.0f;
+    private static final float DICE_SCALE = 12f;
+    private final ModelInstance diceInstance;
     private final Vector3 position;
     private final Vector3 rotation;
     private final Quaternion quaternion;
+    private final Matrix4[] valueFaceRotations = new Matrix4[6];
+    private final Vector3 tempPosition = new Vector3();
+    private final Quaternion tempRotation = new Quaternion();
     private float animationTime;
     private boolean isRolling;
     private int currentValue;
     private int targetValue;
-    private static final float ROLL_DURATION = 1.0f;
-    private static final float DICE_SCALE = 5f;
-
-    private final Matrix4[] valueFaceRotations = new Matrix4[6];
-    private final Vector3 tempPosition = new Vector3();
-    private final Quaternion tempRotation = new Quaternion();
 
     public DiceRenderer() {
         Model diceModel = GameAssets.getInstance().getDiceModel();
@@ -39,7 +38,7 @@ public class DiceRenderer {
         updateTransform();
     }
 
-    private void initializeFaceRotations() {
+    private void initializeFaceRotations() { //TODO put the correct numbers
         // Define rotations for each face to show correct number
         valueFaceRotations[0] = new Matrix4().setToRotation(Vector3.X, 0);  // 1
         valueFaceRotations[1] = new Matrix4().setToRotation(Vector3.X, 90); // 2
@@ -54,7 +53,6 @@ public class DiceRenderer {
             animationTime += deltaTime;
 
             if (animationTime >= ROLL_DURATION) {
-                // Animation finished
                 isRolling = false;
                 currentValue = targetValue;
                 setFaceRotation(currentValue);
@@ -132,11 +130,11 @@ public class DiceRenderer {
 
     public boolean isRolling() {
         return isRolling;
-    }
+    }//TODO check usage not used currently
 
     public int getCurrentValue() {
         return currentValue;
-    }
+    }//TODO check usage not used currently
 
     public void dispose() {
         // Model disposal is handled by GameAssets

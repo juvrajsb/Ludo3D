@@ -25,7 +25,7 @@ public class GameUtils {
      * @param board The game board
      * @return true if the move would land exactly in home, false otherwise
      */
-    public static boolean isExactHomeMove(int currentPosition, int diceRoll, String playerColor, Board board) {
+    public static boolean isExactHomeMove(int currentPosition, int diceRoll, String playerColor, Board board) { //TODO check usage not used currently
         int nextPosition = calculateNextPosition(currentPosition, diceRoll);
         int homeColumnBase = Constants.BOARD_SIZE + (board.getStartPosition(playerColor) / 13) * Constants.HOME_COLUMN_SIZE;
         return nextPosition == homeColumnBase + Constants.HOME_COLUMN_SIZE - 1;

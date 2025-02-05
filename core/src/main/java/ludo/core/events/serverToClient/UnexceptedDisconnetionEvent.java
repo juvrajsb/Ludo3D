@@ -1,19 +1,19 @@
 package ludo.core.events.serverToClient;
 
 import ludo.core.events.Event;
-//import ludo.server.handlers.UnexpectedDisconnectionHandler;
 
 /**
  * Internal client event launched in case of
  * controller sudden disconnection.
  */
 public class UnexceptedDisconnetionEvent extends Event {
+    private static final long serialVersionUID = 1L;
     public UnexceptedDisconnetionEvent() {
         super("UNEXPECTED_DISCONNECTION");
     }
 
     @Override
     public void process() {
-//        new UnexpectedDisconnectionHandler().handle(this);
+        // Will be processed by client handler
     }
 }

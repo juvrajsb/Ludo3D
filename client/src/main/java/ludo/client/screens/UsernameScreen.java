@@ -31,27 +31,22 @@ public class UsernameScreen extends BaseScreen {
         mainTable.setFillParent(true);
         mainTable.defaults().pad(10).width(200);
 
-        // Title
         Label titleLabel = new Label("Choose Your Name", skin, "default");
         mainTable.add(titleLabel).colspan(2).pad(50).row();
 
-        // Username field
         mainTable.add(new Label("Username:", skin)).align(Align.right);
         usernameField = new TextField("", skin);
         mainTable.add(usernameField).align(Align.left).row();
 
-        // Color selection
         mainTable.add(new Label("Color:", skin)).align(Align.right);
         colorSelect = new SelectBox<>(skin);
         colorSelect.setItems("Red", "Blue", "Green", "Yellow");
         mainTable.add(colorSelect).align(Align.left).row();
 
-        // Error label
         errorLabel = new Label("", skin);
         errorLabel.setColor(1, 0, 0, 1);
         mainTable.add(errorLabel).colspan(2).pad(20).row();
 
-        // Join button
         TextButton joinButton = new TextButton("Join Game", skin);
         joinButton.addListener(new ChangeListener() {
             @Override

@@ -86,15 +86,15 @@ public class Connection {
         return connectionId;
     }
 
-    public void setConnectionID(String connectionId) {
+    public void setConnectionID(String connectionId) { //TODO check usage not used currently
         this.connectionId = connectionId;
     }
 
-    public String getHost() {
+    public String getHost() { //TODO check usage not used currently
         return socket.getInetAddress().getHostAddress();
     }
 
-    public int getPort() {
+    public int getPort() { //TODO check usage not used currently
         return socket.getPort();
     }
 
@@ -147,7 +147,7 @@ public class Connection {
         return closed || socket.isClosed() || !socket.isConnected();
     }
 
-    public boolean isConnected() {
+    public boolean isConnected() { //TODO check usage not used currently
         return socket != null && !socket.isClosed() && socket.isConnected();
     }
 }

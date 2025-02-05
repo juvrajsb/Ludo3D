@@ -1,4 +1,3 @@
-// PingEvent.java
 package ludo.core.events.serverToClient;
 
 import ludo.core.events.Event;

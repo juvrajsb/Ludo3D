@@ -1,65 +1,60 @@
 package ludo.client.screens;
 
-import com.badlogic.gdx.*;
+import com.badlogic.gdx.Gdx;
+import com.badlogic.gdx.Input;
+import com.badlogic.gdx.InputAdapter;
 import com.badlogic.gdx.graphics.GL20;
 import com.badlogic.gdx.graphics.PerspectiveCamera;
 import com.badlogic.gdx.graphics.g3d.Environment;
 import com.badlogic.gdx.graphics.g3d.ModelBatch;
 import com.badlogic.gdx.graphics.g3d.attributes.ColorAttribute;
 import com.badlogic.gdx.graphics.g3d.environment.DirectionalLight;
+import com.badlogic.gdx.math.Vector3;
 import com.badlogic.gdx.math.collision.Ray;
 import com.badlogic.gdx.scenes.scene2d.Actor;
-import com.badlogic.gdx.scenes.scene2d.ui.*;
-import com.badlogic.gdx.scenes.scene2d.utils.ChangeListener;
-import com.badlogic.gdx.math.Vector3;
-import ludo.client.GameStateManager;
+import com.badlogic.gdx.scenes.scene2d.ui.TextButton;
 import ludo.client.LudoGame;
-import ludo.client.assets.GameAssets;
 import ludo.client.render.GameRenderer;
 import ludo.client.ui.GameHUD;
-import ludo.core.entities.*;
+import ludo.core.entities.Player;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.logging.Logger;
 
 public class GameScreen extends BaseScreen {
     private static final String TAG = "GameScreen";
+    private static final Logger LOGGER = Logger.getLogger(GameScreen.class.getName());
     private final GameHUD hud;
     private final GameRenderer renderer;
     private final ModelBatch modelBatch;
-    private static final Logger LOGGER = Logger.getLogger(GameStateManager.class.getName());
     private final Environment environment;
     private final PerspectiveCamera camera;
     private final TextButton rollButton;
-    private List<Player> players;
-
+    private final List<Player> players;
+    private final int selectedPawnIndex = -1;
+    private final Vector3 cameraTarget = new Vector3(0, 0, 0);
+    private final boolean isDragging = false;
+    private final float rotationSpeed = 2f;
+    private final float zoomSpeed = 2f;
+    private final float minZoom = 5f;
+    private final float maxZoom = 20f;
+    private final float minHeight = 2f;
+    private final float maxHeight = 20f;
     // Game state
     private Player currentPlayer;
-    private int selectedPawnIndex = -1;
     private boolean canMove;
     private int lastDiceRoll;
     private boolean isRolling = false;
-
     // Camera control variables
     private float cameraRotation = 0;
     private float cameraDistance = 12f;
     private float cameraHeight = 8f;
-    private final Vector3 cameraTarget = new Vector3(0, 0, 0);
-    private boolean isDragging = false;
     private float lastTouchX;
     private float lastTouchY;
-    private float rotationSpeed = 2f;
-    private float zoomSpeed = 2f;
-    private float minZoom = 5f;
-    private float maxZoom = 20f;
-    private float minHeight = 2f;
-    private float maxHeight = 20f;
 
     public GameScreen(final LudoGame game) {
         super(game);
-        // Initialize HUD
         hud = new GameHUD();
         stage.addActor(hud);
 
@@ -90,15 +85,12 @@ public class GameScreen extends BaseScreen {
         });
         stage.addActor(rollButton);
 
-        // Initialize renderer with correct dimensions
         this.renderer = new GameRenderer(Gdx.graphics.getWidth(), Gdx.graphics.getHeight());
 
-        // Set up input handling
         setupInputHandling();
 
         game.getGameStateManager().initialize(this);
 
-        // Debug log for initialization
         Gdx.app.log(TAG, "GameScreen initialized");
     }
 
@@ -123,15 +115,12 @@ public class GameScreen extends BaseScreen {
     }
 
     private void setupInputHandling() {
-        // Add game input processor to the multiplexer (stage is already there from BaseScreen)
         inputMultiplexer.addProcessor(new GameInputProcessor());
-        
-        // Log configuration for debugging
+
         Gdx.app.log(TAG, "Input processors initialized. Count: " + inputMultiplexer.getProcessors().size);
     }
 
-    // Add visual feedback for selectable pawns
-    public void updatePawnHighlights() {
+    public void updatePawnHighlights() { //TODO check usage
         if (canMove && currentPlayer != null &&
             currentPlayer.getName().equals(game.getGameStateManager().getCurrentUsername())) {
             renderer.highlightSelectablePawns(currentPlayer, lastDiceRoll);
@@ -141,8 +130,8 @@ public class GameScreen extends BaseScreen {
     }
 
     private void handleContinuousInput(float delta) {
-        float rotationAmount = 100f * delta; // Faster rotation speed
-        float heightAmount = 5f * delta;     // Faster height change
+        float rotationAmount = 100f * delta;
+        float heightAmount = 5f * delta;
 
         // Check for continuous keyboard input
         if (Gdx.input.isKeyPressed(Input.Keys.LEFT)) {
@@ -182,15 +171,12 @@ public class GameScreen extends BaseScreen {
     }
 
     private void updateCameraPosition() {
-        float x = (float)(cameraDistance * Math.cos(Math.toRadians(cameraRotation)));
-        float z = (float)(cameraDistance * Math.sin(Math.toRadians(cameraRotation)));
+        float x = (float) (cameraDistance * Math.cos(Math.toRadians(cameraRotation)));
+        float z = (float) (cameraDistance * Math.sin(Math.toRadians(cameraRotation)));
         camera.position.set(x, cameraHeight, z);
         camera.lookAt(cameraTarget);
         camera.up.set(Vector3.Y);
         camera.update();
-
-//        Gdx.app.log(TAG, "Camera Position - x:" + x + " y:" + cameraHeight + " z:" + z +
-//            " rotation:" + cameraRotation + " distance:" + cameraDistance);
     }
 
     @Override
@@ -203,13 +189,6 @@ public class GameScreen extends BaseScreen {
         Gdx.gl.glEnable(GL20.GL_DEPTH_TEST);
 
         camera.update();
-
-        // Debug logging periodically
-        if (Gdx.input.isKeyJustPressed(Input.Keys.D)) {
-            Gdx.app.log(TAG, "Camera Position: " + camera.position);
-            Gdx.app.log(TAG, "Number of players: " + players.size());
-            Gdx.app.log(TAG, "Number of pawns: " + renderer.getNumberOfPawns());
-        }
 
         // Render 3D scene
         if (renderer != null && modelBatch != null && environment != null) {
@@ -228,7 +207,6 @@ public class GameScreen extends BaseScreen {
         }
     }
 
-//    @Override
     public void addPlayer(Player player) { // TODO is this correct are players supposed to enter the game like this?
         Gdx.app.log(TAG, "Adding player to GameScreen: " + player.getName());
         if (!players.contains(player)) {
@@ -239,7 +217,7 @@ public class GameScreen extends BaseScreen {
         }
     }
 
-    public int getPlayerCount() {
+    public int getPlayerCount() {//TODO check usage not used currently
         return players.size();
     }
 
@@ -303,7 +281,6 @@ public class GameScreen extends BaseScreen {
         }
     }
 
-
     private void requestDiceRoll() {
         isRolling = true;
         rollButton.setDisabled(true);
@@ -325,7 +302,7 @@ public class GameScreen extends BaseScreen {
         }
     }
 
-    private void updateGameState() {
+    private void updateGameState() { //TODO check usage not used currently
         if (currentPlayer != null) {
             renderer.updateAllPawnPositions();
             hud.updateCurrentPlayer(currentPlayer.getName());
@@ -379,30 +356,6 @@ public class GameScreen extends BaseScreen {
         }
     }
 
-
-//    private void handleInput(float delta) {
-//        // Camera rotation with arrow keys
-//        if (Gdx.input.isKeyPressed(Input.Keys.LEFT)) {
-//            cameraRotation += 90 * delta;
-//        }
-//        if (Gdx.input.isKeyPressed(Input.Keys.RIGHT)) {
-//            cameraRotation -= 90 * delta;
-//        }
-//
-//        // Camera zoom with up/down arrows
-//        if (Gdx.input.isKeyPressed(Input.Keys.UP)) {
-//            cameraDistance = Math.max(8, cameraDistance - 5 * delta);
-//        }
-//        if (Gdx.input.isKeyPressed(Input.Keys.DOWN)) {
-//            cameraDistance = Math.min(20, cameraDistance + 5 * delta);
-//        }
-//
-//        // Handle pawn selection on click
-//        if (Gdx.input.justTouched() && canMove) {
-//            handlePawnSelection(Gdx.input.getX(), Gdx.input.getY());
-//        }
-//    }
-
     private void handlePawnSelection(int screenX, int screenY) {
         if (!canMove || currentPlayer == null || !currentPlayer.getName().equals(game.getGameStateManager().getCurrentUsername())) {
             Gdx.app.log(TAG, "Pawn selection disabled - " +
@@ -417,16 +370,13 @@ public class GameScreen extends BaseScreen {
         Gdx.app.log(TAG, String.format("Pick ray - Origin: %s, Direction: %s",
             pickRay.origin, pickRay.direction));
 
-        // Check if it's our turn
         if (currentPlayer == null || !currentPlayer.getName().equals(game.getGameStateManager().getCurrentUsername())) {
             Gdx.app.log(TAG, "Not current player's turn");
             return;
         }
 
-        // Debug ray cast
         renderer.debugRayTest(screenX, screenY, camera);
 
-        // Attempt pawn selection
         int selectedPawn = renderer.getPawnAtScreenCoords(screenX, screenY, camera);
 
         if (selectedPawn != -1) {
@@ -440,7 +390,6 @@ public class GameScreen extends BaseScreen {
 
 
     public void updatePawnPosition(int pawnIndex, int newPosition) {
-        // Similar to playMoveAnimation
         String color = null;
         int playerIndex = pawnIndex / 4;
         if (playerIndex < players.size()) {
@@ -454,11 +403,11 @@ public class GameScreen extends BaseScreen {
     }
 
     private class GameInputProcessor extends InputAdapter {
-        private Vector3 touchPoint = new Vector3();
+        private static final float DRAG_THRESHOLD = 5f;
+        private final Vector3 touchPoint = new Vector3();
+        private final boolean isMacOS = System.getProperty("os.name").toLowerCase().contains("mac");
         private boolean isDragging = false;
         private float startX, startY;
-        private static final float DRAG_THRESHOLD = 5f;
-        private final boolean isMacOS = System.getProperty("os.name").toLowerCase().contains("mac");
 
         @Override
         public boolean touchDown(int screenX, int screenY, int pointer, int button) {
@@ -469,9 +418,13 @@ public class GameScreen extends BaseScreen {
             // Map button codes for macOS
             int mappedButton = button;
             if (isMacOS) {
-                switch(button) {
-                    case 0: mappedButton = Input.Buttons.LEFT; break;
-                    case 1: mappedButton = Input.Buttons.RIGHT; break;
+                switch (button) {
+                    case 0:
+                        mappedButton = Input.Buttons.LEFT;
+                        break;
+                    case 1:
+                        mappedButton = Input.Buttons.RIGHT;
+                        break;
                 }
             }
 
@@ -553,73 +506,6 @@ public class GameScreen extends BaseScreen {
             }
 
             return true;
-        }
-    }
-
-    private class MacOSInputDebugProcessor extends InputAdapter {
-        @Override
-        public boolean keyDown(int keycode) {
-            Gdx.app.log(TAG, "MacOS Input - keyDown: " + keycode);
-            return false;
-        }
-
-        @Override
-        public boolean keyUp(int keycode) {
-            Gdx.app.log(TAG, "MacOS Input - keyUp: " + keycode);
-            return false;
-        }
-
-        @Override
-        public boolean touchDown(int screenX, int screenY, int pointer, int button) {
-            Gdx.app.log(TAG, String.format("MacOS Input - touchDown: x=%d, y=%d, pointer=%d, button=%d",
-                screenX, screenY, pointer, button));
-
-            // On macOS, we might get different button values
-            // Let's try mapping them explicitly
-            int mappedButton = button;
-            if (System.getProperty("os.name").toLowerCase().contains("mac")) {
-                // Map macOS-specific button codes if needed
-                switch(button) {
-                    case 0: mappedButton = Input.Buttons.LEFT; break;
-                    case 1: mappedButton = Input.Buttons.RIGHT; break;
-                    // Add more mappings if needed
-                }
-            }
-
-            // Let's see what we get from the camera
-            Vector3 worldCoords = new Vector3(screenX, screenY, 0);
-            camera.unproject(worldCoords);
-            Gdx.app.log(TAG, String.format("MacOS Input - World coordinates: x=%f, y=%f, z=%f",
-                worldCoords.x, worldCoords.y, worldCoords.z));
-
-            return false; // Don't consume the event
-        }
-
-        @Override
-        public boolean touchUp(int screenX, int screenY, int pointer, int button) {
-            Gdx.app.log(TAG, String.format("MacOS Input - touchUp: x=%d, y=%d, pointer=%d, button=%d",
-                screenX, screenY, pointer, button));
-            return false;
-        }
-
-        @Override
-        public boolean touchDragged(int screenX, int screenY, int pointer) {
-            Gdx.app.log(TAG, String.format("MacOS Input - touchDragged: x=%d, y=%d, pointer=%d",
-                screenX, screenY, pointer));
-            return false;
-        }
-
-        @Override
-        public boolean mouseMoved(int screenX, int screenY) {
-            // Comment out to avoid log spam, uncomment for debugging
-            // Gdx.app.log(TAG, String.format("MacOS Input - mouseMoved: x=%d, y=%d", screenX, screenY));
-            return false;
-        }
-
-        @Override
-        public boolean scrolled(float amountX, float amountY) {
-            Gdx.app.log(TAG, String.format("MacOS Input - scrolled: x=%f, y=%f", amountX, amountY));
-            return false;
         }
     }
 }

@@ -9,7 +9,7 @@ import java.util.List;
 
 public class LudoGame extends Game {
     private GameStateManager gameStateManager;
-    private List<Player> players;
+    private final List<Player> players;
     private String currentPlayerName;
     private GameScreen gameScreen;
 
@@ -20,8 +20,6 @@ public class LudoGame extends Game {
     @Override
     public void create() {
         gameStateManager = new GameStateManager(this);
-        // Start with connection screen instead of menu
-//        setScreen(new ConnectionScreen(this));
         setScreen(new MenuScreen(this));
     }
 
@@ -32,7 +30,7 @@ public class LudoGame extends Game {
         }
         super.setScreen(screen);
         if (screen instanceof GameScreen) {
-            gameStateManager.initialize((GameScreen) screen);
+            gameStateManager.initialize(screen);
         } else if (screen instanceof LobbyScreen) {
             gameStateManager.setLobbyScreen((LobbyScreen) screen);
         }
@@ -42,7 +40,7 @@ public class LudoGame extends Game {
         return gameStateManager;
     }
 
-    public void startGame(String playerName, String color) {
+    public void startGame(String playerName, String color) {//TODO check usage not used currently
         this.currentPlayerName = playerName;
 
         // Create initial player
@@ -55,7 +53,7 @@ public class LudoGame extends Game {
         setScreen(gameScreen);
     }
 
-    public void addPlayer(Player player) {
+    public void addPlayer(Player player) {//TODO check usage not used currently
         if (players.size() < 4 && !players.stream().anyMatch(p ->
             p.getColor().equals(player.getColor()) ||
                 p.getName().equals(player.getName()))) {
@@ -67,11 +65,11 @@ public class LudoGame extends Game {
         return new ArrayList<>(players);
     }
 
-    public String getCurrentPlayerName() {
+    public String getCurrentPlayerName() {//TODO check usage not used currently
         return currentPlayerName;
     }
 
-    public Player getLocalPlayer() {
+    public Player getLocalPlayer() {//TODO check usage not used currently
         return players.stream()
             .filter(p -> p.getName().equals(currentPlayerName))
             .findFirst()

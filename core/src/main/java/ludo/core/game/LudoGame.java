@@ -10,7 +10,7 @@ import java.util.List;
 import java.util.Random;
 
 import static ludo.core.utils.Constants.*;
-
+//for testing
 public class LudoGame {
     private final List<Player> players;
     private final Board board;

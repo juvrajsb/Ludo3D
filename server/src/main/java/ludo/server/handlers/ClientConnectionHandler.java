@@ -20,31 +20,31 @@ public class ClientConnectionHandler {
         this.playerJoinHandler = new PlayerJoinHandler();
         this.eventTransmitter = new EventTransmitter(Server.getInstance().getAllConnections());
     }
-
-    public void handleNewConnection(Connection connection) {
-        // Add to active connections
-        activeConnections.put(connection.getConnectionID(), connection); //TODO check, no getConnectionID method in Connection
-        Server.LOGGER.info("New client connected: " + connection.getConnectionID());
-    }
-
-    public void handleDisconnection(ClientDisconnectedEvent event) throws IOException {
-        Connection connection = event.getConnection(); //TODO check, no getConnection method in ClientDisconnectedEvent
-        String clientId = connection.getConnectionID();
-
-        // Remove from active connections
-        activeConnections.remove(clientId);
-
-        // Close connection
-        connection.close();
-
-        // Handle player removal if game hasn't started
-        playerJoinHandler.handlePlayerDisconnect(clientId);
-
-        // Notify other players
-        notifyOtherPlayersOfDisconnection(clientId);
-
-        Server.LOGGER.info("Client disconnected: " + clientId);
-    }
+//
+//    public void handleNewConnection(Connection connection) {
+//        // Add to active connections
+//        activeConnections.put(connection.getConnectionID(), connection); //TODO check, no getConnectionID method in Connection
+//        Server.LOGGER.info("New client connected: " + connection.getConnectionID());
+//    }
+//
+//    public void handleDisconnection(ClientDisconnectedEvent event) throws IOException {
+//        Connection connection = event.getConnection(); //TODO check, no getConnection method in ClientDisconnectedEvent
+//        String clientId = connection.getConnectionID();
+//
+//        // Remove from active connections
+//        activeConnections.remove(clientId);
+//
+//        // Close connection
+//        connection.close();
+//
+//        // Handle player removal if game hasn't started
+//        playerJoinHandler.handlePlayerDisconnect(clientId);
+//
+//        // Notify other players
+//        notifyOtherPlayersOfDisconnection(clientId);
+//
+//        Server.LOGGER.info("Client disconnected: " + clientId);
+//    }
 
     public void handleUnexpectedDisconnection(String clientId) {
         Connection connection = activeConnections.get(clientId);
@@ -68,18 +68,18 @@ public class ClientConnectionHandler {
         }
     }
 
-    private void notifyOtherPlayersOfDisconnection(String disconnectedClientId) {
-        for (Connection connection : activeConnections.values()) {
-            if (!connection.getConnectionID().equals(disconnectedClientId)) {
-                try {
-                    UnexceptedDisconnetionEvent event = new UnexceptedDisconnetionEvent();
-                    connection.send(event);
-                } catch (IOException e) {
-                    Server.LOGGER.severe("Error notifying client of disconnection: " + e.getMessage());
-                }
-            }
-        }
-    }
+//    private void notifyOtherPlayersOfDisconnection(String disconnectedClientId) {//TODO check usage not used currently
+//        for (Connection connection : activeConnections.values()) {
+//            if (!connection.getConnectionID().equals(disconnectedClientId)) {
+//                try {
+//                    UnexceptedDisconnetionEvent event = new UnexceptedDisconnetionEvent();
+//                    connection.send(event);
+//                } catch (IOException e) {
+//                    Server.LOGGER.severe("Error notifying client of disconnection: " + e.getMessage());
+//                }
+//            }
+//        }
+//    }
 
     public boolean isClientConnected(String clientId) {
         return activeConnections.containsKey(clientId);
@@ -101,14 +101,14 @@ public class ClientConnectionHandler {
         Server.LOGGER.info("Client reconnected: " + clientId);
     }
 
-    public void closeAllConnections() {
-        for (Connection connection : activeConnections.values()) {
-            try {
-                connection.close();
-            } catch (IOException e) {
-                Server.LOGGER.severe("Error closing connection: " + e.getMessage());
-            }
-        }
-        activeConnections.clear();
-    }
+//    public void closeAllConnections() {//TODO check usage not used currently
+//        for (Connection connection : activeConnections.values()) {
+//            try {
+//                connection.close();
+//            } catch (IOException e) {
+//                Server.LOGGER.severe("Error closing connection: " + e.getMessage());
+//            }
+//        }
+//        activeConnections.clear();
+//    }
 }

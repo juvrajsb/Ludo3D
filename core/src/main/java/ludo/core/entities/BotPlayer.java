@@ -4,7 +4,7 @@ import ludo.core.utils.GameUtils;
 import java.util.*;
 import java.util.stream.Collectors;
 
-public class BotPlayer extends Player {
+public class BotPlayer extends Player {//TODO check usage not used currently
     private static final int CAPTURE_SCORE = 100;
     private static final int SAFETY_SCORE = 50;
     private static final int PROGRESS_SCORE = 30;

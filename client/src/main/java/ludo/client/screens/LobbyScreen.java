@@ -16,12 +16,11 @@ public class LobbyScreen extends BaseScreen {
     private final Table playersTable;
     private final Label statusLabel;
     private final TextButton startButton;
-    private boolean isAdmin = false;
     private final List<Player> players = new ArrayList<>();
+    private boolean isAdmin = false;
 
     public LobbyScreen(final LudoGame game) {
         super(game);
-//        game.getGameStateManager().setLobbyScreen(this);
 
         Table mainTable = new Table();
         mainTable.setFillParent(true);
@@ -74,10 +73,8 @@ public class LobbyScreen extends BaseScreen {
         mainTable.add(backButton).colspan(2).pad(20);
 
         stage.addActor(mainTable);
-//        Gdx.input.setInputProcessor(stage);
         game.getGameStateManager().setLobbyScreen(this);
 
-        // Check if this player is the admin (first player)
         checkAdminStatus();
     }
 
@@ -150,23 +147,12 @@ public class LobbyScreen extends BaseScreen {
         }
     }
 
-//        // Update status
-//        int playerCount = players.size();
-//        if (playerCount < 2) {
-//            statusLabel.setText("Waiting for more players... (" + playerCount + "/4)");
-//            startButton.setDisabled(true);
-//        } else {
-//            statusLabel.setText("Ready to start! (" + playerCount + "/4)");
-//            startButton.setDisabled(false);
-//        }
-
 
     @Override
     public void render(float delta) {
         Gdx.gl.glClearColor(0.2f, 0.2f, 0.2f, 1);
         Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT);
 
-//        checkAdminStatus();
         super.render(delta);
 
         // Check for game start

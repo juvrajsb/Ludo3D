@@ -26,12 +26,11 @@ public class EventListener implements Runnable {
         while (running) {
             try {
                 NetworkMessage message = listeningConnection.receive();
-                if (!(message instanceof Event)) {
+                if (!(message instanceof Event event)) {
                     LOGGER.warning("Received non-event message: " + message.getType());
                     continue;
                 }
 
-                Event event = (Event) message;
                 event.setConnection(listeningConnection);
 
                 synchronized (eventsQueue) {
@@ -56,7 +55,7 @@ public class EventListener implements Runnable {
         }
     }
 
-    public void stop() {
+    public void stop() {//TODO check usage not used currently
         running = false;
     }
 }

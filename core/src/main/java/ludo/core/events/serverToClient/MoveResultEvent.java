@@ -3,6 +3,7 @@ package ludo.core.events.serverToClient;
 import ludo.core.events.Event;
 
 public class MoveResultEvent extends Event {
+    private static final long serialVersionUID = 1L;
     private final boolean success;
     private final String message;
     private final int pawnIndex;

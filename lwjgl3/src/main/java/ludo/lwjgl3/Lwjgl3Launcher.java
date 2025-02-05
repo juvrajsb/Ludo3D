@@ -10,10 +10,8 @@ public class Lwjgl3Launcher {
     private static final String GAME_TITLE = "Ludo Game";
 
     public static void main(String[] args) {
-        System.out.println("Starting Ludo game...");
         try {
             Lwjgl3Application app = createApplication();
-            System.out.println("Application created successfully");
         } catch (Exception e) {
             System.err.println("Failed to create application: ");
             e.printStackTrace();
@@ -22,9 +20,7 @@ public class Lwjgl3Launcher {
     }
 
     private static Lwjgl3Application createApplication() {
-        System.out.println("Creating application configuration...");
         Lwjgl3ApplicationConfiguration config = getDefaultConfiguration();
-        System.out.println("Creating new LudoGame instance...");
         return new Lwjgl3Application(new LudoGame(), config);
     }
 

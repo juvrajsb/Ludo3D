@@ -5,7 +5,6 @@ import ludo.core.network.*;
 import ludo.server.Server;
 
 import java.net.ServerSocket;
-import java.net.Socket;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
@@ -20,8 +19,7 @@ public class ServerNetworkHandler {
 
     private final Map<String, Connection> clients = new ConcurrentHashMap<>();
     private final Object clientsLock = new Object(); // For thread-safe client operations
-    //    private final int port;
-    private ServerSocket serverSocket;
+    private final ServerSocket serverSocket;
     private volatile boolean running;
     private final Server server;
 
@@ -64,52 +62,7 @@ public class ServerNetworkHandler {
         }
     }
 
-//    private void acceptClients() {
-//        new Thread(() -> {
-//            while (running && !serverSocket.isClosed()) {
-//                try {
-//                    Socket clientSocket = serverSocket.accept();
-//                    if (clients.size() >= MAX_CLIENTS) {
-//                        clientSocket.close();
-//                        continue;
-//                    }
-//                    handleNewClient(clientSocket);
-//                } catch (Exception e) {
-//                    if (running) {
-//                        LOGGER.severe("Error accepting client: " + e.getMessage());
-//                    }
-//                }
-//            }
-//        }, "ClientAcceptor").start();
-//    }
-
-//    public void handleNewClient(Socket clientSocket) {
-//        try {
-//            Connection client = Connection.createServerSide(clientSocket);
-//            String clientId = client.getConnectionID();
-//
-//            synchronized(clientsLock) {
-//                if (clients.size() >= MAX_CLIENTS) {
-//                    client.close();
-//                    return;
-//                }
-//                clients.put(clientId, client);
-//                LOGGER.info("New client registered: " + clientId);
-//            }
-//
-//            // Start client message handling in new thread
-//            startClientMessageHandling(client);
-//
-//        } catch (Exception e) {
-//            LOGGER.severe("Error handling new client: " + e.getMessage());
-//            try {
-//                clientSocket.close();
-//            } catch (IOException ignored) {}
-//        }
-//    }
-
-
-    private void handleClientMessage(Connection client, NetworkMessage message) {
+    private void handleClientMessage(Connection client, NetworkMessage message) {//TODO check usage not used currently
         if (message instanceof Event) {
             ((Event) message).setConnection(client);
         }
@@ -118,36 +71,6 @@ public class ServerNetworkHandler {
             messageListener.onMessageReceived(message);
         }
     }
-
-//    private void handleClientError(Connection client) {
-//        String clientId = client.getConnectionID();
-//
-//        synchronized(clientsLock) {
-//            if (clients.remove(clientId) != null) {
-//                LOGGER.info("Client removed: " + clientId);
-//
-//                // Stop ping sender first
-//                PingSender pingSender = client.getPingSender();
-//                if (pingSender != null) {
-//                    pingSender.stop();
-//                }
-//
-//                // Close connection
-//                try {
-//                    client.close();
-//                } catch (IOException e) {
-//                    LOGGER.warning("Error closing client connection: " + e.getMessage());
-//                }
-//
-//                // Notify message listener
-//                if (messageListener != null) {
-//                    messageListener.onConnectionError(
-//                        new IOException("Client disconnected: " + clientId)
-//                    );
-//                }
-//            }
-//        }
-//    }
 
     public void addClient(Connection connection) throws IOException {
         String clientId = connection.getConnectionID();
@@ -221,7 +144,7 @@ public class ServerNetworkHandler {
         }
     }
 
-    public void removeClient(String clientId) {
+    public void removeClient(String clientId) {//TODO check usage not used currently
         synchronized(clientsLock) {
             Connection connection = clients.remove(clientId);
             if (connection != null) {
@@ -238,29 +161,7 @@ public class ServerNetworkHandler {
         }
     }
 
-//    private void startClientMessageHandling(Connection client) {
-//        new Thread(() -> {
-//            while (running && !client.isClosed()) {
-//                try {
-//                    NetworkMessage message = client.receive();
-//                    if (message instanceof Event) {
-//                        ((Event) message).setConnection(client);
-//                    }
-//                    if (messageListener != null) {
-//                        messageListener.onMessageReceived(message);
-//                    }
-//                } catch (Exception e) {
-//                    if (running) {
-//                        LOGGER.warning("Client error: " + e.getMessage());
-//                        handleClientError(client);
-//                        break;
-//                    }
-//                }
-//            }
-//        }, "ClientHandler-" + client.getConnectionID()).start();
-//    }
-
-    public int getClientCount() {
+    public int getClientCount() {//TODO check usage not used currently
         synchronized(clientsLock) {
             return clients.size();
         }
@@ -297,12 +198,7 @@ public class ServerNetworkHandler {
         return clients.containsKey(clientId);
     }
 
-
-//    public int getPort() {
-//        return port;
-//    }
-
-    public void handlePong(String connectionId) {
+    public void handlePong(String connectionId) {//TODO check usage not used currently
         Connection connection = clients.get(connectionId);
         if (connection != null) {
             connection.resetPingFailure();
