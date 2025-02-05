@@ -3,6 +3,7 @@ package ludo.client.ui;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.scenes.scene2d.Actor;
+import com.badlogic.gdx.scenes.scene2d.Touchable;
 import com.badlogic.gdx.scenes.scene2d.ui.*;
 import com.badlogic.gdx.utils.Align;
 import ludo.core.entities.Player;
@@ -23,6 +24,7 @@ public class GameHUD extends Table {
 
         // Make the HUD fill the screen
         setFillParent(true);
+        setTouchable(Touchable.childrenOnly);
 
         // Create top panel for player info and game status
         topPanel = new Table(skin);

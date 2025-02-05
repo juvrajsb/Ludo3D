@@ -69,7 +69,7 @@ public class ConnectionScreen extends BaseScreen {
         mainTable.add(backButton).colspan(2).padTop(20).width(150).height(50).row();
 
         stage.addActor(mainTable);
-        Gdx.input.setInputProcessor(stage);
+//        Gdx.input.setInputProcessor(stage);
     }
 
     private void tryConnect() {

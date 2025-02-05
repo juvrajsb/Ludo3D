@@ -2,6 +2,7 @@ package ludo.client.screens;
 
 import com.badlogic.gdx.Game;
 import com.badlogic.gdx.Gdx;
+import com.badlogic.gdx.InputMultiplexer;
 import com.badlogic.gdx.Screen;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.scenes.scene2d.Stage;
@@ -17,6 +18,7 @@ import ludo.client.LudoGame;
 public abstract class BaseScreen implements Screen {
     protected final LudoGame game;
     protected Stage stage;
+    protected InputMultiplexer inputMultiplexer;
     protected Viewport viewport;
 //    protected SpriteBatch batch;
     protected Skin skin;
@@ -25,6 +27,7 @@ public abstract class BaseScreen implements Screen {
         this.game = game;
         this.viewport = new ScreenViewport();
         this.stage = new Stage(viewport);
+        this.inputMultiplexer = new InputMultiplexer(stage);
 //        this.batch = new SpriteBatch();
         this.skin = new Skin(Gdx.files.internal("ui/uiskin.json"));
     }
@@ -37,7 +40,7 @@ public abstract class BaseScreen implements Screen {
 
     @Override
     public void show() {
-        com.badlogic.gdx.Gdx.input.setInputProcessor(stage);
+        Gdx.input.setInputProcessor(inputMultiplexer);
     }
 
     @Override

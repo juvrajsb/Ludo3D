@@ -74,7 +74,7 @@ public class LobbyScreen extends BaseScreen {
         mainTable.add(backButton).colspan(2).pad(20);
 
         stage.addActor(mainTable);
-        Gdx.input.setInputProcessor(stage);
+//        Gdx.input.setInputProcessor(stage);
         game.getGameStateManager().setLobbyScreen(this);
 
         // Check if this player is the admin (first player)
