@@ -142,38 +142,95 @@ public class GameManager {
 //    }
 
     public boolean movePawn(int playerIndex, int pawnIndex, int steps) {
-        LOGGER.info(String.format("Attempting move - Player: %d, Pawn: %d, Steps: %d",
+        LOGGER.info(String.format("Move attempt - Player: %d, Pawn: %d, Steps: %d",
             playerIndex, pawnIndex, steps));
+        LOGGER.info("Total players: " + players.size());
+        LOGGER.info("Current player positions map: " + getCurrentPawnPositions());
 
-        // Validate move
-        if (!canMovePawn(playerIndex, pawnIndex, steps)) {
-            LOGGER.info("Move validation failed");
+        try {
+            validateIndices(playerIndex, pawnIndex, steps);
+        } catch (IllegalArgumentException e) {
+            LOGGER.severe("Index validation failed: " + e.getMessage());
             return false;
         }
 
         Player player = players.get(playerIndex);
-        Pawn pawn = player.getPawns().get(pawnIndex);
+        LOGGER.info("Player color: " + player.getColor());
 
-        // Handle leaving home
-        if (pawn.isHome()) {
-            if (steps == 6) {
-                pawn.leaveHome(board);
-                LOGGER.info("Pawn left home to position: " + pawn.getPosition());
+        Pawn pawn = player.getPawns().get(pawnIndex);
+        LOGGER.info("Current pawn state - IsHome: " + pawn.isHome() +
+            ", Position: " + pawn.getPosition());
+
+        // Handle leaving home with a 6
+        if (pawn.isHome() && steps == 6) {
+            int startPosition = board.getStartPosition(player.getColor());
+            LOGGER.info("Pawn leaving home. Start position: " + startPosition);
+
+            pawn.setPosition(startPosition);
+
+            pawn.leaveHome(board);
+
+            LOGGER.info("New pawn position after leaving home: " + pawn.getPosition());
+
+            // Verify the move was successful
+            if (pawn.getPosition() == startPosition && !pawn.isHome()) {
+                LOGGER.info("Successfully moved pawn to start position");
                 return true;
+            } else {
+                LOGGER.severe("Failed to properly place pawn at start position");
+                // Revert the move if it wasn't successful
+                pawn.sendHome();
+                return false;
             }
+            // Update position map after move
+//            Map<String, List<Integer>> positions = getCurrentPawnPositions();
+//            LOGGER.info("Updated positions map after home move: " + positions);
+//            return true;
+        }
+
+        if (pawn.isHome()) {
+            LOGGER.info("Pawn is home and roll is not 6 - move invalid");
             return false;
         }
 
         // Calculate new position
-        int newPosition = calculateNewPosition(player, pawn.getPosition(), steps);
+        int currentPosition = pawn.getPosition();
+        int startPos = board.getStartPosition(player.getColor());
+        int entryPoint = (startPos + board.getTotalSpaces() - 1) % board.getTotalSpaces();
+
+        LOGGER.info(String.format("Movement calculation - Current: %d, StartPos: %d, EntryPoint: %d",
+            currentPosition, startPos, entryPoint));
+
+        int potentialNewPos = currentPosition + steps;
+        LOGGER.info("Potential new position: " + potentialNewPos);
+
+        // Calculate final position with detailed logging
+        int newPosition;
+        if (currentPosition <= entryPoint && potentialNewPos > entryPoint) {
+            int stepsAfterEntry = potentialNewPos - entryPoint - 1;
+            LOGGER.info("Entering home column. Steps after entry: " + stepsAfterEntry);
+
+            if (stepsAfterEntry >= board.getHomeColumnSize()) {
+                LOGGER.info("Move would overshoot home column");
+                return false;
+            }
+
+            newPosition = board.getTotalSpaces() + (startPos / 13) * board.getHomeColumnSize() + stepsAfterEntry;
+            LOGGER.info("Calculated home column position: " + newPosition);
+        } else {
+            newPosition = potentialNewPos % board.getTotalSpaces();
+            LOGGER.info("Calculated regular board position: " + newPosition);
+        }
 
         // Execute move
         pawn.setPosition(newPosition);
-        LOGGER.info("Moved pawn to position: " + newPosition);
+        LOGGER.info("Pawn position updated to: " + newPosition);
 
-        // Handle captures
+        // Check position map after move
+        Map<String, List<Integer>> positions = getCurrentPawnPositions();
+        LOGGER.info("Final positions map: " + positions);
+
         handleCaptures(player, newPosition);
-
         return true;
     }
 
@@ -205,13 +262,19 @@ public class GameManager {
     }
 
     private void handleCaptures(Player movingPlayer, int position) {
+        LOGGER.info("Checking captures at position: " + position);
+        LOGGER.info("Moving player: " + movingPlayer.getColor());
         if (board.isSafeSpot(position)) {
+            LOGGER.info("Position " + position + " is a safe spot, no captures possible");
+
             return;
         }
 
         for (Player otherPlayer : players) {
             if (otherPlayer != movingPlayer) {
+                LOGGER.info("Checking pawns of player: " + otherPlayer.getColor());
                 for (Pawn pawn : otherPlayer.getPawns()) {
+                    LOGGER.info("Checking pawn at position: " + pawn.getPosition());
                     if (pawn.getPosition() == position) {
                         pawn.sendHome();
                         LOGGER.info("Captured " + otherPlayer.getColor() + "'s pawn");
@@ -264,12 +327,23 @@ public class GameManager {
 
     public Map<String, List<Integer>> getCurrentPawnPositions() {
         Map<String, List<Integer>> positions = new HashMap<>();
-        for (Player player : players) {
-            positions.put(player.getColor(),
-                player.getPawns().stream()
-                    .map(Pawn::getPosition)
-                    .collect(Collectors.toList()));
+        LOGGER.info("Building current pawn positions map");
+
+        for (Player player : players) { //todo check before commit
+            List<Integer> playerPositions = new ArrayList<>();
+            LOGGER.info("Processing player: " + player.getColor());
+
+            for (Pawn pawn : player.getPawns()) {
+                int position = pawn.isHome() ? -1 : pawn.getPosition();
+                playerPositions.add(position);
+                LOGGER.info(String.format("Player %s, Pawn position: %d (isHome: %b)",
+                    player.getColor(), position, pawn.isHome()));
+            }
+
+            positions.put(player.getColor(), playerPositions);
         }
+
+        LOGGER.info("Complete positions map: " + positions);
         return positions;
     }
 
