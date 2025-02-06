@@ -13,6 +13,7 @@ import com.badlogic.gdx.math.Vector3;
 import com.badlogic.gdx.math.collision.Ray;
 import com.badlogic.gdx.scenes.scene2d.Actor;
 import com.badlogic.gdx.scenes.scene2d.ui.TextButton;
+import com.badlogic.gdx.scenes.scene2d.utils.ChangeListener;
 import ludo.client.LudoGame;
 import ludo.client.render.GameRenderer;
 import ludo.client.ui.GameHUD;
@@ -32,6 +33,7 @@ public class GameScreen extends BaseScreen {
     private final Environment environment;
     private final PerspectiveCamera camera;
     private final TextButton rollButton;
+    private final TextButton saveLoadButton;
     private final List<Player> players;
     private final Vector3 cameraTarget = new Vector3(0, 0, 0);
     private final float zoomSpeed = 2f;
@@ -68,7 +70,7 @@ public class GameScreen extends BaseScreen {
         rollButton = new TextButton("Roll Dice", skin);
         rollButton.setSize(100, 50);
         rollButton.setPosition(Gdx.graphics.getWidth() - 120, 20);
-        rollButton.addListener(new com.badlogic.gdx.scenes.scene2d.utils.ChangeListener() {
+        rollButton.addListener(new ChangeListener() {
             @Override
             public void changed(ChangeEvent event, Actor actor) {
                 Gdx.app.log(TAG, "Roll button clicked");
@@ -79,10 +81,22 @@ public class GameScreen extends BaseScreen {
             }
         });
 
+        saveLoadButton = new TextButton("Save/Load", skin);
+        saveLoadButton.setSize(100, 50);
+        saveLoadButton.setPosition(Gdx.graphics.getWidth() - 120, 80);
+        saveLoadButton.addListener(new ChangeListener() {
+            @Override
+            public void changed(ChangeEvent event, Actor actor) {
+                Gdx.app.log(TAG, "Save/Load button clicked");
+                game.setScreen(new SaveGameScreen(game));
+            }
+        });
+
         this.renderer = new GameRenderer(Gdx.graphics.getWidth(), Gdx.graphics.getHeight());
 
         stage.addActor(hud);
         stage.addActor(rollButton);
+        stage.addActor(saveLoadButton);
 
         setupInputHandling();
         game.getGameStateManager().initialize(this);
@@ -246,10 +260,14 @@ public class GameScreen extends BaseScreen {
     }
 
     public void updatePlayerPawns(String color, List<Integer> positions) {
+        // Only update pawns that have actually moved
         for (Player player : players) {
             if (player.getColor().equals(color)) {
                 for (int i = 0; i < positions.size(); i++) {
-                    renderer.updatePawnPosition(i, positions.get(i), color);
+                    int currentPos = player.getPawns().get(i).getPosition();
+                    if (currentPos != positions.get(i)) {
+                        renderer.updatePawnPosition(i, positions.get(i), color);
+                    }
                 }
                 break;
             }
@@ -260,10 +278,12 @@ public class GameScreen extends BaseScreen {
         return currentPlayer;
     }
 
-    public void setCurrentPlayer(String playerName) {
-        LOGGER.info("Setting current player to: " + playerName);
+    public void setCurrentPlayer(String identifier) {
+        LOGGER.info("Setting current player to: " + identifier);
+        // Try finding player by color first
         for (Player player : players) {
-            if (player.getColor().equals(playerName)) { //changed to color
+            if (player.getColor().toUpperCase().equals(identifier.toUpperCase()) || 
+                player.getName().equals(identifier)) {
                 currentPlayer = player;
                 hud.updateCurrentPlayer(player.getColor());
                 boolean isMyTurn = player.getName().equals(game.getGameStateManager().getCurrentUsername());
@@ -272,9 +292,10 @@ public class GameScreen extends BaseScreen {
                 LOGGER.info("Current player set - Name: " + player.getName() +
                     ", Color: " + player.getColor() +
                     ", isMyTurn: " + isMyTurn);
-                break;
+                return;
             }
         }
+        LOGGER.severe("Player not found for identifier: " + identifier);
     }
 
     private void requestDiceRoll() {
@@ -310,6 +331,7 @@ public class GameScreen extends BaseScreen {
     }
 
     public void enablePawnSelection() {
+        disableControls();
         canMove = true;
         showMessage("Select a pawn to move");
     }
