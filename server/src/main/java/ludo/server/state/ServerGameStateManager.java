@@ -94,7 +94,7 @@ public class ServerGameStateManager implements MessageListener {
             networkHandler.broadcast(resultEvent);
 
             // If no valid moves are possible with this roll, automatically end turn
-            if (!gameManager.hasValidMovesAvailable(gameManager.getCurrentPlayer(), diceValue)) {
+            if (!gameManager.hasValidMovesAvailable(gameManager.getCurrentPlayer(), diceValue)) { //todo duplicate with @GameStateManager.handleDiceRoll
                 LOGGER.info("No valid moves available - automatically ending turn");
                 handleTurnEnd(event);
             }
@@ -158,10 +158,6 @@ public class ServerGameStateManager implements MessageListener {
         String connectionId = event.getConnection().getConnectionID();
         String playerName = connectionToPlayerMap.get(connectionId);
 
-        LOGGER.info("Processing move request from " + playerName +
-            " - Pawn: " + event.getPawnIndex() +
-            " Steps: " + event.getSteps());
-
         // Validate it's the player's turn
         if (!gameManager.isPlayerTurn(playerName)) {
             LOGGER.warning("Move rejected - not player's turn");
@@ -169,32 +165,29 @@ public class ServerGameStateManager implements MessageListener {
             return;
         }
 
-        // Get the player and attempt the move
         Player currentPlayer = gameManager.getPlayerByName(playerName);
         if (currentPlayer == null) {
-            LOGGER.severe("Player not found: " + playerName);
+            LOGGER.severe("Player not found in game manager: " + playerName);
             return;
         }
 
         int pawnIndex = event.getPawnIndex();
         int steps = event.getSteps();
+        int playerIndex = gameManager.getPlayers().indexOf(currentPlayer);
 
-        // Add debug logging
-        LOGGER.info("Current player: " + currentPlayer.getName() +
-            ", Color: " + currentPlayer.getColor() +
-            ", Position in players list: " + gameManager.getPlayers().indexOf(currentPlayer));
+        LOGGER.info(String.format("Move parameters - PlayerIndex: %d, PawnIndex: %d, Steps: %d",
+            playerIndex, pawnIndex, steps));
 
-        // Attempt move with additional logging
-        boolean moveSuccess = gameManager.movePawn(
-            gameManager.getPlayers().indexOf(currentPlayer),
-            pawnIndex,
-            steps
-        );
+        Map<String, List<Integer>> beforePositions = gameManager.getCurrentPawnPositions();
+        LOGGER.info("Positions before move: " + beforePositions);
 
+        boolean moveSuccess = gameManager.movePawn(playerIndex, pawnIndex, steps);
         LOGGER.info("Move result: " + (moveSuccess ? "Success" : "Failed"));
 
         if (moveSuccess) {
-            // Get new position
+            Map<String, List<Integer>> afterPositions = gameManager.getCurrentPawnPositions();
+            LOGGER.info("Positions after move: " + afterPositions);
+            // Get new position after move
             int newPosition = currentPlayer.getPawns().get(pawnIndex).getPosition();
             LOGGER.info("New position: " + newPosition);
 
@@ -205,19 +198,24 @@ public class ServerGameStateManager implements MessageListener {
                 pawnIndex,
                 newPosition
             );
+            LOGGER.info("Broadcasting move result: " + resultEvent);
             networkHandler.broadcast(resultEvent);
 
             // Update game state
+            broadcastGameState();
             if (gameManager.hasPlayerWon(playerName)) {
                 handleGameOver(playerName);
-            } else {
+            }
+            // If the move was just leaving home with a 6, don't end turn
+            boolean wasLeavingHome = currentPlayer.getPawns().get(pawnIndex).isHome() && steps == 6;
+            if (!wasLeavingHome) {
+                // Move to next turn
                 gameManager.nextTurn();
-                broadcastGameState();
 
                 // Send turn change event
-                TurnChangeEvent turnEvent = new TurnChangeEvent(
-                    gameManager.getCurrentPlayer().getName()
-                );
+                String nextPlayer = gameManager.getCurrentPlayer().getName();
+                LOGGER.info("Next player: " + nextPlayer);
+                TurnChangeEvent turnEvent = new TurnChangeEvent(nextPlayer);
                 networkHandler.broadcast(turnEvent);
             }
         } else {
