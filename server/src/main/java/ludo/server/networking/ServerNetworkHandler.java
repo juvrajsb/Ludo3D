@@ -37,7 +37,7 @@ public class ServerNetworkHandler {
 //            serverSocket = new ServerSocket(port);
             running = true;
 //            LOGGER.info("Server started on port " + port);
-            LOGGER.info("Server started on port " + serverSocket.getLocalPort());
+//            LOGGER.info("Server started on port " + serverSocket.getLocalPort());
 //            acceptClients();
         } catch (Exception e) {
             LOGGER.severe("Failed to start server: " + e.getMessage());

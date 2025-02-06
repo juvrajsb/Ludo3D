@@ -143,50 +143,50 @@ public class GameStateManager implements MessageListener {
         try {
             switch (message.getType()) {
                 case "FIRST_PLAYER":
-                    LOGGER.info("Received first player designation");
+//                    LOGGER.info("Received first player designation");
                     handleFirstPlayer();
                     break;
                 case "JOIN_GAME_RESPONSE":
                     JoinGameResponseEvent joinResponse = (JoinGameResponseEvent) message;
-                    LOGGER.info("Join response received: " + joinResponse.getResponse());
+//                    LOGGER.info("Join response received: " + joinResponse.getResponse());
                     handleJoinResponse(joinResponse);
                     break;
                 case "DICE_ROLL_RESULT":
                     DiceRollResultEvent diceEvent = (DiceRollResultEvent) message;
-                    LOGGER.info("Dice roll result: " + diceEvent.getValue() + ", Color: " + diceEvent.getPlayerColor());
+//                    LOGGER.info("Dice roll result: " + diceEvent.getValue() + ", Color: " + diceEvent.getPlayerColor());
                     handleDiceRoll(message);
                     break;
                 case "MOVE_RESULT":
                     MoveResultEvent moveEvent = (MoveResultEvent) message;
-                    LOGGER.info("Move result - Success: " + moveEvent.isSuccess() +
-                        ", PawnIndex: " + moveEvent.getPawnIndex() +
-                        ", NewPosition: " + moveEvent.getNewPosition());
+//                    LOGGER.info("Move result - Success: " + moveEvent.isSuccess() +
+//                        ", PawnIndex: " + moveEvent.getPawnIndex() +
+//                        ", NewPosition: " + moveEvent.getNewPosition());
                     handleMoveResult(message);
                     break;
                 case "GAME_STATE_UPDATE":
-                    LOGGER.info("Game state update received");
+//                    LOGGER.info("Game state update received");
                     handleGameStateUpdate(message);
                     logGameState((GameStateUpdateEvent) message);
                     break;
                 case "PLAYER_JOINED":
                     PlayerJoinedEvent joinEvent = (PlayerJoinedEvent) message;
-                    LOGGER.info("Player joined: " + joinEvent.getPlayer().getName() +
-                        " (" + joinEvent.getPlayer().getColor() + ")");
+//                    LOGGER.info("Player joined: " + joinEvent.getPlayer().getName() +
+//                        " (" + joinEvent.getPlayer().getColor() + ")");
                     handlePlayerJoined(message);
                     break;
                 case "TURN_CHANGE":
                     TurnChangeEvent turnEvent = (TurnChangeEvent) message;
-                    LOGGER.info("Turn changed to: " + turnEvent.getCurrentPlayer() +
-                        " (isMyTurn: " + turnEvent.getCurrentPlayer().equals(currentUsername) + ")");
+//                    LOGGER.info("Turn changed to: " + turnEvent.getCurrentPlayer() +
+//                        " (isMyTurn: " + turnEvent.getCurrentPlayer().equals(currentUsername) + ")");
                     handleTurnChange(message);
                     break;
                 case "GAME_OVER":
                     GameOverEvent gameOverEvent = (GameOverEvent) message;
-                    LOGGER.info("Game over - Winner: " + gameOverEvent.getWinner());
+//                    LOGGER.info("Game over - Winner: " + gameOverEvent.getWinner());
                     handleGameOver(message);
                     break;
                 case "GAME_STARTED":
-                    LOGGER.info("Game start event received");
+//                    LOGGER.info("Game start event received");
                     handleGameStarted((GameStartedEvent) message);
                     break;
                 case "START_GAME_RESPONSE":
@@ -194,8 +194,8 @@ public class GameStateManager implements MessageListener {
                     break;
                 case "WAITING_ROOM_UPDATE":
                     WaitingRoomUpdateEvent roomEvent = (WaitingRoomUpdateEvent) message;
-                    LOGGER.info("Waiting room update - Players: " + roomEvent.getUsernames() +
-                        " (" + roomEvent.getNumberOfPlayers() + " players)");
+//                    LOGGER.info("Waiting room update - Players: " + roomEvent.getUsernames() +
+//                        " (" + roomEvent.getNumberOfPlayers() + " players)");
                     handleWaitingRoomUpdate(roomEvent);
                     break;
                 default:
@@ -362,7 +362,7 @@ public class GameStateManager implements MessageListener {
             }
 
             game.setScreen(newGameScreen);
-            LOGGER.info("Screen transition complete. Current player: " + currentUsername + 
+            LOGGER.info("Screen transition complete. Current player: " + currentUsername +
                 ", isMyTurn: " + isMyTurn);
         });
     }
@@ -478,7 +478,7 @@ public class GameStateManager implements MessageListener {
 
         if (gameScreen != null) {
             if (isMyTurn) {
-                LOGGER.info("Beginning turn for " + currentUsername);
+//                LOGGER.info("Beginning turn for " + currentUsername);
                 gameScreen.enableControls();
                 gameScreen.showMessage("Your turn! Roll the dice");
             } else {

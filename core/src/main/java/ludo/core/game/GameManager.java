@@ -4,6 +4,7 @@ import ludo.core.entities.Pawn;
 import ludo.core.entities.Player;
 import ludo.core.entities.Board;
 import ludo.core.entities.Dice;
+import ludo.core.persistence.GamePersistence;
 import ludo.core.utils.Constants;
 import ludo.core.network.Connection;
 import ludo.core.events.serverToClient.GameStateUpdateEvent;
@@ -231,6 +232,18 @@ public class GameManager {
         LOGGER.info("Final positions map: " + positions);
 
         handleCaptures(player, newPosition);
+
+        // Auto-save after each move
+        try {
+            GamePersistence.autoSave(
+                players,
+                getCurrentPlayer().getColor(),
+                gameState
+            );
+        } catch (Exception e) {
+            LOGGER.warning("Failed to auto-save game: " + e.getMessage());
+        }
+
         return true;
     }
 

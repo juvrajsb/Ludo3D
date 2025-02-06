@@ -403,22 +403,22 @@ public class ServerGameStateManager implements MessageListener {
 
     private boolean isColorTaken(String desiredColor) {
         return gameManager.getPlayers().stream()
-            .anyMatch(p -> p.getColor().equals(desiredColor));
+            .anyMatch(p -> p.getColor().equals(desiredColor.toUpperCase()));
     }
 
     private void handleJoinRequest(JoinGameRequestEvent event) {
         String connectionId = event.getConnection().getConnectionID();
         String playerName = event.getPlayerName();
-        String color = event.getDesiredColor();
+        String color = event.getDesiredColor().toUpperCase();
 
         // Validate name
-        if (isNameTaken(playerName, color)) {
+        if (isNameTaken(playerName.toUpperCase(), color.toUpperCase())) {
             networkHandler.sendToClient(connectionId,
                 new JoinGameResponseEvent(Response.USERNAME_TAKEN));
             return;
         }
         // Validate color
-        if (isColorTaken(color)) {
+        if (isColorTaken(color.toUpperCase())) {
             networkHandler.sendToClient(connectionId,
                 new JoinGameResponseEvent(Response.COLOR_TAKEN));
             return;
