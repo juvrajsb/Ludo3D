@@ -47,6 +47,8 @@ public class Board implements Serializable {
         positionToGrid = new HashMap<>();
         gridToPosition = new HashMap<>();
 
+        initializeHomePositions();
+
         // RED path (bottom)
         for (int i = 0; i < 6; i++) {
             mapPosition(i, new GridPosition(14, 8 + i));  // Bottom to right
@@ -106,8 +108,32 @@ public class Board implements Serializable {
     }
 
     private void mapPosition(int boardPosition, GridPosition gridPosition) {
-        positionToGrid.put(boardPosition, gridPosition);
-        gridToPosition.put(gridPosition, boardPosition);
+        if (boardPosition >= 0 && gridPosition != null) {
+            positionToGrid.put(boardPosition, gridPosition);
+            gridToPosition.put(gridPosition, boardPosition);
+        }
+    }
+
+    private void initializeHomePositions() {
+        // Red home positions
+        for (int i = 0; i < 4; i++) {
+            mapPosition(-1, new GridPosition(14 - i, 14 - i)); // Red home positions
+        }
+
+        // Blue home positions
+        for (int i = 0; i < 4; i++) {
+            mapPosition(-1, new GridPosition(0 + i, 0 + i)); // Blue home positions
+        }
+
+        // Green home positions
+        for (int i = 0; i < 4; i++) {
+            mapPosition(-1, new GridPosition(14 - i, 0 + i)); // Green home positions
+        }
+
+        // Yellow home positions
+        for (int i = 0; i < 4; i++) {
+            mapPosition(-1, new GridPosition(0 + i, 14 - i)); // Yellow home positions
+        }
     }
 
     public static class GridPosition {
