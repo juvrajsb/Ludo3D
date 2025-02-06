@@ -139,7 +139,7 @@ public class GameRenderer {
             e.printStackTrace();
         }
     }
-    
+
     private Vector3 calculatePawnPosition(int boardPosition, String playerColor, int pawnIndex) {
         if (boardPosition == -1) {
             // Pawn is in home base
