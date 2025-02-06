@@ -332,9 +332,7 @@ public class GameStateManager implements MessageListener {
     public void handleGameStarted(GameStartedEvent event) {
         LOGGER.info("Game started event received");
         LOGGER.info("Current players in GameStateManager: " + currentPlayers.size());
-
-        final List<Player> eventPlayers = event.getPlayers();
-        LOGGER.info("Players received in event: " + eventPlayers.size());
+        LOGGER.info("Players received in event: " + event.getPlayers().size());
 
         if (gameScreen != null) {
             LOGGER.info("Game screen exists, skipping creation");
@@ -350,19 +348,22 @@ public class GameStateManager implements MessageListener {
                 newGameScreen.addPlayer(player);
             });
 
-            newGameScreen.setCurrentPlayer(event.getStartingPlayer());
-            isMyTurn = event.getStartingPlayer().equals(currentUsername);
+            // Use player name instead of color for comparison
+            String startingPlayerName = event.getStartingPlayer();
+            newGameScreen.setCurrentPlayer(startingPlayerName);
+            isMyTurn = currentUsername.equals(startingPlayerName);
 
             if (isMyTurn) {
                 newGameScreen.enableControls();
                 newGameScreen.showMessage("Your turn!");
             } else {
                 newGameScreen.disableControls();
-                newGameScreen.showMessage("Waiting for " + event.getStartingPlayer());
+                newGameScreen.showMessage("Waiting for " + startingPlayerName);
             }
 
             game.setScreen(newGameScreen);
-            LOGGER.info("Screen transition complete. Current player: " + currentUsername + ", isMyTurn: " + isMyTurn);
+            LOGGER.info("Screen transition complete. Current player: " + currentUsername + 
+                ", isMyTurn: " + isMyTurn);
         });
     }
 
@@ -384,7 +385,7 @@ public class GameStateManager implements MessageListener {
         }
     }
 
-    private void handleDiceRoll(NetworkMessage message) {
+    public void handleDiceRoll(NetworkMessage message) {
         DiceRollResultEvent event = (DiceRollResultEvent) message;
         currentDiceValue = event.getValue();
         LOGGER.info("Dice roll result: " + currentDiceValue + " for " + event.getPlayerColor());
@@ -411,6 +412,8 @@ public class GameStateManager implements MessageListener {
                 }
             }
 
+            LOGGER.info("Valid move check: " + hasValidMove + " for player " + currentPlayer.getName()+ " with roll: " + currentDiceValue);
+
             if (hasValidMove) {
                 gameScreen.enablePawnSelection();
                 gameScreen.showMessage("Select a pawn to move");
@@ -418,6 +421,20 @@ public class GameStateManager implements MessageListener {
                 LOGGER.info("No valid moves available with roll: " + currentDiceValue);
                 gameScreen.showMessage("No valid moves - turn passed");
                 networkHandler.sendMessage(new TurnEndEvent());
+            }
+        }
+    }
+
+    public void setCurrentPlayer(String color) {
+        if (gameScreen != null) {
+            gameScreen.setCurrentPlayer(color);
+            isMyTurn = color.equals(currentColor);
+            if (isMyTurn) {
+                gameScreen.enableControls();
+                gameScreen.showMessage("Your turn!");
+            } else {
+                gameScreen.disableControls();
+                gameScreen.showMessage("Waiting for " + color);
             }
         }
     }
