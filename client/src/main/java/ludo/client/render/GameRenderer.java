@@ -80,26 +80,43 @@ public class GameRenderer {
         diceRenderer.render(modelBatch);
     }
 
-    private void updateAnimations(float delta) {
+    public void updateAnimations(float delta) {
         Iterator<Map.Entry<Integer, PawnAnimation>> it = pawnAnimations.entrySet().iterator();
         while (it.hasNext()) {
             Map.Entry<Integer, PawnAnimation> entry = it.next();
             PawnAnimation anim = entry.getValue();
-            int pawnIndex = entry.getKey();
-
-            anim.progress += delta / ANIMATION_DURATION;
-            if (anim.progress >= 1.0f) {
-                updatePawnTransform(pawnIndex, anim.targetPos);
-                pawnPositions.put(pawnIndex, anim.targetPos);
+            if (anim.update(delta)) {
+                // Animation complete, remove it
                 it.remove();
             } else {
-                // Interpolate position
-                Vector3 currentPos = new Vector3();
-                currentPos.lerp(anim.targetPos, anim.progress);
-                updatePawnTransform(pawnIndex, currentPos);
+                // Update pawn position
+                int pawnIndex = entry.getKey();
+                ModelInstance pawn = pawnInstances.get(pawnIndex);
+                Vector3 pos = anim.getCurrentPosition();
+                pawn.transform.setTranslation(pos);
             }
         }
     }
+    // private void updateAnimations(float delta) {
+    //     Iterator<Map.Entry<Integer, PawnAnimation>> it = pawnAnimations.entrySet().iterator();
+    //     while (it.hasNext()) {
+    //         Map.Entry<Integer, PawnAnimation> entry = it.next();
+    //         PawnAnimation anim = entry.getValue();
+    //         int pawnIndex = entry.getKey();
+
+    //         anim.progress += delta / ANIMATION_DURATION;
+    //         if (anim.progress >= 1.0f) {
+    //             updatePawnTransform(pawnIndex, anim.targetPos);
+    //             pawnPositions.put(pawnIndex, anim.targetPos);
+    //             it.remove();
+    //         } else {
+    //             // Interpolate position
+    //             Vector3 currentPos = new Vector3();
+    //             currentPos.lerp(anim.targetPos, anim.progress);
+    //             updatePawnTransform(pawnIndex, currentPos);
+    //         }
+    //     }
+    // }
 
     private void updatePawnTransform(int pawnIndex, Vector3 position) {
         if (pawnIndex < pawnInstances.size) {
@@ -162,19 +179,22 @@ public class GameRenderer {
     }
 
     public void updatePawnPosition(int pawnIndex, int newPosition, String playerColor) {
-
         if (pawnIndex >= 0 && pawnIndex < pawnInstances.size) {
-            Vector3 currentPos = pawnPositions.get(pawnIndex);
+            Vector3 currentPos = pawnInstances.get(pawnIndex).transform.getTranslation(new Vector3());
             Vector3 targetPos = calculatePawnPosition(newPosition, playerColor, pawnIndex % 4);
 
-            // Start animation
-            pawnAnimations.put(pawnIndex, new PawnAnimation(currentPos, targetPos, playerColor)); //todo this needs to fix is whats causing the animation problem
+            // Only create animation if positions are different
+            if (!currentPos.epsilonEquals(targetPos, 0.001f)) {
+                Gdx.app.log("GameRenderer", String.format(
+                    "Updating pawn %d (%s) position: %d -> Current(%s), Target(%s)",
+                    pawnIndex, playerColor, newPosition,
+                    currentPos.toString(),
+                    targetPos.toString()));
 
-            // Update stored position
-            pawnPositions.put(pawnIndex, targetPos);
-
-            LOGGER.info(String.format("Moving pawn %d to position %d (%.1f, %.1f)",
-                pawnIndex, newPosition, targetPos.x, targetPos.z));
+                PawnAnimation animation = new PawnAnimation(currentPos.cpy(), targetPos.cpy(), playerColor);
+                pawnAnimations.put(pawnIndex, animation);
+                pawnPositions.put(pawnIndex, targetPos.cpy());
+            }
         }
     }
 
@@ -182,32 +202,36 @@ public class GameRenderer {
 
     private Vector3 calculateHomeBasePosition(String color, int pawnIndex) {
         float x = 0, z = 0;
+        float baseOffset = 0.8f;
 
-        // Convert pawn index to grid position (0-3 to 2x2 grid)
-        float offsetX = (pawnIndex % 2) * 2.0f;
-        float offsetZ = (pawnIndex / 2) * 2.0f;
+        // Convert pawn index to 2x2 grid position (0-3)
+        float offsetX = (pawnIndex % 2) * baseOffset;
+        float offsetZ = (pawnIndex / 2) * baseOffset;
 
         switch(color.toUpperCase()) {
-            case "BLUE":
-                x = 2.5f + offsetX;
-                z = 2.5f + offsetZ;
+            case "GREEN":
+                // Green home base in bottom-right corner
+                x = 2.0f + offsetX;
+                z = 2.0f + offsetZ;
                 break;
             case "RED":
-                x = 2.5f + offsetX;
-                z = 10.5f + offsetZ;
-                break;
-            case "GREEN":
-                x = 10.5f + offsetX;
-                z = 10.5f + offsetZ;
+                // Red home base in top-right corner
+                x = 2.0f + offsetX;
+                z = -3.0f + offsetZ;
                 break;
             case "YELLOW":
-                x = 10.5f + offsetX;
-                z = 2.5f + offsetZ;
+                // Yellow home base in bottom-left corner
+                x = -3.0f + offsetX;
+                z = 2.0f + offsetZ;
+                break;
+            case "BLUE":
+                // Blue home base in top-left corner
+                x = -3.0f + offsetX;
+                z = -3.0f + offsetZ;
                 break;
         }
 
-        // Convert grid coordinates to world coordinates
-        return gridToWorld(x, z);
+        return new Vector3(x, 0.2f, z);
     }
 
     private Vector3 calculateStartPosition(String color) {
@@ -509,29 +533,35 @@ public class GameRenderer {
         }
     }
 
-    private static class PawnAnimation { //todo integrate correctly
+    private static class PawnAnimation {
         private final Vector3 startPos;
         private final Vector3 targetPos;
         private final String playerColor;
-        float progress;
+        private float progress;
+        private static final float ANIMATION_SPEED = 2.0f;
+        private static final float ARC_HEIGHT = 0.5f;
 
         PawnAnimation(Vector3 start, Vector3 target, String color) {
             this.startPos = start.cpy();
-            this.targetPos = target;
+            this.targetPos = target.cpy();
             this.playerColor = color;
             this.progress = 0;
+
+            // Debug log to track positions
+            Gdx.app.log("PawnAnimation", String.format(
+                "Creating animation for %s pawn: Start(%s) -> Target(%s)",
+                color, start.toString(), target.toString()));
         }
 
         Vector3 getCurrentPosition() {
             Vector3 currentPos = new Vector3();
-            // Use bezier curve for smoother animation
             float t = progress;
             float oneMinusT = 1 - t;
 
             // Calculate control point for arc
             Vector3 controlPoint = new Vector3(
                 (startPos.x + targetPos.x) * 0.5f,
-                startPos.y + 1.0f, // Arc height
+                startPos.y + ARC_HEIGHT,
                 (startPos.z + targetPos.z) * 0.5f
             );
 
@@ -541,6 +571,11 @@ public class GameRenderer {
             currentPos.z = oneMinusT * oneMinusT * startPos.z + 2 * oneMinusT * t * controlPoint.z + t * t * targetPos.z;
 
             return currentPos;
+        }
+
+        boolean update(float deltaTime) {
+            progress += deltaTime * ANIMATION_SPEED;
+            return progress >= 1.0f;
         }
     }
 }
