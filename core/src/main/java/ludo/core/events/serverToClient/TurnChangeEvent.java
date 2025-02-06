@@ -1,9 +1,9 @@
-// PlayerJoinedEvent.java
 package ludo.core.events.serverToClient;
 
 import ludo.core.events.Event;
-import ludo.core.network.NetworkMessage;// Fix TurnChangeEvent.java
+
 public class TurnChangeEvent extends Event {
+    private static final long serialVersionUID = 1L;
     private final String currentPlayer;
 
     public TurnChangeEvent(String currentPlayer) {

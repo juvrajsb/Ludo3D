@@ -96,8 +96,6 @@ public class UsernameScreen extends BaseScreen {
 
         switch (response) {
             case OK:
-                game.setScreen(new LobbyScreen(game));
-                break;
             case FIRST_PLAYER:
                 game.setScreen(new LobbyScreen(game));
                 break;
