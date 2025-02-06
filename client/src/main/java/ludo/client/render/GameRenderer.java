@@ -3,7 +3,6 @@ package ludo.client.render;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.graphics.Camera;
 import com.badlogic.gdx.graphics.Color;
-import com.badlogic.gdx.graphics.GL20;
 import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.g3d.*;
 import com.badlogic.gdx.graphics.g3d.attributes.ColorAttribute;
@@ -22,15 +21,17 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.logging.Logger;
+
 import ludo.core.entities.Pawn;
 public class GameRenderer {
+    private static final Logger LOGGER = Logger.getLogger(GameRenderer.class.getName());
     private static final String TAG = "GameRenderer";
     private static final Color HIGHLIGHT_COLOR = new Color(1, 1, 0, 0.5f);
     private static final float ANIMATION_DURATION = 0.5f;
     private final Vector3 tempVector = new Vector3();
     private final float BOARD_SIZE = 8f;
     private final float PAWN_SCALE = 2f;
-    private final Ray ray;
     private final Vector3 intersection;
     private final float CELL_SIZE = BOARD_SIZE / 15f; // 15x15 grid
     private final Board gameBoard;
@@ -49,29 +50,11 @@ public class GameRenderer {
         pawnInstances = new Array<>();
         pawnPositions = new HashMap<>();
         pawnAnimations = new HashMap<>();
-        ray = new Ray();
         gameBoard = new Board();
         intersection = new Vector3();
         diceRenderer = new DiceRenderer();
         initializePlayerColors();
         createBoard();
-    }
-
-    public void debugRayTest(int screenX, int screenY, Camera camera) {
-        ray.set(camera.getPickRay(screenX, screenY));
-        Gdx.app.log(TAG, "Testing ray intersection at screen coords: " + screenX + ", " + screenY);
-
-        for (int i = 0; i < pawnInstances.size; i++) {
-            Vector3 pawnPos = pawnPositions.get(i);
-            if (pawnPos != null) {
-                float radius = CELL_SIZE * 0.4f;
-                boolean hit = Intersector.intersectRaySphere(ray, pawnPos, radius, intersection);
-                if (hit) {
-                    Gdx.app.log(TAG, "Ray hit pawn " + i + " at position " + pawnPos);
-                    Gdx.app.log(TAG, "Intersection point: " + intersection);
-                }
-            }
-        }
     }
 
     public int getNumberOfPawns() {
@@ -121,8 +104,10 @@ public class GameRenderer {
     private void updatePawnTransform(int pawnIndex, Vector3 position) {
         if (pawnIndex < pawnInstances.size) {
             ModelInstance pawn = pawnInstances.get(pawnIndex);
-            pawn.transform.setToTranslation(position);
-            pawn.transform.scale(PAWN_SCALE, PAWN_SCALE, PAWN_SCALE);
+            if (pawn != null) {
+                pawn.transform.setToTranslation(position);
+                pawn.transform.scale(PAWN_SCALE, PAWN_SCALE, PAWN_SCALE);
+            }
         }
     }
 
@@ -147,69 +132,149 @@ public class GameRenderer {
 
             // Create board instance
             boardInstance = new ModelInstance(boardModel);
-            boardInstance.transform.translate(0, -0.1f, 0); // Slightly below pawns
+            boardInstance.transform.translate(0, 0, 0); // Slightly below pawns
             Gdx.app.log(TAG, "Board created successfully");
         } catch (Exception e) {
             Gdx.app.error(TAG, "Error creating board: " + e.getMessage());
             e.printStackTrace();
         }
     }
+    
+    private Vector3 calculatePawnPosition(int boardPosition, String playerColor, int pawnIndex) {
+        if (boardPosition == -1) {
+            // Pawn is in home base
+            return calculateHomeBasePosition(playerColor, pawnIndex);
+        }
 
-    private Vector3 calculatePawnPosition(int boardPosition, String playerColor) {
+        if (boardPosition >= (int)BOARD_SIZE) {
+            // Pawn is in target column
+            int step = boardPosition - (int)BOARD_SIZE;
+            return calculateTargetPosition(playerColor, step);
+        }
+
         // Get grid position from board
         Board.GridPosition gridPos = gameBoard.getGridPosition(boardPosition);
-
-        // If position is -1 (home) or invalid, use home area position
         if (gridPos == null) {
-            return calculateHomeAreaPosition(playerColor);
+            return calculateHomeBasePosition(playerColor, pawnIndex);
         }
 
-        // Convert grid position to world coordinates
-        float x = (gridPos.x * CELL_SIZE) - (BOARD_SIZE / 2) + (CELL_SIZE / 2);
-        float z = (gridPos.y * CELL_SIZE) - (BOARD_SIZE / 2) + (CELL_SIZE / 2);
-        float y = 0.2f; // Height above board
-
-        return new Vector3(x, y, z);
+        return gridToWorld(gridPos.x, gridPos.y);
     }
 
-    private Vector3 calculateHomeAreaPosition(String playerColor) {
-        float x = 0, z = 0;
-        float offset = BOARD_SIZE * 0.4f; // Distance from center for home areas
+    public void updatePawnPosition(int pawnIndex, int newPosition, String playerColor) {
 
-        switch (playerColor.toUpperCase()) { //TODO check if this is correct colors
+        if (pawnIndex >= 0 && pawnIndex < pawnInstances.size) {
+            Vector3 currentPos = pawnPositions.get(pawnIndex);
+            Vector3 targetPos = calculatePawnPosition(newPosition, playerColor, pawnIndex % 4);
+
+            // Start animation
+            pawnAnimations.put(pawnIndex, new PawnAnimation(currentPos, targetPos, playerColor)); //todo this needs to fix is whats causing the animation problem
+
+            // Update stored position
+            pawnPositions.put(pawnIndex, targetPos);
+
+            LOGGER.info(String.format("Moving pawn %d to position %d (%.1f, %.1f)",
+                pawnIndex, newPosition, targetPos.x, targetPos.z));
+        }
+    }
+
+//    public void addPlayerPawns(Player player, int playerIndex) {
+
+    private Vector3 calculateHomeBasePosition(String color, int pawnIndex) {
+        float x = 0, z = 0;
+
+        // Convert pawn index to grid position (0-3 to 2x2 grid)
+        float offsetX = (pawnIndex % 2) * 2.0f;
+        float offsetZ = (pawnIndex / 2) * 2.0f;
+
+        switch(color.toUpperCase()) {
+            case "BLUE":
+                x = 2.5f + offsetX;
+                z = 2.5f + offsetZ;
+                break;
             case "RED":
-                x = offset;
-                z = offset;
+                x = 2.5f + offsetX;
+                z = 10.5f + offsetZ;
                 break;
             case "GREEN":
-                x = -offset;
-                z = offset;
-                break;
-            case "BLUE":
-                x = offset;
-                z = -offset;
+                x = 10.5f + offsetX;
+                z = 10.5f + offsetZ;
                 break;
             case "YELLOW":
-                x = -offset;
-                z = -offset;
+                x = 10.5f + offsetX;
+                z = 2.5f + offsetZ;
                 break;
         }
 
-        return new Vector3(x, 0.2f, z);
+        // Convert grid coordinates to world coordinates
+        return gridToWorld(x, z);
+    }
+
+    private Vector3 calculateStartPosition(String color) {
+        switch(color.toUpperCase()) {
+            case "BLUE": return gridToWorld(7, 2);
+            case "RED": return gridToWorld(2, 7);
+            case "GREEN": return gridToWorld(7, 12);
+            case "YELLOW": return gridToWorld(12, 7);
+            default: return new Vector3(0, 0.2f, 0);
+        }
+    }
+
+    private Vector3 calculateTargetPosition(String color, int step) {
+        float x = 0, z = 0;
+        switch(color.toUpperCase()) {
+            case "BLUE":
+                x = 8;
+                z = 7 + step;
+                break;
+            case "RED":
+                x = 7 + step;
+                z = 6;
+                break;
+            case "GREEN":
+                x = 6;
+                z = 7 - step;
+                break;
+            case "YELLOW":
+                x = 7 - step;
+                z = 8;
+                break;
+        }
+        return gridToWorld(x, z);
+    }
+
+    private Vector3 gridToWorld(float gridX, float gridZ) {
+        // Convert grid coordinates (0-15) to world coordinates
+        float worldX = (gridX - 7.5f) * CELL_SIZE;
+        float worldZ = (gridZ - 7.5f) * CELL_SIZE;
+        return new Vector3(worldX, 0.2f, worldZ);
     }
 
     private void positionPawn(ModelInstance pawnInstance, int boardPosition, int pawnIndex, String playerColor) {
-        Vector3 position = calculatePawnPosition(boardPosition, playerColor);
-
-        // Add small offset for multiple pawns in same position
-        float offset = 0.2f * (pawnIndex % 4);  // Reduced offset
-        position.x += offset;
-        position.z += offset;
+        Vector3 position;
+        if (boardPosition == -1) {
+            // Pawn is in home - use home area position
+            position = calculateHomeBasePosition(playerColor, pawnIndex);
+            // Add small offset for multiple pawns in home
+            float offsetMultiplier = 0.4f;
+            position.x += (pawnIndex % 2) * offsetMultiplier;
+            position.z += (pawnIndex / 2) * offsetMultiplier;
+        } else {
+            // Pawn is on board - use board grid position
+            Board.GridPosition gridPos = gameBoard.getGridPosition(boardPosition);
+            if (gridPos != null) {
+                float x = (gridPos.x * CELL_SIZE) - (BOARD_SIZE / 2) + (CELL_SIZE / 2);
+                float z = (gridPos.y * CELL_SIZE) - (BOARD_SIZE / 2) + (CELL_SIZE / 2);
+                position = new Vector3(x, 0, z);
+            } else {
+                LOGGER.warning("Invalid grid position for board position: " + boardPosition);
+                return;
+            }
+        }
 
         pawnInstance.transform.setToTranslation(position);
         pawnInstance.transform.scale(PAWN_SCALE, PAWN_SCALE, PAWN_SCALE);
-
-        // Store position for reference
+        pawnInstance.userData = playerColor; // Store color for highlighting
         pawnPositions.put(pawnIndex, position);
     }
 
@@ -230,16 +295,30 @@ public class GameRenderer {
                 " Color: " + player.getColor() +
                 " Pawns: " + player.getPawns().size());
 
-            Color playerColor = playerColors.get(player.getColor());
-            Material pawnMaterial = new Material(ColorAttribute.createDiffuse(playerColor));
+            // Get the color for this player's pawns
+            Color playerColor = getPlayerColor(player.getColor());
+
+            // Create material with diffuse color attribute
+            Material pawnMaterial = new Material(
+                ColorAttribute.createDiffuse(playerColor),
+                ColorAttribute.createSpecular(1, 1, 1, 1),  // White specular highlights
+                ColorAttribute.createAmbient(playerColor.r * 0.5f,
+                    playerColor.g * 0.5f,
+                    playerColor.b * 0.5f,
+                    1f)  // Darker ambient color
+            );
 
             int playerPawnCount = 0;
             for (Pawn pawn : player.getPawns()) {
                 ModelInstance pawnInstance = new ModelInstance(pawnModel);
-                pawnInstance.materials.get(0).set(pawnMaterial);
+
+                // Apply the material to all parts of the model
+                for (Material mat : pawnInstance.materials) {
+                    mat.clear();
+                    mat.set(pawnMaterial);
+                }
 
                 int position = pawn.getPosition();
-                // Pass both absolute pawnIndex and player-specific pawnCount
                 positionPawn(pawnInstance, position, playerPawnCount, player.getColor());
 
                 pawnInstances.add(pawnInstance);
@@ -253,57 +332,25 @@ public class GameRenderer {
         Gdx.app.log(TAG, "Finished creating pawns. Total: " + pawnInstances.size);
     }
 
-    public void highlightSelectablePawns(Player player, int diceRoll) {
-        highlightedPawns.clear();
-
-        // Only highlight pawns that can actually move
-        for (int i = 0; i < player.getPawns().size(); i++) {
-            Pawn pawn = player.getPawns().get(i);
-            boolean canMove = false;
-
-            if (pawn.isHome()) {
-                // Can only move out of home with a 6
-                canMove = (diceRoll == 6);
-            } else if (!pawn.isFinished()) {
-                // Already on board and not finished
-                canMove = true;
-            }
-
-            if (canMove) {
-                int pawnIdx = i;
-                highlightedPawns.put(pawnIdx, true);
-                ModelInstance pawnInstance = pawnInstances.get(pawnIdx);
-                // Add glow effect or highlight
-                Material mat = pawnInstance.materials.get(0);
-                mat.set(ColorAttribute.createDiffuse(HIGHLIGHT_COLOR));
-            }
-        }
-    }
+//    public void highlightSelectablePawns(Player player, int diceRoll) {
 
     public void clearHighlights() {
         for (Map.Entry<Integer, Boolean> entry : highlightedPawns.entrySet()) {
             int pawnIdx = entry.getKey();
-            ModelInstance pawnInstance = pawnInstances.get(pawnIdx);
-            // Reset material to original color
-            Material mat = pawnInstance.materials.get(0);
-            mat.set(ColorAttribute.createDiffuse(
-                playerColors.get(pawnInstance.userData.toString())));
+            if (pawnIdx < pawnInstances.size) {
+                ModelInstance pawnInstance = pawnInstances.get(pawnIdx);
+                if (pawnInstance != null && pawnInstance.userData != null) {
+                    Material mat = pawnInstance.materials.get(0);
+                    mat.set(ColorAttribute.createDiffuse(
+                        playerColors.get(pawnInstance.userData.toString())));
+                }
+            }
         }
         highlightedPawns.clear();
     }
 
     public boolean isPawnHighlighted(int pawnIndex) {//TODO check usage not used currently
         return highlightedPawns.containsKey(pawnIndex);
-    }
-
-    public void updatePawnPosition(int pawnIndex, int newPosition, String playerColor) {
-        if (pawnIndex >= 0 && pawnIndex < pawnInstances.size) {
-            Vector3 currentPos = pawnPositions.get(pawnIndex);
-            Vector3 targetPos = calculatePawnPosition(newPosition, playerColor);
-
-            // Start animation
-            pawnAnimations.put(pawnIndex, new PawnAnimation(currentPos, targetPos));
-        }
     }
 
     public void updateAllPawnPositions() {
@@ -326,11 +373,28 @@ public class GameRenderer {
 
     private void initializePlayerColors() {
         playerColors = new HashMap<>();
-        playerColors.put("RED", Color.RED);
-        playerColors.put("GREEN", Color.GREEN);
-        playerColors.put("BLUE", Color.BLUE);
-        playerColors.put("YELLOW", Color.YELLOW);
+
+        playerColors.put("RED", new Color(0.8f, 0.2f, 0.2f, 1f));
+        playerColors.put("GREEN", new Color(0.2f, 0.8f, 0.2f, 1f));
+        playerColors.put("BLUE", new Color(0.2f, 0.2f, 0.8f, 1f));
+        playerColors.put("YELLOW", new Color(0.8f, 0.8f, 0.2f, 1f));
     }
+
+    private Color getPlayerColor(String colorName) {
+        if (colorName == null) return Color.WHITE; // Fallback color
+
+        // Convert to uppercase for case-insensitive lookup
+        String upperColor = colorName.toUpperCase();
+        Color color = playerColors.get(upperColor);
+
+        if (color == null) {
+            Gdx.app.error(TAG, "No color found for: " + colorName + ". Using fallback color.");
+            return Color.WHITE; // Fallback color
+        }
+
+        return color;
+    }
+
 
     public int getPawnAtScreenCoords(int screenX, int screenY, Camera camera) {
         Ray ray = camera.getPickRay(screenX, screenY);
@@ -371,30 +435,112 @@ public class GameRenderer {
     }
 
     private void highlightPawn(int pawnIndex) {
-        ModelInstance pawn = pawnInstances.get(pawnIndex);
-        // Add temporary highlight effect
-        Material mat = pawn.materials.get(0);
-        mat.set(ColorAttribute.createDiffuse(Color.YELLOW));
+        if (pawnIndex < 0 || pawnIndex >= pawnInstances.size) {
+            Gdx.app.error(TAG, "Invalid pawn index: " + pawnIndex);
+            return;
+        }
 
-        // Reset highlight after a short delay
-        Timer.schedule(new Timer.Task() {
-            @Override
-            public void run() {
-                String color = (String) pawn.userData;
-                mat.set(ColorAttribute.createDiffuse(playerColors.get(color)));
+        ModelInstance pawn = pawnInstances.get(pawnIndex);
+        if (pawn == null || pawn.userData == null) {
+            Gdx.app.error(TAG, "Pawn or pawn color data is null");
+            return;
+        }
+
+        String colorName = (String) pawn.userData;
+        final Color baseColor = playerColors.get(colorName.toUpperCase());
+        if (baseColor == null) {
+            Gdx.app.error(TAG, "Could not find color for: " + colorName);
+            return;
+        }
+
+        // Store final values for use in Timer task
+        final float ambientR = baseColor.r * 0.5f;
+        final float ambientG = baseColor.g * 0.5f;
+        final float ambientB = baseColor.b * 0.5f;
+
+        // Create a brighter version of the base color for highlighting
+        Color highlightColor = new Color(
+            Math.min(baseColor.r * 1.5f, 1f),
+            Math.min(baseColor.g * 1.5f, 1f),
+            Math.min(baseColor.b * 1.5f, 1f),
+            1f
+        );
+
+        try {
+            Material highlightMaterial = new Material(
+                ColorAttribute.createDiffuse(highlightColor),
+                ColorAttribute.createSpecular(1, 1, 1, 1),
+                ColorAttribute.createAmbient(highlightColor.r * 0.5f,
+                    highlightColor.g * 0.5f,
+                    highlightColor.b * 0.5f,
+                    1f)
+            );
+
+            // Apply highlight material
+            for (Material mat : pawn.materials) {
+                mat.clear();
+                mat.set(highlightMaterial);
             }
-        }, 0.2f);  // Reset after 0.2 seconds
+
+            // Schedule reset of material
+            Timer.schedule(new Timer.Task() {
+                @Override
+                public void run() {
+                    try {
+                        Material originalMaterial = new Material(
+                            ColorAttribute.createDiffuse(new Color(baseColor)),
+                            ColorAttribute.createSpecular(1, 1, 1, 1),
+                            ColorAttribute.createAmbient(ambientR, ambientG, ambientB, 1f)
+                        );
+
+                        if (pawn.materials != null) {
+                            for (Material mat : pawn.materials) {
+                                mat.clear();
+                                mat.set(originalMaterial);
+                            }
+                        }
+                    } catch (Exception e) {
+                        Gdx.app.error(TAG, "Error resetting pawn material: " + e.getMessage());
+                    }
+                }
+            }, 0.2f);
+        } catch (Exception e) {
+            Gdx.app.error(TAG, "Error applying highlight material: " + e.getMessage());
+        }
     }
 
-    private static class PawnAnimation {
-        Vector3 startPos;
-        Vector3 targetPos;
+    private static class PawnAnimation { //todo integrate correctly
+        private final Vector3 startPos;
+        private final Vector3 targetPos;
+        private final String playerColor;
         float progress;
 
-        PawnAnimation(Vector3 start, Vector3 target) {
+        PawnAnimation(Vector3 start, Vector3 target, String color) {
             this.startPos = start.cpy();
             this.targetPos = target;
+            this.playerColor = color;
             this.progress = 0;
+        }
+
+        Vector3 getCurrentPosition() {
+            Vector3 currentPos = new Vector3();
+            // Use bezier curve for smoother animation
+            float t = progress;
+            float oneMinusT = 1 - t;
+
+            // Calculate control point for arc
+            Vector3 controlPoint = new Vector3(
+                (startPos.x + targetPos.x) * 0.5f,
+                startPos.y + 1.0f, // Arc height
+                (startPos.z + targetPos.z) * 0.5f
+            );
+
+            // Quadratic bezier curve
+            currentPos.x = oneMinusT * oneMinusT * startPos.x + 2 * oneMinusT * t * controlPoint.x + t * t * targetPos.x;
+            currentPos.y = oneMinusT * oneMinusT * startPos.y + 2 * oneMinusT * t * controlPoint.y + t * t * targetPos.y;
+            currentPos.z = oneMinusT * oneMinusT * startPos.z + 2 * oneMinusT * t * controlPoint.z + t * t * targetPos.z;
+
+            return currentPos;
         }
     }
 }
