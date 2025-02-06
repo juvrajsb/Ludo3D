@@ -19,7 +19,6 @@ public class ServerGameStateManager implements MessageListener {
     private final GameManager gameManager;
     private final ServerNetworkHandler networkHandler;
     private final Map<String, String> connectionToPlayerMap;
-    private final boolean gameStarted = false;
 
     public ServerGameStateManager(ServerNetworkHandler networkHandler) {
         this.networkHandler = networkHandler;
@@ -79,13 +78,155 @@ public class ServerGameStateManager implements MessageListener {
         }
     }
 
-    private void handlePong(Event event) {
+    private void handleDiceRollRequest(DiceRollRequestEvent event) {
         String connectionId = event.getConnection().getConnectionID();
-        event.getConnection().resetPingFailure();
-        LOGGER.fine("Received pong from client: " + connectionId);
+        String playerName = connectionToPlayerMap.get(connectionId);
+
+        if (playerName != null && gameManager.isPlayerTurn(playerName)) {
+            int diceValue = gameManager.rollDice();
+            LOGGER.info(String.format("Player %s rolled %d", playerName, diceValue));
+
+            // Send dice result to all players
+            DiceRollResultEvent resultEvent = new DiceRollResultEvent(
+                diceValue,
+                gameManager.getCurrentPlayer().getColor()
+            );
+            networkHandler.broadcast(resultEvent);
+
+            // If no valid moves are possible with this roll, automatically end turn
+            if (!gameManager.hasValidMovesAvailable(gameManager.getCurrentPlayer(), diceValue)) {
+                LOGGER.info("No valid moves available - automatically ending turn");
+                handleTurnEnd(event);
+            }
+        }
     }
 
-    public void handleTurnEnd(Event event) {
+    //    private void handleMoveRequest(MoveRequestEvent event) {
+//        String connectionId = event.getConnection().getConnectionID();
+//        String playerName = connectionToPlayerMap.get(connectionId);
+//
+//        if (!gameManager.isPlayerTurn(playerName)) {
+//            LOGGER.warning("Move rejected - not player's turn");
+//            sendMoveResponse(connectionId, false, "Not your turn", event.getPawnIndex(), -1);
+//            return;
+//        }
+//
+//        Player currentPlayer = gameManager.getCurrentPlayer();
+//        int playerIndex = gameManager.getPlayers().indexOf(currentPlayer);
+//        int pawnIndex = event.getPawnIndex();
+//        int steps = event.getSteps();
+//
+//        LOGGER.info(String.format("Processing move - Player: %s, Pawn: %d, Steps: %d",
+//            currentPlayer.getColor(), pawnIndex, steps));
+//
+//        boolean moveSuccess = gameManager.movePawn(playerIndex, pawnIndex, steps);
+//
+//        if (moveSuccess) {
+//            // Get updated position after move
+//            int newPosition = currentPlayer.getPawns().get(pawnIndex).getPosition();
+//
+//            // Broadcast successful move
+//            MoveResultEvent resultEvent = new MoveResultEvent(
+//                true,
+//                "Move successful",
+//                pawnIndex,
+//                newPosition
+//            );
+//            networkHandler.broadcast(resultEvent);
+//
+//            // Check for win
+//            if (gameManager.hasPlayerWon(playerName)) {
+//                handleGameOver(playerName);
+//            } else {
+//                // Move to next turn
+//                gameManager.nextTurn();
+//                broadcastGameState();
+//
+//                // Notify turn change
+//                TurnChangeEvent turnEvent = new TurnChangeEvent(
+//                    gameManager.getCurrentPlayer().getName()
+//                );
+//                networkHandler.broadcast(turnEvent);
+//            }
+//        } else {
+//            // Send failure response
+//            sendMoveResponse(connectionId, false, "Invalid move", pawnIndex, -1);
+//        }
+//    }
+
+    private void handleMoveRequest(MoveRequestEvent event) {
+        String connectionId = event.getConnection().getConnectionID();
+        String playerName = connectionToPlayerMap.get(connectionId);
+
+        LOGGER.info("Processing move request from " + playerName +
+            " - Pawn: " + event.getPawnIndex() +
+            " Steps: " + event.getSteps());
+
+        // Validate it's the player's turn
+        if (!gameManager.isPlayerTurn(playerName)) {
+            LOGGER.warning("Move rejected - not player's turn");
+            sendMoveResponse(connectionId, false, "Not your turn", event.getPawnIndex(), -1);
+            return;
+        }
+
+        // Get the player and attempt the move
+        Player currentPlayer = gameManager.getPlayerByName(playerName);
+        if (currentPlayer == null) {
+            LOGGER.severe("Player not found: " + playerName);
+            return;
+        }
+
+        int pawnIndex = event.getPawnIndex();
+        int steps = event.getSteps();
+
+        // Add debug logging
+        LOGGER.info("Current player: " + currentPlayer.getName() +
+            ", Color: " + currentPlayer.getColor() +
+            ", Position in players list: " + gameManager.getPlayers().indexOf(currentPlayer));
+
+        // Attempt move with additional logging
+        boolean moveSuccess = gameManager.movePawn(
+            gameManager.getPlayers().indexOf(currentPlayer),
+            pawnIndex,
+            steps
+        );
+
+        LOGGER.info("Move result: " + (moveSuccess ? "Success" : "Failed"));
+
+        if (moveSuccess) {
+            // Get new position
+            int newPosition = currentPlayer.getPawns().get(pawnIndex).getPosition();
+            LOGGER.info("New position: " + newPosition);
+
+            // Send successful move response
+            MoveResultEvent resultEvent = new MoveResultEvent(
+                true,
+                "Move successful",
+                pawnIndex,
+                newPosition
+            );
+            networkHandler.broadcast(resultEvent);
+
+            // Update game state
+            if (gameManager.hasPlayerWon(playerName)) {
+                handleGameOver(playerName);
+            } else {
+                gameManager.nextTurn();
+                broadcastGameState();
+
+                // Send turn change event
+                TurnChangeEvent turnEvent = new TurnChangeEvent(
+                    gameManager.getCurrentPlayer().getName()
+                );
+                networkHandler.broadcast(turnEvent);
+            }
+        } else {
+            LOGGER.warning("Move failed for pawn " + pawnIndex);
+            sendMoveResponse(connectionId, false, "Invalid move", pawnIndex, -1);
+        }
+    }
+
+    private void handleTurnEnd(Event event) {
         String connectionId = event.getConnection().getConnectionID();
         String playerName = connectionToPlayerMap.get(connectionId);
 
@@ -104,6 +245,27 @@ public class ServerGameStateManager implements MessageListener {
             // Update game state
             broadcastGameState();
         }
+    }
+
+    private void broadcastGameState() {
+        GameStateUpdateEvent stateEvent = new GameStateUpdateEvent(
+            gameManager.getCurrentPawnPositions(),
+            gameManager.getCurrentPlayer().getColor(),
+            gameManager.getGameState()
+        );
+        networkHandler.broadcast(stateEvent);
+    }
+
+    private void sendMoveResponse(String connectionId, boolean success, String message,
+                                  int pawnIndex, int newPosition) {
+        MoveResultEvent response = new MoveResultEvent(success, message, pawnIndex, newPosition);
+        networkHandler.sendToClient(connectionId, response);
+    }
+
+    private void handlePong(Event event) {
+        String connectionId = event.getConnection().getConnectionID();
+        event.getConnection().resetPingFailure();
+        LOGGER.fine("Received pong from client: " + connectionId);
     }
 
     private void handleStartGameRequest(StartGameRequestEvent event) {
@@ -178,111 +340,11 @@ public class ServerGameStateManager implements MessageListener {
             );
     }
 
-    private void handleMoveRequest(MoveRequestEvent event) {
-        String connectionId = event.getConnection().getConnectionID();
-        String playerName = connectionToPlayerMap.get(connectionId);
-
-        LOGGER.info("Processing move request from " + playerName +
-            " - Pawn: " + event.getPawnIndex() +
-            " Steps: " + event.getSteps());
-
-        // Validate it's the player's turn
-        if (!gameManager.isPlayerTurn(playerName)) {
-            LOGGER.warning("Move rejected - not player's turn");
-            sendMoveResponse(connectionId, false, "Not your turn", event.getPawnIndex(), -1);
-            return;
-        }
-
-        // Get the player and attempt the move
-        Player currentPlayer = gameManager.getPlayerByName(playerName);
-        if (currentPlayer == null) {
-            LOGGER.severe("Player not found: " + playerName);
-            return;
-        }
-
-        int pawnIndex = event.getPawnIndex();
-        int steps = event.getSteps();
-
-        // Add debug logging
-        LOGGER.info("Current player: " + currentPlayer.getName() +
-            ", Color: " + currentPlayer.getColor() +
-            ", Position in players list: " + gameManager.getPlayers().indexOf(currentPlayer));
-
-        // Attempt move with additional logging
-        boolean moveSuccess = gameManager.movePawn(
-            gameManager.getPlayers().indexOf(currentPlayer),
-            pawnIndex,
-            steps
-        );
-
-        LOGGER.info("Move result: " + (moveSuccess ? "Success" : "Failed"));
-
-        if (moveSuccess) {
-            // Get new position
-            int newPosition = currentPlayer.getPawns().get(pawnIndex).getPosition();
-            LOGGER.info("New position: " + newPosition);
-
-            // Send successful move response
-            MoveResultEvent resultEvent = new MoveResultEvent(
-                true,
-                "Move successful",
-                pawnIndex,
-                newPosition
-            );
-            networkHandler.broadcast(resultEvent);
-
-            // Update game state
-            if (gameManager.hasPlayerWon(playerName)) {
-                handleGameOver(playerName);
-            } else {
-                gameManager.nextTurn();
-                broadcastGameState();
-
-                // Send turn change event
-                TurnChangeEvent turnEvent = new TurnChangeEvent(
-                    gameManager.getCurrentPlayer().getName()
-                );
-                networkHandler.broadcast(turnEvent);
-            }
-        } else {
-            LOGGER.warning("Move failed for pawn " + pawnIndex);
-            sendMoveResponse(connectionId, false, "Invalid move", pawnIndex, -1);
-        }
-    }
-
-    private void sendMoveResponse(String connectionId, boolean success, String message,
-                                  int pawnIndex, int newPosition) {
-        MoveResultEvent response = new MoveResultEvent(success, message, pawnIndex, newPosition);
-        networkHandler.sendToClient(connectionId, response);
-    }
-
     private void handleGameOver(String winner) {
         GameOverEvent gameOverEvent = new GameOverEvent(winner);
         networkHandler.broadcast(gameOverEvent);
         gameManager.setGameState(GameState.GAME_OVER);
         broadcastGameState();
-    }
-
-    private void broadcastGameState() {
-        GameStateUpdateEvent stateEvent = new GameStateUpdateEvent(
-            gameManager.getCurrentPawnPositions(),
-            gameManager.getCurrentPlayer().getColor(),
-            gameManager.getGameState()
-        );
-        networkHandler.broadcast(stateEvent);
-    }
-
-    private void handleDiceRollRequest(DiceRollRequestEvent event) {
-        String connectionId = event.getConnection().getConnectionID();
-        String playerName = connectionToPlayerMap.get(connectionId);
-        if (playerName != null && gameManager.isPlayerTurn(playerName)) {
-            int value = gameManager.rollDice();
-            DiceRollResultEvent resultEvent = new DiceRollResultEvent(
-                value,
-                gameManager.getCurrentPlayer().getColor()
-            );
-            networkHandler.broadcast(resultEvent);
-        }
     }
 
     private void handleLeaveRequest(LeaveGameRequestEvent event) {
