@@ -13,7 +13,7 @@ public class Pawn implements Serializable {
     private boolean isFinished;
 
     public Pawn(String color) {
-        this.color = color;
+        this.color = color.toUpperCase();
         this.position = -1;
         this.isHome = true;
         this.isFinished = false;

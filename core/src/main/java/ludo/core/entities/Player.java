@@ -17,7 +17,7 @@ public class Player implements Serializable {
 
     public Player(String name, String color) {
         this.name = name;
-        this.color = color;
+        this.color = color.toUpperCase();
         this.pawns = new ArrayList<>();
         this.useSingleDie = false;
         initializePawns();

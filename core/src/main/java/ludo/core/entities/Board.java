@@ -169,7 +169,7 @@ public class Board implements Serializable {
     }
 
     public int getStartPosition(String color) {
-        return playerStartPositions.get(color);
+        return playerStartPositions.get(color.toUpperCase());
     }
 
     public boolean isSafeSpot(int position) {
@@ -187,7 +187,7 @@ public class Board implements Serializable {
     public boolean isHomeColumn(int position, String color) {
         // For positions in home column area (≥52)
         if (position >= BOARD_SIZE) {
-            int playerIndex = getStartPosition(color) / 13;
+            int playerIndex = getStartPosition(color.toUpperCase()) / 13;
             int homeStart = BOARD_SIZE + playerIndex * HOME_COLUMN_SIZE;
             int homeEnd = homeStart + HOME_COLUMN_SIZE - 1;
             return position >= homeStart && position <= homeEnd;
