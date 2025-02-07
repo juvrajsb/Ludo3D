@@ -145,10 +145,18 @@ public class LudoGame {
     }
 
     private void handleCaptures(Player movingPlayer, int position) {
+        // Don't handle captures if the position is in a home column
+        if (position >= BOARD_SIZE) {
+            return;
+        }
+        // Don't handle captures on safe spots
+        if (board.isSafeSpot(position)) {
+            return;
+        }
         for (Player player : players) {
             if (player != movingPlayer) {
                 for (Pawn pawn : player.getPawns()) {
-                    if (pawn.getPosition() == position) {
+                    if (!pawn.isHome() && pawn.getPosition() == position) {
                         pawn.sendHome();
                     }
                 }
@@ -184,12 +192,12 @@ public class LudoGame {
     }
 
     public boolean isGameOver() {
-        return players.stream().anyMatch(p -> p.getPawnsInHome() == Constants.PAWNS_PER_PLAYER);
+        return players.stream().anyMatch(p -> p.getPawns().stream().allMatch(Pawn::isFinished));
     }
 
     public Player getWinner() {
         return players.stream()
-            .filter(p -> p.getPawnsInHome() == Constants.PAWNS_PER_PLAYER)
+            .filter(p -> p.getPawns().stream().allMatch(Pawn::isFinished))
             .findFirst()
             .orElse(null);
     }
@@ -254,5 +262,24 @@ public class LudoGame {
         } catch (IllegalArgumentException e) {
             return false;
         }
+    }
+
+    public String getSerializedGameState() {
+        StringBuilder state = new StringBuilder();
+        for (int i = 0; i < players.size(); i++) {
+            Player player = players.get(i);
+            state.append(player.getColor()).append(":");
+            List<Pawn> pawns = player.getPawns();
+            for (int j = 0; j < pawns.size(); j++) {
+                state.append(pawns.get(j).getPosition());
+                if (j < pawns.size() - 1) {
+                    state.append(",");
+                }
+            }
+            if (i < players.size() - 1) {
+                state.append(";");
+            }
+        }
+        return state.toString();
     }
 }
