@@ -7,6 +7,7 @@ import ludo.client.screens.UsernameScreen;
 import ludo.core.entities.Pawn;
 import ludo.core.events.serverToClient.*;
 import ludo.core.events.clientToServer.*;
+import ludo.core.game.GameManager;
 import ludo.core.network.*;
 import ludo.client.networking.ClientNetworkHandler;
 import ludo.client.screens.GameScreen;
@@ -20,6 +21,7 @@ public class GameStateManager implements MessageListener {
     private static final Logger LOGGER = Logger.getLogger(GameStateManager.class.getName());
 
     private final ClientNetworkHandler networkHandler;
+    private GameManager gameManager;
     private GameScreen gameScreen;
     private boolean isMyTurn;
     private int currentDiceValue;
@@ -31,6 +33,8 @@ public class GameStateManager implements MessageListener {
     private LobbyScreen lobbyScreen;
     private UsernameScreen usernameScreen;
     private final LudoGame game;
+    private int consecutiveSixes = 0;
+    private static final int MAX_CONSECUTIVE_SIXES = 3;
     private final List<Player> currentPlayers = new ArrayList<>();
 
     public GameStateManager(LudoGame game) {
@@ -40,6 +44,7 @@ public class GameStateManager implements MessageListener {
         this.isFirstPlayer = false;
         this.isMyTurn = false;
         this.gameStarted = false;
+        this.gameManager = new GameManager(); // todo potetial bug
     }
 
     //for testing
@@ -390,39 +395,80 @@ public class GameStateManager implements MessageListener {
         currentDiceValue = event.getValue();
         LOGGER.info("Dice roll result: " + currentDiceValue + " for " + event.getPlayerColor());
 
+        // Always update the UI to show the roll
         gameScreen.updateDiceDisplay(currentDiceValue);
 
-        // Add this block to properly enable pawn selection
+        // Only handle move logic if it's our turn
         if (isMyTurn) {
-            // Check if it's a valid roll
-            boolean hasValidMove = false;
-            Player currentPlayer = gameScreen.getCurrentPlayer();
-            if (currentPlayer != null) {
-                if (currentDiceValue == 6) {
-                    // Can move from home or existing pawns
-                    hasValidMove = true;
-                } else {
-                    // Check if player has any pawns outside home
-                    for (Pawn pawn : currentPlayer.getPawns()) {
-                        if (!pawn.isHome()) {
-                            hasValidMove = true;
-                            break;
-                        }
-                    }
+            if (currentDiceValue == 6) {
+                consecutiveSixes++;
+                LOGGER.info("Consecutive sixes: " + consecutiveSixes);
+
+                if (consecutiveSixes >= MAX_CONSECUTIVE_SIXES) {
+                    LOGGER.info("Maximum consecutive sixes reached - ending turn");
+                    gameScreen.showMessage("Three sixes in a row - turn forfeited!");
+                    networkHandler.sendMessage(new TurnEndEvent());
+                    isMyTurn = false;
+                    consecutiveSixes = 0;
+                    return;
                 }
+            } else {
+                // Reset consecutive sixes on non-6 roll
+                consecutiveSixes = 0;
             }
 
-            LOGGER.info("Valid move check: " + hasValidMove + " for player " + currentPlayer.getName()+ " with roll: " + currentDiceValue);
+            Player currentPlayer = gameScreen.getCurrentPlayer();
+            if (currentPlayer == null) {
+                LOGGER.severe("Current player is null during dice roll handling");
+                return;
+            }
+
+            // Check if we have valid moves
+            boolean hasValidMove = hasValidMovesAvailable(currentPlayer, currentDiceValue);
+
+            LOGGER.info("Valid move check: " + hasValidMove + " for player " + currentPlayer.getName()
+                + " with roll: " + currentDiceValue);
 
             if (hasValidMove) {
                 gameScreen.enablePawnSelection();
-                gameScreen.showMessage("Select a pawn to move");
+                if (currentDiceValue == 6) {
+                    gameScreen.showMessage("Roll again after moving a pawn");
+                } else {
+                    gameScreen.showMessage("Select a pawn to move");
+                }
             } else {
                 LOGGER.info("No valid moves available with roll: " + currentDiceValue);
                 gameScreen.showMessage("No valid moves - turn passed");
                 networkHandler.sendMessage(new TurnEndEvent());
+                isMyTurn = false;
+                consecutiveSixes = 0; // Reset on turn end
             }
         }
+    }
+
+    private boolean hasValidMovesAvailable(Player player, int roll) {
+        int playerIndex = gameManager.getPlayers().indexOf(player);
+
+        // Check each pawn
+        for (int i = 0; i < player.getPawns().size(); i++) {
+            Pawn pawn = player.getPawns().get(i);
+
+            // For pawns in home, only 6 is valid to move out of home
+            if (pawn.isHome()) {
+                if (roll == 6) {
+                    return true;
+                }
+                continue;
+            }
+
+            // For pawns on board, any valid move is possible
+            if (!pawn.isHome() && gameManager.canMovePawn(playerIndex, i, roll)) {
+                LOGGER.info("Found valid move for pawn " + i + " at position " + pawn.getPosition());
+                return true;
+            }
+        }
+
+        return false;
     }
 
     public void setCurrentPlayer(String color) {
@@ -475,10 +521,10 @@ public class GameStateManager implements MessageListener {
         isMyTurn = event.getCurrentPlayer().equals(currentUsername);
         LOGGER.info("Turn changed to: " + event.getCurrentPlayer() + " (isMyTurn: " + isMyTurn + ")");
         currentDiceValue = 0;
+        consecutiveSixes = 0;
 
         if (gameScreen != null) {
             if (isMyTurn) {
-//                LOGGER.info("Beginning turn for " + currentUsername);
                 gameScreen.enableControls();
                 gameScreen.showMessage("Your turn! Roll the dice");
             } else {

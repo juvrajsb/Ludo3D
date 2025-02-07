@@ -5,6 +5,7 @@ import com.badlogic.gdx.graphics.GL20;
 import com.badlogic.gdx.scenes.scene2d.Actor;
 import com.badlogic.gdx.scenes.scene2d.ui.*;
 import com.badlogic.gdx.scenes.scene2d.utils.ChangeListener;
+import com.badlogic.gdx.utils.Align;
 import ludo.client.LudoGame;
 import ludo.core.persistence.GamePersistence;
 import ludo.core.persistence.GamePersistence.GameSaveData;
@@ -12,9 +13,15 @@ import ludo.core.game.GameState;
 import ludo.core.entities.Player;
 import ludo.core.entities.Pawn;
 
+import java.text.SimpleDateFormat;
+import java.util.Date;
+import java.util.logging.Logger;
+
 public class SaveGameScreen extends BaseScreen {
+    private static final Logger LOGGER = Logger.getLogger(SaveGameScreen.class.getName());
     private final Table mainTable;
     private final Label statusLabel;
+    private final Label autoSaveLabel;
 
     public SaveGameScreen(final LudoGame game) {
         super(game);
@@ -25,11 +32,26 @@ public class SaveGameScreen extends BaseScreen {
 
         // Title
         Label titleLabel = new Label("Save Game", skin);
-        mainTable.add(titleLabel).colspan(2).pad(50).row();
+        titleLabel.setAlignment(Align.center);
+        mainTable.add(titleLabel).colspan(2).pad(30).row();
 
-        // Status label
+        // Status labels
+        Table statusTable = new Table();
+        statusTable.defaults().pad(5);
+        
         statusLabel = new Label("", skin);
-        mainTable.add(statusLabel).colspan(2).pad(20).row();
+        statusLabel.setWrap(true);
+        statusTable.add(statusLabel).width(300).row();
+        
+        autoSaveLabel = new Label("", skin);
+        autoSaveLabel.setWrap(true);
+        statusTable.add(autoSaveLabel).width(300).row();
+        
+        mainTable.add(statusTable).colspan(2).pad(20).row();
+
+        // Create buttons table
+        Table buttonsTable = new Table();
+        buttonsTable.defaults().pad(5).width(150);
 
         // Save button
         TextButton saveButton = new TextButton("Save Game", skin);
@@ -45,16 +67,25 @@ public class SaveGameScreen extends BaseScreen {
         loadButton.addListener(new ChangeListener() {
             @Override
             public void changed(ChangeEvent event, Actor actor) {
-                loadGame();
+                loadGame(false);
+            }
+        });
+
+        // Load Auto-save button
+        TextButton loadAutoSaveButton = new TextButton("Load Auto-save", skin);
+        loadAutoSaveButton.addListener(new ChangeListener() {
+            @Override
+            public void changed(ChangeEvent event, Actor actor) {
+                loadGame(true);
             }
         });
 
         // Delete save button
-        TextButton deleteButton = new TextButton("Delete Save", skin);
+        TextButton deleteButton = new TextButton("Delete Saves", skin);
         deleteButton.addListener(new ChangeListener() {
             @Override
             public void changed(ChangeEvent event, Actor actor) {
-                deleteSave();
+                deleteSaves();
             }
         });
 
@@ -67,11 +98,14 @@ public class SaveGameScreen extends BaseScreen {
             }
         });
 
-        // Add buttons
-        mainTable.add(saveButton).colspan(2).pad(10).row();
-        mainTable.add(loadButton).colspan(2).pad(10).row();
-        mainTable.add(deleteButton).colspan(2).pad(10).row();
-        mainTable.add(backButton).colspan(2).pad(10).row();
+        // Add buttons to table
+        buttonsTable.add(saveButton).row();
+        buttonsTable.add(loadButton).row();
+        buttonsTable.add(loadAutoSaveButton).row();
+        buttonsTable.add(deleteButton).row();
+        buttonsTable.add(backButton).row();
+
+        mainTable.add(buttonsTable).colspan(2).pad(10).row();
 
         stage.addActor(mainTable);
 
@@ -85,16 +119,17 @@ public class SaveGameScreen extends BaseScreen {
                 game.getGameStateManager().getCurrentColor(),
                 game.getGameStateManager().isGameStarted() ? GameState.IN_PROGRESS : GameState.WAITING_FOR_PLAYERS
             );
-            statusLabel.setText("Game saved successfully!");
             updateSaveStatus();
+            statusLabel.setText("[GREEN]Game saved successfully![]");
         } catch (Exception e) {
-            statusLabel.setText("Failed to save game: " + e.getMessage());
+            LOGGER.severe("Failed to save game: " + e.getMessage());
+            statusLabel.setText("[RED]Failed to save game: " + e.getMessage() + "[]");
         }
     }
 
-    private void loadGame() {
+    private void loadGame(boolean loadAutoSave) {
         try {
-            GameSaveData saveData = GamePersistence.loadGame();
+            GameSaveData saveData = loadAutoSave ? GamePersistence.loadAutoSave() : GamePersistence.loadGame();
             if (saveData != null) {
                 // Clear current game state
                 game.reset();
@@ -117,33 +152,51 @@ public class SaveGameScreen extends BaseScreen {
 
                 // Switch to game screen
                 game.setScreen(new GameScreen(game));
-                statusLabel.setText("Game loaded successfully!");
+                LOGGER.info("Game loaded successfully");
             } else {
-                statusLabel.setText("No saved game found.");
+                String source = loadAutoSave ? "auto-save" : "save";
+                statusLabel.setText("[RED]No valid " + source + " found.[]");
             }
         } catch (Exception e) {
-            statusLabel.setText("Failed to load game: " + e.getMessage());
+            LOGGER.severe("Failed to load game: " + e.getMessage());
+            statusLabel.setText("[RED]Failed to load game: " + e.getMessage() + "[]");
         }
     }
 
-    private void deleteSave() {
+    private void deleteSaves() {
         GamePersistence.deleteSaveGame();
+        GamePersistence.deleteAutoSave();
         updateSaveStatus();
-        statusLabel.setText("Save file deleted.");
+        statusLabel.setText("[GREEN]All save files deleted.[]");
     }
 
     private void updateSaveStatus() {
+        SimpleDateFormat dateFormat = new SimpleDateFormat("MM/dd/yyyy HH:mm:ss");
+
+        // Update manual save status
         if (GamePersistence.hasSaveGame()) {
             GameSaveData saveData = GamePersistence.loadGame();
             if (saveData != null) {
-                String saveInfo = String.format("Save found with %d players\nLast saved: %s",
+                String saveInfo = String.format("[WHITE]Manual save:\n%d players\nLast saved: %s[]",
                     saveData.players.size(),
-                    new java.text.SimpleDateFormat("MM/dd/yyyy HH:mm:ss")
-                        .format(new java.util.Date(saveData.timestamp)));
+                    dateFormat.format(new Date(saveData.timestamp)));
                 statusLabel.setText(saveInfo);
             }
         } else {
-            statusLabel.setText("No saved game found.");
+            statusLabel.setText("[GRAY]No manual save found.[]");
+        }
+
+        // Update auto-save status
+        if (GamePersistence.hasAutoSave()) {
+            GameSaveData autoSaveData = GamePersistence.loadAutoSave();
+            if (autoSaveData != null) {
+                String autoSaveInfo = String.format("[WHITE]Auto-save:\n%d players\nLast saved: %s[]",
+                    autoSaveData.players.size(),
+                    dateFormat.format(new Date(autoSaveData.timestamp)));
+                autoSaveLabel.setText(autoSaveInfo);
+            }
+        } else {
+            autoSaveLabel.setText("[GRAY]No auto-save found.[]");
         }
     }
 

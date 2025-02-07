@@ -43,14 +43,14 @@ public class GamePersistence {
             if (players == null || currentPlayerColor == null || gameState == null) {
                 return false;
             }
-            
+
             // Check if all players have valid data
             for (PlayerSaveData player : players) {
                 if (!player.isValid()) {
                     return false;
                 }
             }
-            
+
             return true;
         }
     }
@@ -66,8 +66,8 @@ public class GamePersistence {
         }
 
         public boolean isValid() {
-            return name != null && !name.isEmpty() && 
-                   color != null && !color.isEmpty() && 
+            return name != null && !name.isEmpty() &&
+                   color != null && !color.isEmpty() &&
                    pawns != null && pawns.size() == 4 &&
                    pawns.stream().allMatch(PawnSaveData::isValid);
         }
@@ -78,7 +78,6 @@ public class GamePersistence {
         public int position;
         public boolean isHome;
         public boolean isFinished;
-        public Board.GridPosition gridPosition;
 
         public boolean isValid() {
             return position >= 0 && position < Constants.BOARD_SIZE;
@@ -112,7 +111,6 @@ public class GamePersistence {
                 // Save grid position if pawn is on board
                 if (!pawn.isHome()) {
                     Board board = new Board(); // Create temporary board for position conversion
-                    pawnData.gridPosition = board.getGridPosition(pawn.getPosition());
                 }
 
                 playerData.pawns.add(pawnData);
@@ -152,14 +150,14 @@ public class GamePersistence {
 
         try (FileReader reader = new FileReader(saveFile)) {
             GameSaveData saveData = gson.fromJson(reader, GameSaveData.class);
-            
+
             if (saveData == null) {
                 LOGGER.severe("Failed to parse save file: null data");
                 return null;
             }
 
             if (saveData.saveVersion > CURRENT_SAVE_VERSION) {
-                LOGGER.severe("Save file version " + saveData.saveVersion + 
+                LOGGER.severe("Save file version " + saveData.saveVersion +
                     " is newer than current version " + CURRENT_SAVE_VERSION);
                 return null;
             }

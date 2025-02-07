@@ -3,174 +3,230 @@ package ludo.core.entities;
 import java.io.Serializable;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.Objects;
 
 public class Board implements Serializable {
     private static final int BOARD_SIZE = 52;  // Total spaces on main track
     private static final int HOME_COLUMN_SIZE = 6;
-    private static final int GRID_SIZE = 15;   // 15x15 grid //TODO check usage not used currently
+    private static final int GRID_SIZE = 15;   // 15x15 grid
 
+    private Cell[][] cells; // 2D array of cells
     private Map<String, Integer> playerStartPositions;
     private Map<Integer, Boolean> safeSpots;
-    private Map<Integer, GridPosition> positionToGrid;  // Maps board position to grid coordinates
-    private Map<GridPosition, Integer> gridToPosition;  // Maps grid coordinates to board position
 
     public Board() {
+        cells = new Cell[GRID_SIZE][GRID_SIZE]; // Initialize the grid
+        safeSpots = new HashMap<>(); // Initialize safeSpots map
+        playerStartPositions = new HashMap<>();
         initializePlayerStartPositions();
         initializeSafeSpots();
         initializeBoardLayout();
     }
 
-    private void initializePlayerStartPositions() {
-        playerStartPositions = new HashMap<>();
-        playerStartPositions.put("RED", 0);
-        playerStartPositions.put("GREEN", 13);
-        playerStartPositions.put("BLUE", 26);
-        playerStartPositions.put("YELLOW", 39);
+    private void initializeBoardLayout() {
+        // Initialize main track
+        initializeMainTrack();
+        // Initialize home bases
+        initializeHomeBases();
+        // Initialize start positions
+        initializeStartPositions();
+        // Initialize home columns
+        initializeHomeColumns();
+        // Initialize safe spots
+        initializeSafeSpots();
+    }
+
+    private void initializeMainTrack() {
+        // Initialize using the same coordinates as BoardCoordinates
+        // Bottom edge (RED path)
+        for (int i = 0; i < 13; i++) {
+            mapPosition(i, new Cell(7, 14 - i, "RED", "normal"));
+        }
+
+        // Right edge (BLUE path)
+        for (int i = 13; i < 26; i++) {
+            mapPosition(i, new Cell(13 - (i - 13), 7, "BLUE", "normal"));
+        }
+
+        // Top edge (GREEN path)
+        for (int i = 26; i < 39; i++) {
+            mapPosition(i, new Cell(6, 1 + (i - 26), "GREEN", "normal"));
+        }
+
+        // Left edge (YELLOW path)
+        for (int i = 39; i < 52; i++) {
+            mapPosition(i, new Cell(i - 39, 8, "YELLOW", "normal"));
+        }
+    }
+
+    private void initializeHomeColumns() {
+        // RED home column (moves up)
+        for (int i = 0; i < HOME_COLUMN_SIZE; i++) {
+            mapPosition(BOARD_SIZE + i, new Cell(7, 9 + i, "RED", "home"));
+        }
+
+        // BLUE home column (moves left)
+        for (int i = 0; i < HOME_COLUMN_SIZE; i++) {
+            mapPosition(BOARD_SIZE + HOME_COLUMN_SIZE + i, new Cell(12 - i, 7, "BLUE", "home"));
+        }
+
+        // GREEN home column (moves right)
+        for (int i = 0; i < HOME_COLUMN_SIZE; i++) {
+            mapPosition(BOARD_SIZE + (2 * HOME_COLUMN_SIZE) + i, new Cell(1 + i, 7, "GREEN", "home"));
+        }
+
+        // YELLOW home column (moves down)
+        for (int i = 0; i < HOME_COLUMN_SIZE; i++) {
+            mapPosition(BOARD_SIZE + (3 * HOME_COLUMN_SIZE) + i, new Cell(7, 5 - i, "YELLOW", "home"));
+        }
+    }
+
+    private void initializeHomeBases() {
+        // RED home base (bottom right)
+        cells[13][13] = new Cell(13, 13, "RED", "base");
+        cells[14][13] = new Cell(14, 13, "RED", "base");
+        cells[13][14] = new Cell(13, 14, "RED", "base");
+        cells[14][14] = new Cell(14, 14, "RED", "base");
+
+        // BLUE home base (top right)
+        cells[13][0] = new Cell(13, 0, "BLUE", "base");
+        cells[14][0] = new Cell(14, 0, "BLUE", "base");
+        cells[13][1] = new Cell(13, 1, "BLUE", "base");
+        cells[14][1] = new Cell(14, 1, "BLUE", "base");
+
+        // GREEN home base (top left)
+        cells[0][0] = new Cell(0, 0, "GREEN", "base");
+        cells[1][0] = new Cell(1, 0, "GREEN", "base");
+        cells[0][1] = new Cell(0, 1, "GREEN", "base");
+        cells[1][1] = new Cell(1, 1, "GREEN", "base");
+
+        // YELLOW home base (bottom left)
+        cells[0][13] = new Cell(0, 13, "YELLOW", "base");
+        cells[1][13] = new Cell(1, 13, "YELLOW", "base");
+        cells[0][14] = new Cell(0, 14, "YELLOW", "base");
+        cells[1][14] = new Cell(1, 14, "YELLOW", "base");
+    }
+
+//    private void initializeHomeColumns() {
+//        // RED home column (moves up)
+//        for (int i = 0; i < HOME_COLUMN_SIZE; i++) {
+//            int position = BOARD_SIZE + i;
+//            mapPosition(position, new Cell(7, 8 + i, "RED", "home"));
+//        }
+//
+//        // BLUE home column (moves left)
+//        for (int i = 0; i < HOME_COLUMN_SIZE; i++) {
+//            int position = BOARD_SIZE + HOME_COLUMN_SIZE + i;
+//            mapPosition(position, new Cell(8 - i, 7, "BLUE", "home"));
+//        }
+//
+//        // GREEN home column (moves right)
+//        for (int i = 0; i < HOME_COLUMN_SIZE; i++) {
+//            int position = BOARD_SIZE + (2 * HOME_COLUMN_SIZE) + i;
+//            mapPosition(position, new Cell(6 + i, 7, "GREEN", "home"));
+//        }
+//
+//        // YELLOW home column (moves down)
+//        for (int i = 0; i < HOME_COLUMN_SIZE; i++) {
+//            int position = BOARD_SIZE + (3 * HOME_COLUMN_SIZE) + i;
+//            mapPosition(position, new Cell(7, 6 - i, "YELLOW", "home"));
+//        }
+//    }
+//
+//    private void initializeHomeBases() {
+//        // RED home base (bottom right)
+//        cells[13][13] = new Cell(13, 13, "RED", "base");
+//        cells[13][14] = new Cell(13, 14, "RED", "base");
+//        cells[14][13] = new Cell(14, 13, "RED", "base");
+//        cells[14][14] = new Cell(14, 14, "RED", "base");
+//
+//        // BLUE home base (bottom left)
+//        cells[13][0] = new Cell(13, 0, "BLUE", "base");
+//        cells[13][1] = new Cell(13, 1, "BLUE", "base");
+//        cells[14][0] = new Cell(14, 0, "BLUE", "base");
+//        cells[14][1] = new Cell(14, 1, "BLUE", "base");
+//
+//        // GREEN home base (top left)
+//        cells[0][0] = new Cell(0, 0, "GREEN", "base");
+//        cells[0][1] = new Cell(0, 1, "GREEN", "base");
+//        cells[1][0] = new Cell(1, 0, "GREEN", "base");
+//        cells[1][1] = new Cell(1, 1, "GREEN", "base");
+//
+//        // YELLOW home base (top right)
+//        cells[0][13] = new Cell(0, 13, "YELLOW", "base");
+//        cells[0][14] = new Cell(0, 14, "YELLOW", "base");
+//        cells[1][13] = new Cell(1, 13, "YELLOW", "base");
+//        cells[1][14] = new Cell(1, 14, "YELLOW", "base");
+//    }
+
+    private void initializeStartPositions() {
+        // Set start positions with proper cells
+        cells[8][13] = new Cell(8, 13, "RED", "start");
+        cells[13][6] = new Cell(13, 6, "GREEN", "start");
+        cells[1][8] = new Cell(1, 8, "BLUE", "start");
+        cells[6][1] = new Cell(6, 1, "YELLOW", "start");
     }
 
     private void initializeSafeSpots() {
+        // Initialize map before using it
         safeSpots = new HashMap<>();
-        // Start positions
+
+        // Start positions are safe spots
         safeSpots.put(0, true);   // Red start
         safeSpots.put(13, true);  // Green start
         safeSpots.put(26, true);  // Blue start
         safeSpots.put(39, true);  // Yellow start
-        // Safe spots before home columns
-        safeSpots.put(8, true);   // Before red home
-        safeSpots.put(21, true);  // Before green home
-        safeSpots.put(34, true);  // Before blue home
-        safeSpots.put(47, true);  // Before yellow home
+
+        // Additional safe spots
+        safeSpots.put(8, true);   // Safe spot
+        safeSpots.put(21, true);  // Safe spot
+        safeSpots.put(34, true);  // Safe spot
+        safeSpots.put(47, true);  // Safe spot
+
+        // Set safe spots with proper cells
+        cells[12][8] = new Cell(12, 8, null, "safe");  // Red safe spot
+        cells[8][2] = new Cell(8, 2, null, "safe");    // Green safe spot
+        cells[6][12] = new Cell(6, 12, null, "safe");  // Blue safe spot
+        cells[1][6] = new Cell(1, 6, null, "safe");    // Yellow safe spot
     }
 
-    private void initializeBoardLayout() {
-        positionToGrid = new HashMap<>();
-        gridToPosition = new HashMap<>();
-
-        initializeHomePositions();
-
-        // RED path (bottom)
-        for (int i = 0; i < 6; i++) {
-            mapPosition(i, new GridPosition(14, 8 + i));  // Bottom to right
-        }
-        for (int i = 6; i < 13; i++) {
-            mapPosition(i, new GridPosition(14 - (i - 5), 14));  // Right to top
-        }
-
-        // GREEN path (right)
-        for (int i = 13; i < 19; i++) {
-            mapPosition(i, new GridPosition(8 - (i - 13), 14));  // Right to top
-        }
-        for (int i = 19; i < 26; i++) {
-            mapPosition(i, new GridPosition(0, 14 - (i - 18)));  // Top to left
-        }
-
-        // BLUE path (top)
-        for (int i = 26; i < 32; i++) {
-            mapPosition(i, new GridPosition(0, 8 - (i - 26)));  // Top to left
-        }
-        for (int i = 32; i < 39; i++) {
-            mapPosition(i, new GridPosition(i - 31, 0));  // Left to bottom
-        }
-
-        // YELLOW path (left)
-        for (int i = 39; i < 45; i++) {
-            mapPosition(i, new GridPosition(8 + (i - 39), 0));  // Left to bottom
-        }
-        for (int i = 45; i < 52; i++) {
-            mapPosition(i, new GridPosition(14, i - 44));  // Bottom to right
-        }
-
-        // Home columns
-        initializeHomeColumns();
-    }
-
-    private void initializeHomeColumns() {
-        // RED home column (vertical up from bottom)
-        for (int i = 0; i < HOME_COLUMN_SIZE; i++) {
-            mapPosition(BOARD_SIZE + i, new GridPosition(13, 8 + i));
-        }
-
-        // GREEN home column (horizontal left from right)
-        for (int i = 0; i < HOME_COLUMN_SIZE; i++) {
-            mapPosition(BOARD_SIZE + HOME_COLUMN_SIZE + i, new GridPosition(8 + i, 13));
-        }
-
-        // BLUE home column (vertical down from top)
-        for (int i = 0; i < HOME_COLUMN_SIZE; i++) {
-            mapPosition(BOARD_SIZE + 2 * HOME_COLUMN_SIZE + i, new GridPosition(1, 8 - i));
-        }
-
-        // YELLOW home column (horizontal right from left)
-        for (int i = 0; i < HOME_COLUMN_SIZE; i++) {
-            mapPosition(BOARD_SIZE + 3 * HOME_COLUMN_SIZE + i, new GridPosition(8 - i, 1));
+    private void mapPosition(int boardPosition, Cell cell) {
+        if (boardPosition >= 0 && cell != null) {
+            int x = cell.getX();
+            int y = cell.getY();
+            cells[x][y] = cell; // Place the cell in the grid
         }
     }
 
-    private void mapPosition(int boardPosition, GridPosition gridPosition) {
-        if (boardPosition >= 0 && gridPosition != null) {
-            positionToGrid.put(boardPosition, gridPosition);
-            gridToPosition.put(gridPosition, boardPosition);
-        }
+//    private void initializeHomeColumns() {
+//        // RED home column
+//        for (int i = 0; i < HOME_COLUMN_SIZE; i++) {
+//            int position = BOARD_SIZE + i;
+//            mapPosition(position, new Cell(7, 8 + i, "RED", "home"));
+//        }
+//        // GREEN home column
+//        for (int i = 0; i < HOME_COLUMN_SIZE; i++) {
+//            int position = BOARD_SIZE + HOME_COLUMN_SIZE + i;
+//            mapPosition(position, new Cell(8 + i, 7, "GREEN", "home"));
+//        }
+//        // BLUE home column
+//        for (int i = 0; i < HOME_COLUMN_SIZE; i++) {
+//            int position = BOARD_SIZE + (2 * HOME_COLUMN_SIZE) + i;
+//            mapPosition(position, new Cell(2 + i, 7, "BLUE", "home"));
+//        }
+//        // YELLOW home column
+//        for (int i = 0; i < HOME_COLUMN_SIZE; i++) {
+//            int position = BOARD_SIZE + (3 * HOME_COLUMN_SIZE) + i;
+//            mapPosition(position, new Cell(7, 2 + i, "YELLOW", "home"));
+//        }
+//    }
+
+    public Cell getCell(int x, int y) {
+        return cells[x][y];
     }
 
-    private void initializeHomePositions() {
-        // Red home positions
-        for (int i = 0; i < 4; i++) {
-            mapPosition(-1, new GridPosition(14 - i, 14 - i)); // Red home positions
-        }
-
-        // Blue home positions
-        for (int i = 0; i < 4; i++) {
-            mapPosition(-1, new GridPosition(0 + i, 0 + i)); // Blue home positions
-        }
-
-        // Green home positions
-        for (int i = 0; i < 4; i++) {
-            mapPosition(-1, new GridPosition(14 - i, 0 + i)); // Green home positions
-        }
-
-        // Yellow home positions
-        for (int i = 0; i < 4; i++) {
-            mapPosition(-1, new GridPosition(0 + i, 14 - i)); // Yellow home positions
-        }
-    }
-
-    public static class GridPosition {
-        public final int x;
-        public final int y;
-
-        public GridPosition(int x, int y) {
-            this.x = x;
-            this.y = y;
-        }
-
-        @Override
-        public boolean equals(Object o) {
-            if (this == o) return true;
-            if (o == null || getClass() != o.getClass()) return false;
-            GridPosition that = (GridPosition) o;
-            return x == that.x && y == that.y;
-        }
-
-        @Override
-        public int hashCode() {
-            return Objects.hash(x, y);
-        }
-    }
-
-    // Getters for the grid mapping
-    public GridPosition getGridPosition(int boardPosition) {
-        return positionToGrid.get(boardPosition);
-    }
-
-    public Integer getBoardPosition(int gridX, int gridY) {//TODO check usage not used currently
-        return gridToPosition.get(new GridPosition(gridX, gridY));
-    }
-
-    public int getStartPosition(String color) {
-        return playerStartPositions.get(color.toUpperCase());
-    }
+//    public int getStartPosition(String color) {
+//        return playerStartPositions.get(color.toUpperCase());
+//    }
 
     public boolean isSafeSpot(int position) {
         return safeSpots.getOrDefault(position, false);
@@ -187,13 +243,143 @@ public class Board implements Serializable {
     public boolean isHomeColumn(int position, String color) {
         // For positions in home column area (≥52)
         if (position >= BOARD_SIZE) {
-            int playerIndex = getStartPosition(color.toUpperCase()) / 13;
-            int homeStart = BOARD_SIZE + playerIndex * HOME_COLUMN_SIZE;
+            int colorIndex;
+            switch (color.toUpperCase()) {
+                case "RED": colorIndex = 0; break;
+                case "GREEN": colorIndex = 1; break;
+                case "BLUE": colorIndex = 2; break;
+                case "YELLOW": colorIndex = 3; break;
+                default: return false;
+            }
+            int homeStart = BOARD_SIZE + colorIndex * HOME_COLUMN_SIZE;
             int homeEnd = homeStart + HOME_COLUMN_SIZE - 1;
             return position >= homeStart && position <= homeEnd;
         }
-
-    // For positions on main board (<52), never consider them as home column
-    return false;
+        return false;
     }
+
+    private void initializePlayerStartPositions() {
+        playerStartPositions = new HashMap<>();
+        playerStartPositions.put("RED", 0);
+        playerStartPositions.put("GREEN", 13);
+        playerStartPositions.put("BLUE", 26);
+        playerStartPositions.put("YELLOW", 39);
+    }
+
+    public Cell getGridPosition(int boardPosition) {
+        int x = boardPosition % GRID_SIZE;
+        int y = boardPosition / GRID_SIZE;
+        return getCell(x, y);
+    }
+
+    public int getHomeBase(String color) {
+        switch (color.toUpperCase()) {
+            case "YELLOW": return BOARD_SIZE + 3 * HOME_COLUMN_SIZE;
+            case "BLUE": return BOARD_SIZE + 2 * HOME_COLUMN_SIZE;
+            case "RED": return BOARD_SIZE;
+            case "GREEN": return BOARD_SIZE + HOME_COLUMN_SIZE;
+            default: return -1;
+        }
+    }
+
+    public int getStartPosition(String color) {
+        return playerStartPositions.getOrDefault(color.toUpperCase(), -1);
+    }
+
+    public int getSafeSpot(String color) {
+        switch (color.toUpperCase()) {
+            case "YELLOW": return 45;
+            case "BLUE": return 32;
+            case "RED": return 6;
+            case "GREEN": return 19;
+            default: return -1;
+        }
+    }
+
+    // Add new helper method for position validation
+    public boolean isValidPosition(int position) {
+        if (position < 0) return false;
+        if (position < BOARD_SIZE) return true;
+        if (position < BOARD_SIZE + (HOME_COLUMN_SIZE * 4)) return true;
+        return false;
+    }
+
+    // Add new method to get cell position index
+    public int getCellPositionIndex(Cell cell) {
+        if (cell == null) return -1;
+
+        // Check main board positions
+        for (int i = 0; i < BOARD_SIZE; i++) {
+            if (getGridPosition(i).equals(cell)) {
+                return i;
+            }
+        }
+
+        // Check home columns
+        for (int i = 0; i < 4; i++) {  // For each player color
+            for (int j = 0; j < HOME_COLUMN_SIZE; j++) {
+                int position = BOARD_SIZE + (i * HOME_COLUMN_SIZE) + j;
+                if (getGridPosition(position).equals(cell)) {
+                    return position;
+                }
+            }
+        }
+
+        return -1;  // Position not found
+    }
+
+    // Update getStartPosition to return position index when needed
+    public int getStartPositionIndex(String color) {
+        return playerStartPositions.getOrDefault(color.toUpperCase(), -1);
+    }
+
+    // Fix the Cell type mismatch by converting position index to Cell
+    public Cell getStartCell(String color) {
+        int startPos = getStartPosition(color);
+        return getGridPosition(startPos);
+    }
+
+    public Cell getStartPositionCell(String color) {
+        int position = getStartPosition(color);
+        return getGridPosition(position);
+    }
+
+
+//        public ludo.core.model.Cell getHomeBase(String color) {
+//            int colorIndex;
+//            switch (color.toUpperCase()) {
+//                case "YELLOW": colorIndex = 0; break;
+//                case "BLUE": colorIndex = 1; break;
+//                case "RED": colorIndex = 2; break;
+//                case "GREEN": colorIndex = 3; break;
+//                default: return null;
+//            }
+//            return new ludo.core.model.Cell(Constants.HOME_BASES[colorIndex][0], Constants.HOME_BASES[colorIndex][1]);
+//        }
+//
+//        public ludo.core.model.Cell getStartPosition(String color) {
+//            int colorIndex;
+//            switch (color.toUpperCase()) {
+//                case "YELLOW": colorIndex = 0; break;
+//                case "BLUE": colorIndex = 1; break;
+//                case "RED": colorIndex = 2; break;
+//                case "GREEN": colorIndex = 3; break;
+//                default: return null;
+//            }
+//            return new ludo.core.model.Cell(Constants.START_POSITIONS[colorIndex][0], Constants.START_POSITIONS[colorIndex][1]);
+//        }
+//
+//        public ludo.core.model.Cell getSafeSpot(String color) {
+//            int colorIndex;
+//            switch (color.toUpperCase()) {
+//                case "YELLOW": colorIndex = 0; break;
+//                case "BLUE": colorIndex = 1; break;
+//                case "RED": colorIndex = 2; break;
+//                case "GREEN": colorIndex = 3; break;
+//                default: return null;
+//            }
+//            return new ludo.core.model.Cell(Constants.SAFE_SPOTS[colorIndex][0], Constants.SAFE_SPOTS[colorIndex][1]);
+//        }
+//        // ...existing code...
+//    }
 }

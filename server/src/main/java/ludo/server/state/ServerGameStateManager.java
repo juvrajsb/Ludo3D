@@ -94,65 +94,12 @@ public class ServerGameStateManager implements MessageListener {
             networkHandler.broadcast(resultEvent);
 
             // If no valid moves are possible with this roll, automatically end turn
-            if (!gameManager.hasValidMovesAvailable(gameManager.getCurrentPlayer(), diceValue)) { //todo duplicate with @GameStateManager.handleDiceRoll
+            if (!gameManager.hasValidMovesAvailable(gameManager.getCurrentPlayer(), diceValue)) {
                 LOGGER.info("No valid moves available - automatically ending turn");
                 handleTurnEnd(event);
             }
         }
     }
-
-    //    private void handleMoveRequest(MoveRequestEvent event) {
-//        String connectionId = event.getConnection().getConnectionID();
-//        String playerName = connectionToPlayerMap.get(connectionId);
-//
-//        if (!gameManager.isPlayerTurn(playerName)) {
-//            LOGGER.warning("Move rejected - not player's turn");
-//            sendMoveResponse(connectionId, false, "Not your turn", event.getPawnIndex(), -1);
-//            return;
-//        }
-//
-//        Player currentPlayer = gameManager.getCurrentPlayer();
-//        int playerIndex = gameManager.getPlayers().indexOf(currentPlayer);
-//        int pawnIndex = event.getPawnIndex();
-//        int steps = event.getSteps();
-//
-//        LOGGER.info(String.format("Processing move - Player: %s, Pawn: %d, Steps: %d",
-//            currentPlayer.getColor(), pawnIndex, steps));
-//
-//        boolean moveSuccess = gameManager.movePawn(playerIndex, pawnIndex, steps);
-//
-//        if (moveSuccess) {
-//            // Get updated position after move
-//            int newPosition = currentPlayer.getPawns().get(pawnIndex).getPosition();
-//
-//            // Broadcast successful move
-//            MoveResultEvent resultEvent = new MoveResultEvent(
-//                true,
-//                "Move successful",
-//                pawnIndex,
-//                newPosition
-//            );
-//            networkHandler.broadcast(resultEvent);
-//
-//            // Check for win
-//            if (gameManager.hasPlayerWon(playerName)) {
-//                handleGameOver(playerName);
-//            } else {
-//                // Move to next turn
-//                gameManager.nextTurn();
-//                broadcastGameState();
-//
-//                // Notify turn change
-//                TurnChangeEvent turnEvent = new TurnChangeEvent(
-//                    gameManager.getCurrentPlayer().getName()
-//                );
-//                networkHandler.broadcast(turnEvent);
-//            }
-//        } else {
-//            // Send failure response
-//            sendMoveResponse(connectionId, false, "Invalid move", pawnIndex, -1);
-//        }
-//    }
 
     private void handleMoveRequest(MoveRequestEvent event) {
         String connectionId = event.getConnection().getConnectionID();
@@ -181,13 +128,14 @@ public class ServerGameStateManager implements MessageListener {
         Map<String, List<Integer>> beforePositions = gameManager.getCurrentPawnPositions();
         LOGGER.info("Positions before move: " + beforePositions);
 
+        Pawn selectedPawn = currentPlayer.getPawns().get(pawnIndex);
+        boolean isLeavingHome = selectedPawn.isHome() && steps == 6;
         boolean moveSuccess = gameManager.movePawn(playerIndex, pawnIndex, steps);
         LOGGER.info("Move result: " + (moveSuccess ? "Success" : "Failed"));
 
         if (moveSuccess) {
             Map<String, List<Integer>> afterPositions = gameManager.getCurrentPawnPositions();
             LOGGER.info("Positions after move: " + afterPositions);
-            // Get new position after move
             int newPosition = currentPlayer.getPawns().get(pawnIndex).getPosition();
             LOGGER.info("New position: " + newPosition);
 
@@ -203,20 +151,39 @@ public class ServerGameStateManager implements MessageListener {
 
             // Update game state
             broadcastGameState();
+
+            // Check for win condition
             if (gameManager.hasPlayerWon(playerName)) {
                 handleGameOver(playerName);
+                return;
             }
-            // If the move was just leaving home with a 6, don't end turn
-            boolean wasLeavingHome = currentPlayer.getPawns().get(pawnIndex).isHome() && steps == 6;
-            if (!wasLeavingHome) {
-                // Move to next turn
-                gameManager.nextTurn();
 
-                // Send turn change event
-                String nextPlayer = gameManager.getCurrentPlayer().getName();
-                LOGGER.info("Next player: " + nextPlayer);
-                TurnChangeEvent turnEvent = new TurnChangeEvent(nextPlayer);
-                networkHandler.broadcast(turnEvent);
+            // Handle turn logic
+            if (steps == 6) {
+                // If player rolled a 6, they get another turn
+                if (isLeavingHome) {
+                    // If the pawn just left home with a 6, player gets another roll
+                    LOGGER.info("Pawn left home with a 6 - player gets another roll");
+                    // Don't end turn, just let them roll again
+                } else {
+                    // If they moved a pawn with a 6, they get another roll
+                    LOGGER.info("Player moved with a 6 - player gets another roll");
+                    // Don't end turn, let them roll again
+                }
+            } else {
+                boolean hasValidMove = gameManager.hasValidMovesAvailable(gameManager.getCurrentPlayer(), steps);
+                if (!hasValidMove) {
+                    LOGGER.info("No valid moves left - ending turn");
+                    gameManager.nextTurn();
+
+                    // Send turn change event
+                    String nextPlayer = gameManager.getCurrentPlayer().getName();
+                    LOGGER.info("Next player: " + nextPlayer);
+                    TurnChangeEvent turnEvent = new TurnChangeEvent(nextPlayer);
+                    networkHandler.broadcast(turnEvent);
+                } else {
+                    LOGGER.info("Valid moves available - player continues turn");
+                }
             }
         } else {
             LOGGER.warning("Move failed for pawn " + pawnIndex);
