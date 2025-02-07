@@ -20,17 +20,34 @@ public class Pawn implements Serializable {
     }
 
     public boolean canMove(int spaces, Board board) {
-        if (isHome || isFinished) {
+        // Can only leave home with a 6
+        if (isHome && spaces != 6) {
             return false;
         }
 
-        int newPosition = (position + spaces) % board.getTotalSpaces();
-
-        if (board.isHomeColumn(newPosition, color)) {
-            // Check if would overshoot home
-            return newPosition < board.getStartPosition(color) + board.getTotalSpaces() - 1;
+        // Cannot move if finished
+        if (isFinished) {
+            return false;
         }
 
+        // If in home, any 6 is valid
+        if (isHome && spaces == 6) {
+            return true;
+        }
+
+        int newPosition = position + spaces;
+        
+        // Check if entering home column
+        int startPos = board.getStartPosition(color);
+        int entryPoint = (startPos + board.getTotalSpaces() - 1) % board.getTotalSpaces();
+        
+        if (position <= entryPoint && newPosition > entryPoint) {
+            int stepsIntoHome = newPosition - entryPoint - 1;
+            // Check if would overshoot home column
+            return stepsIntoHome < board.getHomeColumnSize();
+        }
+
+        // Regular movement is always valid if not entering home column
         return true;
     }
 
