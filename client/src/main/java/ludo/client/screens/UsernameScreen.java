@@ -58,7 +58,6 @@ public class UsernameScreen extends BaseScreen {
 
         stage.addActor(mainTable);
 
-        // Check if first player to show player count selection
         if (game.getGameStateManager().isFirstPlayer()) {
             playerCountTable = new Table();
             playerCountTable.add(new Label("Number of Players:", skin)).align(Align.right);
@@ -80,11 +79,9 @@ public class UsernameScreen extends BaseScreen {
             return;
         }
 
-        // Clear any previous error
         errorLabel.setText("");
         joinInProgress = true;
 
-        // Attempt to join
         if (!game.getGameStateManager().joinGame(username, colorSelect.getSelected())) {
             joinInProgress = false;
             errorLabel.setText("Failed to send join request");
