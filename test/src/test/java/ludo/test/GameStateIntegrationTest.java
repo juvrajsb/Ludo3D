@@ -22,7 +22,7 @@ public class GameStateIntegrationTest {
 
     @Before
     public void setup() {
-        MockitoAnnotations.initMocks(this);
+        MockitoAnnotations.openMocks(this);  // Updated from deprecated initMocks
         when(networkHandler.isConnected()).thenReturn(true);
         gameState = new GameStateManager(networkHandler); // Use the constructor with networkHandler
     }
