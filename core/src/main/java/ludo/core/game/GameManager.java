@@ -14,7 +14,6 @@ import java.io.IOException;
 import java.util.*;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.logging.Logger;
-import java.util.stream.Collectors;
 
 public class GameManager {
     private static final Logger LOGGER = Logger.getLogger(GameManager.class.getName());
@@ -28,7 +27,7 @@ public class GameManager {
     private int lastDiceRoll;
     private final Map<String, Player> playerMap;
 
-    private GameManager() {
+    public GameManager() {
         this.players = new CopyOnWriteArrayList<>();
         this.board = new Board();
         this.dice = new Dice();
@@ -85,29 +84,43 @@ public class GameManager {
     }
 
     public boolean canMovePawn(int playerIndex, int pawnIndex, int steps) {
-        if (playerIndex < 0 || playerIndex >= players.size() ||
-            pawnIndex < 0 || pawnIndex >= Constants.PAWNS_PER_PLAYER) {
-            return false;
-        }
+        try {
+            validateIndices(playerIndex, pawnIndex, steps);
+            Player player = players.get(playerIndex);
+            Pawn pawn = player.getPawns().get(pawnIndex);
 
-        Player player = players.get(playerIndex);
-        Pawn pawn = player.getPawns().get(pawnIndex);
-
-        // Can only move pawns in home with a 6
-        if (pawn.isHome() && steps != 6) {
-            return false;
-        }
-
-        // If pawn is not in home, check if move is valid
-        if (!pawn.isHome()) {
-            int newPosition = calculateNewPosition(player, pawn.getPosition(), steps);
-
-            // Check if move would overshoot home column
-            if (isHomeColumnOvershoot(player, pawn.getPosition(), newPosition)) {
+            // Basic validation using Pawn's canMove method
+            if (!pawn.canMove(steps, board)) {
                 return false;
             }
 
-            // Check for collisions with own pawns
+            int currentPosition = pawn.getPosition();
+            int startPos = board.getStartPosition(player.getColor());
+
+            // Calculate potential new position
+            int newPosition;
+            if (pawn.isHome() && steps == 6) {
+                newPosition = startPos;
+            } else {
+                newPosition = currentPosition + steps;
+                if (newPosition >= board.getTotalSpaces()) {
+                    // Check home column entry
+                    int entryPoint = (startPos + board.getTotalSpaces() - 1) % board.getTotalSpaces();
+                    if (currentPosition <= entryPoint && newPosition > entryPoint) {
+                        int homeSteps = newPosition - entryPoint - 1;
+                        if (homeSteps >= board.getHomeColumnSize()) {
+                            return false; // Would overshoot home
+                        }
+                        // Check for blocking pawns in home column
+                        newPosition = board.getTotalSpaces() +
+                            (startPos / 13) * board.getHomeColumnSize() + homeSteps;
+                    } else {
+                        newPosition = newPosition % board.getTotalSpaces();
+                    }
+                }
+            }
+
+            // Check for blocking by own pawns
             if (!board.isSafeSpot(newPosition)) {
                 for (Pawn otherPawn : player.getPawns()) {
                     if (otherPawn != pawn && otherPawn.getPosition() == newPosition) {
@@ -115,38 +128,17 @@ public class GameManager {
                     }
                 }
             }
+
+            return true;
+        } catch (Exception e) {
+            LOGGER.severe("Error validating move: " + e.getMessage());
+            return false;
         }
-
-        return true;
     }
-
-
-//    public synchronized boolean movePawn(String playerId, int pawnIndex, int steps) {
-//        Player player = getPlayerByName(playerId);
-//        return player != null && movePawn(player, pawnIndex, steps);
-//    }
-//
-//    public synchronized boolean movePawn(Player player, int pawnIndex, int steps) {
-//        if (!isValidMove(player, pawnIndex, steps)) {
-//            return false;
-//        }
-//
-//        Pawn pawn = player.getPawns().get(pawnIndex);
-//        if (!pawn.canMove(steps, board)) {
-//            return false;
-//        }
-//
-//        // Execute the move
-//        pawn.move(steps, board);
-//        checkForCaptures(player, pawn.getPosition());
-//        return true;
-//    }
 
     public boolean movePawn(int playerIndex, int pawnIndex, int steps) {
         LOGGER.info(String.format("Move attempt - Player: %d, Pawn: %d, Steps: %d",
             playerIndex, pawnIndex, steps));
-        LOGGER.info("Total players: " + players.size());
-        LOGGER.info("Current player positions map: " + getCurrentPawnPositions());
 
         try {
             validateIndices(playerIndex, pawnIndex, steps);
@@ -156,80 +148,42 @@ public class GameManager {
         }
 
         Player player = players.get(playerIndex);
-        LOGGER.info("Player color: " + player.getColor());
-
         Pawn pawn = player.getPawns().get(pawnIndex);
-        LOGGER.info("Current pawn state - IsHome: " + pawn.isHome() +
-            ", Position: " + pawn.getPosition());
 
         // Handle leaving home with a 6
         if (pawn.isHome() && steps == 6) {
-            int startPosition = board.getStartPosition(player.getColor());
+            int startPosition = board.getStartPositionIndex(player.getColor());
             LOGGER.info("Pawn leaving home. Start position: " + startPosition);
 
             pawn.setPosition(startPosition);
-
             pawn.leaveHome(board);
 
             LOGGER.info("New pawn position after leaving home: " + pawn.getPosition());
 
-            // Verify the move was successful
             if (pawn.getPosition() == startPosition && !pawn.isHome()) {
                 LOGGER.info("Successfully moved pawn to start position");
                 return true;
             } else {
                 LOGGER.severe("Failed to properly place pawn at start position");
-                // Revert the move if it wasn't successful
                 pawn.sendHome();
                 return false;
             }
-            // Update position map after move
-//            Map<String, List<Integer>> positions = getCurrentPawnPositions();
-//            LOGGER.info("Updated positions map after home move: " + positions);
-//            return true;
-        }
-
-        if (pawn.isHome()) {
-            LOGGER.info("Pawn is home and roll is not 6 - move invalid");
-            return false;
         }
 
         // Calculate new position
         int currentPosition = pawn.getPosition();
-        int startPos = board.getStartPosition(player.getColor());
-        int entryPoint = (startPos + board.getTotalSpaces() - 1) % board.getTotalSpaces();
-
-        LOGGER.info(String.format("Movement calculation - Current: %d, StartPos: %d, EntryPoint: %d",
-            currentPosition, startPos, entryPoint));
-
-        int potentialNewPos = currentPosition + steps;
-        LOGGER.info("Potential new position: " + potentialNewPos);
+        int startPos = board.getStartPositionIndex(player.getColor());
 
         // Calculate final position with detailed logging
-        int newPosition;
-        if (currentPosition <= entryPoint && potentialNewPos > entryPoint) {
-            int stepsAfterEntry = potentialNewPos - entryPoint - 1;
-            LOGGER.info("Entering home column. Steps after entry: " + stepsAfterEntry);
-
-            if (stepsAfterEntry >= board.getHomeColumnSize()) {
-                LOGGER.info("Move would overshoot home column");
-                return false;
-            }
-
-            newPosition = board.getTotalSpaces() + (startPos / 13) * board.getHomeColumnSize() + stepsAfterEntry;
-            LOGGER.info("Calculated home column position: " + newPosition);
-        } else {
-            newPosition = potentialNewPos % board.getTotalSpaces();
-            LOGGER.info("Calculated regular board position: " + newPosition);
+        int newPosition = calculateNewPosition(player, currentPosition, steps);
+        if (newPosition == -1) {
+            LOGGER.info("Invalid move - position calculation failed");
+            return false;
         }
 
         // Execute move
         pawn.setPosition(newPosition);
         LOGGER.info("Pawn position updated to: " + newPosition);
-
-        // Check position map after move
-        Map<String, List<Integer>> positions = getCurrentPawnPositions();
-        LOGGER.info("Final positions map: " + positions);
 
         handleCaptures(player, newPosition);
 
@@ -249,16 +203,24 @@ public class GameManager {
 
     private int calculateNewPosition(Player player, int currentPosition, int steps) {
         if (currentPosition >= board.getTotalSpaces()) {
-            return currentPosition + steps;
+            // Already in home column
+            int newPos = currentPosition + steps;
+            if (isHomeColumnOvershoot(player, currentPosition, newPos)) {
+                return -1;
+            }
+            return newPos;
         }
 
-        int startPos = board.getStartPosition(player.getColor());
+        int startPos = board.getStartPositionIndex(player.getColor());
         int entryPoint = (startPos + board.getTotalSpaces() - 1) % board.getTotalSpaces();
         int potentialNewPos = currentPosition + steps;
 
         // Check if entering home column
         if (currentPosition <= entryPoint && potentialNewPos > entryPoint) {
             int stepsAfterEntry = potentialNewPos - entryPoint - 1;
+            if (stepsAfterEntry >= board.getHomeColumnSize()) {
+                return -1;
+            }
             return board.getTotalSpaces() + (startPos / 13) * board.getHomeColumnSize() + stepsAfterEntry;
         }
 
@@ -266,35 +228,12 @@ public class GameManager {
     }
 
     private boolean isHomeColumnOvershoot(Player player, int currentPos, int newPos) {
-        if (currentPos >= board.getTotalSpaces() || newPos >= board.getTotalSpaces()) {
+        if (currentPos >= board.getTotalSpaces()) {
             int homeStart = board.getTotalSpaces() +
-                (board.getStartPosition(player.getColor()) / 13) * board.getHomeColumnSize();
+                (board.getStartPositionIndex(player.getColor()) / 13) * board.getHomeColumnSize();
             return newPos >= homeStart + board.getHomeColumnSize();
         }
         return false;
-    }
-
-    private void handleCaptures(Player movingPlayer, int position) {
-        LOGGER.info("Checking captures at position: " + position);
-        LOGGER.info("Moving player: " + movingPlayer.getColor());
-        if (board.isSafeSpot(position)) {
-            LOGGER.info("Position " + position + " is a safe spot, no captures possible");
-
-            return;
-        }
-
-        for (Player otherPlayer : players) {
-            if (otherPlayer != movingPlayer) {
-                LOGGER.info("Checking pawns of player: " + otherPlayer.getColor());
-                for (Pawn pawn : otherPlayer.getPawns()) {
-                    LOGGER.info("Checking pawn at position: " + pawn.getPosition());
-                    if (pawn.getPosition() == position) {
-                        pawn.sendHome();
-                        LOGGER.info("Captured " + otherPlayer.getColor() + "'s pawn");
-                    }
-                }
-            }
-        }
     }
 
     public int rollDice() {
@@ -360,7 +299,7 @@ public class GameManager {
         return positions;
     }
 
-    private void checkForCaptures(Player movingPlayer, int position) { //TODO check usage not used currently
+    private void handleCaptures(Player movingPlayer, int position) {
         if (board.isSafeSpot(position)) {
             return;
         }
@@ -369,12 +308,12 @@ public class GameManager {
             if (otherPlayer != movingPlayer) {
                 otherPlayer.getPawns().stream()
                     .filter(p -> p.getPosition() == position)
-                    .forEach(p -> p.sendHome());
+                    .forEach(Pawn::sendHome);
             }
         }
     }
 
-    private boolean isValidMove(Player player, int pawnIndex, int steps) { //TODO check usage not used currently
+    private boolean isValidMove(Player player, int pawnIndex, int steps) {
         if (player != getCurrentPlayer() ||
             pawnIndex < 0 ||
             pawnIndex >= Constants.PAWNS_PER_PLAYER) {
@@ -389,7 +328,7 @@ public class GameManager {
         GameStateUpdateEvent stateEvent = new GameStateUpdateEvent(
             getCurrentPawnPositions(),
             getCurrentPlayer().getColor(),
-            gameState //TODO check; required GameStateType; provided GameState
+            gameState
         );
         connection.send(stateEvent);
     }
