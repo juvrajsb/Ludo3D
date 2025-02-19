@@ -244,7 +244,16 @@ public class GameManager {
     public boolean hasValidMovesAvailable(Player player, int diceRoll) {
         int playerIndex = players.indexOf(player);
 
-        // Check each pawn for possible moves
+        boolean hasPawnsOutside = player.getPawns().stream()
+            .anyMatch(p -> !p.isHome());
+
+        if (hasPawnsOutside) {
+            return player.getPawns().stream()
+                .filter(p -> !p.isHome())
+                .anyMatch(p -> canMovePawn(playerIndex, player.getPawns().indexOf(p), diceRoll));
+        }
+
+        // Altrimenti controlla tutte le pedine
         for (int i = 0; i < player.getPawns().size(); i++) {
             if (canMovePawn(playerIndex, i, diceRoll)) {
                 return true;
@@ -255,10 +264,29 @@ public class GameManager {
     }
 
     public void nextTurn() {
-        currentPlayerIndex = (currentPlayerIndex + 1) % players.size();
-        lastDiceRoll = 0;
-        gameState = GameState.IN_PROGRESS;
-        LOGGER.info("this is ok Turn changed to player: " + getCurrentPlayer().getColor());
+        if (lastDiceRoll != 6) {
+            currentPlayerIndex = (currentPlayerIndex + 1) % players.size();
+            lastDiceRoll = 0;
+            gameState = GameState.IN_PROGRESS;
+            LOGGER.info("Turn changed to player: " + getCurrentPlayer().getColor());
+        } else {
+            LOGGER.info("Player rolled a 6 - keeping turn for: " + getCurrentPlayer().getColor());
+        }
+    }
+
+    public boolean mustMovePawn(int playerIndex, int diceRoll) {
+        Player player = players.get(playerIndex);
+        
+        boolean hasPawnsOutside = player.getPawns().stream()
+            .anyMatch(p -> !p.isHome());
+            
+        if (hasPawnsOutside) {
+            return player.getPawns().stream()
+                .filter(p -> !p.isHome())
+                .anyMatch(p -> canMovePawn(playerIndex, player.getPawns().indexOf(p), diceRoll));
+        }
+        
+        return false;
     }
 
     public Player getCurrentPlayer() {
