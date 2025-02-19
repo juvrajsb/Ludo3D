@@ -40,12 +40,12 @@ public class DiceRenderer {
 
     private void initializeFaceRotations() { //TODO put the correct numbers
         // Define rotations for each face to show correct number
-        valueFaceRotations[0] = new Matrix4().setToRotation(Vector3.X, 0);  // 1
-        valueFaceRotations[1] = new Matrix4().setToRotation(Vector3.X, 90); // 2
-        valueFaceRotations[2] = new Matrix4().setToRotation(Vector3.Y, 90); // 3
-        valueFaceRotations[3] = new Matrix4().setToRotation(Vector3.Y, -90); // 4
-        valueFaceRotations[4] = new Matrix4().setToRotation(Vector3.X, -90); // 5
-        valueFaceRotations[5] = new Matrix4().setToRotation(Vector3.X, 180); // 6
+        valueFaceRotations[2] = new Matrix4().setToRotation(Vector3.X, 0);  // 1
+        valueFaceRotations[3] = new Matrix4().setToRotation(Vector3.X, 90); // 2
+        valueFaceRotations[4] = new Matrix4().setToRotation(Vector3.Y, 90); // 3
+        valueFaceRotations[5] = new Matrix4().setToRotation(Vector3.Y, -90); // 4
+        valueFaceRotations[0] = new Matrix4().setToRotation(Vector3.X, -90); // 5
+        valueFaceRotations[1] = new Matrix4().setToRotation(Vector3.X, 180); // 6
     }
 
     public void update(float deltaTime) {
