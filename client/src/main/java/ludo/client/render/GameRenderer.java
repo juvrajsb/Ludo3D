@@ -1,7 +1,6 @@
 package ludo.client.render;
 
 import com.badlogic.gdx.Gdx;
-import com.badlogic.gdx.Input;
 import com.badlogic.gdx.graphics.Camera;
 import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.Texture;
@@ -34,7 +33,6 @@ public class GameRenderer {
     private final float BOARD_SIZE = 15f;
     private final float PAWN_SCALE = 5f;
     private final float BOARD_SCALE = 0.5f;
-    private final float BOARD_OFFSET = BOARD_SIZE/2;
     private final Vector3 intersection;
     private final Board gameBoard;
     private final Array<ModelInstance> pawnInstances;
@@ -73,38 +71,11 @@ public class GameRenderer {
         diceRenderer.startRoll(value);
     }
 
-    private void renderDebugGrid() {
-        shapeRenderer.begin(ShapeRenderer.ShapeType.Line);
-        shapeRenderer.setColor(Color.WHITE);
-
-        // Draw grid lines and coordinates
-        for (int i = 0; i <= BOARD_SIZE; i++) {
-            Vector3 startVert = gridToWorld(i, 0);
-            Vector3 endVert = gridToWorld(i, BOARD_SIZE);
-            Vector3 startHoriz = gridToWorld(0, i);
-            Vector3 endHoriz = gridToWorld(BOARD_SIZE, i);
-
-            shapeRenderer.line(startVert.x, startVert.z, endVert.x, endVert.z);
-            shapeRenderer.line(startHoriz.x, startHoriz.z, endHoriz.x, endHoriz.z);
-
-            // Log every 5th line position
-            if (i % 5 == 0) {
-                Gdx.app.log(TAG, String.format("Grid line %d: vertical(%.1f, %.1f) -> (%.1f, %.1f)",
-                    i, startVert.x, startVert.z, endVert.x, endVert.z));
-            }
-        }
-        shapeRenderer.end();
-    }
-
     public void render(ModelBatch modelBatch, Environment environment, float delta) {
         updateAnimations(delta);
 
         if (boardInstance != null) {
             modelBatch.render(boardInstance, environment);
-        }
-
-        if (Gdx.input.isKeyPressed(Input.Keys.G)) {  // Press G to toggle grid
-            renderDebugGrid();
         }
 
         for (ModelInstance pawn : pawnInstances) {
@@ -236,102 +207,6 @@ public class GameRenderer {
         Gdx.app.log(TAG, String.format("Bottom Right: %s", bottomRight));
     }
 
-//    public void updatePawnPosition(int pawnIndex, int newPosition, String playerColor) {
-//        if (pawnIndex >= 0 && pawnIndex < pawnInstances.size) {
-//            Vector3 currentPos = pawnInstances.get(pawnIndex).transform.getTranslation(new Vector3());
-//            Vector3 targetPos = calculatePawnPosition(newPosition, playerColor, pawnIndex % 4);
-//
-//            // Only create animation if positions are different
-//            if (!currentPos.epsilonEquals(targetPos, 0.001f)) {
-//                Gdx.app.log("GameRenderer", String.format(
-//                    "Updating pawn %d (%s) position: %d -> Current(%s), Target(%s)",
-//                    pawnIndex, playerColor, newPosition,
-//                    currentPos.toString(),
-//                    targetPos.toString()));
-//
-//                PawnAnimation animation = new PawnAnimation(currentPos.cpy(), targetPos.cpy(), playerColor);
-//                pawnAnimations.put(pawnIndex, animation);
-//                pawnPositions.put(pawnIndex, targetPos.cpy());
-//            }
-    private Vector3 calculatePawnPosition(int boardPosition) {
-        Cell cell = gameBoard.getGridPosition(boardPosition);
-        if (cell == null) {
-            Gdx.app.error(TAG, "Invalid board position: " + boardPosition);
-            return new Vector3(0, 0.2f, 0);
-        }
-
-        int gridX = cell.getX();
-        int gridZ = cell.getY();
-
-        float worldX = (gridX - (BOARD_SIZE / 2)) * BOARD_SCALE;
-        float worldZ = (BOARD_SIZE / 2 - gridZ) * BOARD_SCALE; // Flip Z axis
-
-        return new Vector3(worldX, 0.2f, worldZ);
-    }
-
-//    public void updatePawnPosition(int pawnIndex, int newPosition, String playerColor) {
-//        int globalPawnIndex = getGlobalPawnIndex(playerColor, pawnIndex);
-//
-//        Gdx.app.log(TAG, String.format("[POSITION] Updating %s pawn %d to position %d",
-//            playerColor, pawnIndex, newPosition));
-//
-//        ModelInstance pawn = pawnInstances.get(globalPawnIndex);
-//        Vector3 targetPos;
-//
-//        if (newPosition == -1) {
-//            targetPos = calculateHomeBasePosition(playerColor, pawnIndex);
-//        } else {
-//            targetPos = calculateTargetPosition(playerColor, newPosition);
-//        }
-//
-//        Vector3 currentPos = pawn.transform.getTranslation(new Vector3());
-//        PawnAnimation animation = new PawnAnimation(currentPos, targetPos, playerColor);
-//        pawnAnimations.put(globalPawnIndex, animation);
-//        pawnPositions.put(globalPawnIndex, targetPos);
-//    }
-
-//    public void updatePawnPosition(int pawnIndex, int newPosition, String playerColor) {
-//        // Calculate global pawn index
-//        int colorOffset;
-//        switch(playerColor.toUpperCase()) {
-//            case "RED": colorOffset = 0; break;
-//            case "BLUE": colorOffset = 4; break;
-//            case "GREEN": colorOffset = 8; break;
-//            case "YELLOW": colorOffset = 12; break;
-//            default: return;
-//        }
-//        int globalPawnIndex = colorOffset + (pawnIndex % 4);
-//
-//        // Ensure we have enough pawns created
-//        while (pawnInstances.size <= globalPawnIndex) {
-//            ModelInstance newPawn = createPawnInstance(playerColor);
-//            pawnInstances.add(newPawn);
-//        }
-//
-//        Vector3 targetPos;
-//        if (newPosition == -1) {
-//            // Home base position
-//            targetPos = calculateHomeBasePosition(playerColor, pawnIndex);
-//        } else if (newPosition >= gameBoard.getTotalSpaces()) {
-//            // Home column position
-//            targetPos = calculateHomeColumnPosition(playerColor, newPosition - gameBoard.getTotalSpaces());
-//        } else {
-//            // Main track position
-//            targetPos = calculateMainTrackPosition(newPosition);
-//        }
-//
-//        Vector3 currentPos = null;
-//        if (pawnPositions.containsKey(globalPawnIndex)) {
-//            currentPos = pawnPositions.get(globalPawnIndex).cpy();
-//        } else {
-//            currentPos = targetPos.cpy();
-//        }
-//
-//        PawnAnimation animation = new PawnAnimation(currentPos, targetPos, playerColor);
-//        pawnAnimations.put(globalPawnIndex, animation);
-//        pawnPositions.put(globalPawnIndex, targetPos);
-//    }
-
     private ModelInstance createPawnInstance(String color) {
         Model pawnModel = GameAssets.getInstance().getPawnModel();
         if (pawnModel == null) {
@@ -352,13 +227,11 @@ public class GameRenderer {
                 1f)
         );
 
-        // Apply the material to all parts of the model
         for (Material mat : pawn.materials) {
             mat.clear();
             mat.set(pawnMaterial);
         }
 
-        // Apply scale
         pawn.transform.scale(PAWN_SCALE, PAWN_SCALE, PAWN_SCALE);
 
         return pawn;
@@ -384,42 +257,6 @@ public class GameRenderer {
         return color;
     }
 
-    private Vector3 calculateMainTrackPosition(int position) {
-        // Main track positions based on diagram
-        if (position < 13) {
-            // Bottom edge moving right
-            return gridToWorld(6 + position, 13);
-        } else if (position < 26) {
-            // Right edge moving up
-            return gridToWorld(13, 13 - (position - 13));
-        } else if (position < 39) {
-            // Top edge moving left
-            return gridToWorld(13 - (position - 26), 1);
-        } else {
-            // Left edge moving down
-            return gridToWorld(1, 1 + (position - 39));
-        }
-    }
-
-    private Vector3 calculateHomeColumnPosition(String color, int offset) {
-        switch(color.toUpperCase()) {
-            case "RED":
-                // Red home column goes up the middle
-                return gridToWorld(7, 8 + offset);
-            case "BLUE":
-                // Blue home column goes left in middle row
-                return gridToWorld(8 - offset, 7);
-            case "GREEN":
-                // Green home column goes right in middle row
-                return gridToWorld(6 + offset, 7);
-            case "YELLOW":
-                // Yellow home column goes down the middle
-                return gridToWorld(7, 6 - offset);
-            default:
-                return new Vector3(0, 0.2f, 0);
-        }
-    }
-
     private Vector3 calculateHomeBasePosition(String color, int index) {
         switch(color.toUpperCase()) {
             case "RED": // Bottom right
@@ -435,114 +272,10 @@ public class GameRenderer {
         }
     }
 
-//    private int getGlobalPawnIndex(String playerColor, int localPawnIndex) {
-//        // Calculate offset based on player color
-//        int colorOffset = 0;
-//        switch(playerColor.toUpperCase()) {
-//            case "RED": colorOffset = 0; break;
-//            case "BLUE": colorOffset = 4; break;
-//            case "GREEN": colorOffset = 8; break;
-//            case "YELLOW": colorOffset = 12; break;
-//        }
-//        return colorOffset + localPawnIndex;
-//    }
-
-//    private Vector3 calculateHomeBasePosition(String color, int index) {
-//        switch(color.toUpperCase()) {
-//            case "RED":
-//                return gridToWorld(13 - (index % 2), 13 - (index / 2));
-//            case "BLUE":
-//                return gridToWorld(1 + (index % 2), 1 + (index / 2));
-//            case "GREEN":
-//                return gridToWorld(13 - (index % 2), 1 + (index / 2));
-//            case "YELLOW":
-//                return gridToWorld(1 + (index % 2), 13 - (index / 2));
-//            default:
-//                return new Vector3(0, 0.2f, 0);
-//        }
-//    }
-
-    @SuppressWarnings("unused") // Used for pawn animation
-    private Vector3 calculateStartPosition(String color) {
-        Cell startCell = gameBoard.getStartPositionCell(color);  // Use getStartPositionCell instead of getStartPosition
-        if (startCell == null) return new Vector3();
-        return gridToWorld(startCell.getX(), startCell.getY());  // Use getY() instead of getZ()
-    }
-
-//    private Vector3 calculateTargetPosition(String playerColor, int boardPosition) {
-//        // Handle pawns in home base (-1)
-//        if (boardPosition == -1) {
-//            return calculateHomeBasePosition(playerColor, 0);
-//        }
-//
-//        // Handle pawns in home columns (>=52)
-//        if (boardPosition >= gameBoard.getTotalSpaces()) {
-//            int homeOffset = boardPosition - gameBoard.getTotalSpaces();
-//            switch(playerColor.toUpperCase()) {
-//                case "RED": // Goes up
-//                    return gridToWorld(7, 8 + homeOffset);
-//                case "BLUE": // Goes left
-//                    return gridToWorld(8 - homeOffset, 7);
-//                case "GREEN": // Goes right
-//                    return gridToWorld(6 + homeOffset, 7);
-//                case "YELLOW": // Goes down
-//                    return gridToWorld(7, 6 - homeOffset);
-//                default:
-//                    return new Vector3(0, 0.2f, 0);
-//            }
-//        }
-//
-//        // Get position from board grid
-//        Cell cell = gameBoard.getGridPosition(boardPosition);
-//        if (cell != null) {
-//            return gridToWorld(cell.getX(), cell.getY());
-//        }
-//
-//        Gdx.app.error(TAG, "Invalid board position: " + boardPosition);
-//        return new Vector3(0, 0.2f, 0);
-//    }
-
-//    private Vector3 calculateHomeBasePosition(String color, int index) {
-//        switch(color.toUpperCase()) {
-//            case "RED": // Bottom right
-//                return gridToWorld(13 + (index % 2), 13 + (index / 2));
-//            case "BLUE": // Bottom left
-//                return gridToWorld(13 + (index % 2), 0 + (index / 2));
-//            case "GREEN": // Top left
-//                return gridToWorld(0 + (index % 2), 0 + (index / 2));
-//            case "YELLOW": // Top right
-//                return gridToWorld(0 + (index % 2), 13 + (index / 2));
-//            default:
-//                return new Vector3(0, 0.2f, 0);
-//        }
-//    }
-
     private Vector3 gridToWorld(int x, int y) {
         // Convert grid coordinates (0-14) to world space
         float worldX = (x - BOARD_SIZE/2) * BOARD_SCALE;
         float worldZ = (BOARD_SIZE/2 - y) * BOARD_SCALE;
-        return new Vector3(worldX, 0.2f, worldZ);
-    }
-
-    @SuppressWarnings("unused")  // This method will be used for color-based animations
-    private int getColorOffset(String playerColor) {
-        switch (playerColor) {
-            case "BLUE": return 10;
-            case "GREEN": return 20;
-            case "YELLOW": return 30;
-            default: return 0;
-        }
-    }
-
-    private Vector3 gridToWorld(float gridX, float gridZ) {
-        // Board is 15x15, centered at origin
-        // Convert from grid (0-15) to world coordinates (-7.5 to 7.5)
-        float worldX = (gridX - BOARD_SIZE/2) * BOARD_SCALE;
-        float worldZ = (BOARD_SIZE/2 - gridZ) * BOARD_SCALE; // Flip Z axis to maintain correct orientation
-
-        Gdx.app.log(TAG, String.format("[GRID->WORLD] Converting (%.2f,%.2f) to world coordinates (%.2f,%.2f)",
-            gridX, gridZ, worldX, worldZ));
-
         return new Vector3(worldX, 0.2f, worldZ);
     }
 
@@ -571,6 +304,7 @@ public class GameRenderer {
         pawnInstance.userData = playerColor;
         pawnPositions.put(pawnIndex, position);
     }
+
     public void clearHighlights() {
         for (Map.Entry<Integer, Boolean> entry : highlightedPawns.entrySet()) {
             int pawnIdx = entry.getKey();
@@ -629,22 +363,6 @@ public class GameRenderer {
         playerColors.put("BLUE", new Color(0.2f, 0.2f, 0.8f, 1f));
         playerColors.put("YELLOW", new Color(0.8f, 0.8f, 0.2f, 1f));
     }
-
-//    private Color getPlayerColor(String colorName) {
-//        if (colorName == null) return Color.WHITE; // Fallback color
-//
-//        // Convert to uppercase for case-insensitive lookup
-//        String upperColor = colorName.toUpperCase();
-//        Color color = playerColors.get(upperColor);
-//
-//        if (color == null) {
-//            Gdx.app.error(TAG, "No color found for: " + colorName + ". Using fallback color.");
-//            return Color.WHITE; // Fallback color
-//        }
-//
-//        return color;
-//    }
-
 
     public int getPawnAtScreenCoords(int screenX, int screenY, Camera camera, String currentPlayerColor) {
         Ray ray = camera.getPickRay(screenX, screenY);
@@ -819,7 +537,6 @@ public class GameRenderer {
         return hit;
     }
 
-    // Helper method to get pawn color based on index
     private String getPawnColor(int index) {
         int colorIndex = index / 4;  // Each color has 4 pawns
         switch (colorIndex) {
@@ -830,29 +547,6 @@ public class GameRenderer {
             default: return "RED";
         }
     }
-
-//    private Vector3 calculateTargetPosition(String playerColor, int boardPosition) {
-//        try {
-//            // Handle home base (-1)
-//            if (boardPosition == -1) {
-//                int pawnIndex = pawnIndicesInBase.getOrDefault(playerColor, 0) % 4;
-//                pawnIndicesInBase.put(playerColor, pawnIndicesInBase.getOrDefault(playerColor, 0) + 1);
-//                return BoardCoordinates.getHomeBasePosition(playerColor, pawnIndex);
-//            }
-//
-//            // Handle home column positions (>=52)
-//            if (boardPosition >= gameBoard.getTotalSpaces()) {
-//                int homeStep = boardPosition - gameBoard.getTotalSpaces();
-//                return BoardCoordinates.getHomeColumnPosition(playerColor, homeStep);
-//            }
-//
-//            // Handle main path positions
-//            return BoardCoordinates.getMainPathPosition(boardPosition);
-//        } catch (Exception e) {
-//            Gdx.app.error(TAG, "Error calculating position: " + e.getMessage(), e);
-//            return new Vector3(0, 0.2f, 0);
-//        }
-//    }
 
     public void updatePawnPosition(int pawnIndex, int newPosition, String playerColor) {
         Gdx.app.log(TAG, String.format("[POSITION] Updating %s pawn %d to position %d", playerColor, pawnIndex, newPosition));
@@ -916,101 +610,4 @@ public class GameRenderer {
         return colorOffset + localPawnIndex;
     }
 
-//    public void updatePawnPosition(int pawnIndex, int newPosition, String playerColor) {
-//        Gdx.app.log(TAG, String.format("[POSITION] Updating %s pawn %d to position %d", playerColor, pawnIndex, newPosition));
-//
-//        int colorOffset = getColorOffset(playerColor);
-//        int globalPawnIndex = colorOffset + (pawnIndex % 4);
-//
-//        // Ensure pawn instance exists
-//        while (pawnInstances.size <= globalPawnIndex) {
-//            ModelInstance newPawn = createPawnInstance(playerColor);
-//            pawnInstances.add(newPawn);
-//        }
-//
-//        Vector3 targetPos = calculateTargetPosition(playerColor, newPosition);
-//        Vector3 currentPos = pawnPositions.getOrDefault(globalPawnIndex, targetPos.cpy());
-//
-//        // Log the readable grid coordinates
-//        String readableCoords = BoardCoordinates.worldToGrid(targetPos);
-//        Gdx.app.log(TAG, String.format("[GRID] %s pawn %d moving to grid position %s", playerColor, pawnIndex, readableCoords));
-//
-//        // Only create animation if the position has changed
-//        if (!currentPos.equals(targetPos)) {
-//            Gdx.app.log(TAG, String.format("[ANIMATION] %s pawn moving from %s to %s", playerColor, currentPos.toString(), targetPos.toString()));
-//            PawnAnimation animation = new PawnAnimation(currentPos, targetPos, playerColor);
-//            pawnAnimations.put(globalPawnIndex, animation);
-//            pawnPositions.put(globalPawnIndex, targetPos);
-//        }
-//    }
-//
-//    private Vector3 calculateTargetPosition(String playerColor, int boardPosition) {
-//        try {
-//            // Handle home base (-1)
-//            if (boardPosition == -1) {
-//                int pawnIndex = pawnIndicesInBase.getOrDefault(playerColor, 0) % 4;
-//                pawnIndicesInBase.put(playerColor, pawnIndicesInBase.getOrDefault(playerColor, 0) + 1);
-//                return BoardCoordinates.getHomeBasePosition(playerColor, pawnIndex);
-//            }
-//
-//            // Handle home column positions (>=52)
-//            if (boardPosition >= gameBoard.getTotalSpaces()) {
-//                int homeStep = boardPosition - gameBoard.getTotalSpaces();
-//                return BoardCoordinates.getHomeColumnPosition(playerColor, homeStep);
-//            }
-//
-//            // Handle main path positions
-//            return BoardCoordinates.getMainPathPosition(boardPosition);
-//        } catch (Exception e) {
-//            Gdx.app.error(TAG, "Error calculating position: " + e.getMessage(), e);
-//            return new Vector3(0, 0.2f, 0);
-//        }
-//    }
-
-    private static class PawnAnimation {
-        private final Vector3 startPos;
-        private final Vector3 targetPos;
-        private final Vector3 controlPoint;
-        private float progress;
-        private static final float ANIMATION_SPEED = 2.0f;
-        private static final float ARC_HEIGHT = 0.8f;
-
-        PawnAnimation(Vector3 start, Vector3 target, String color) {
-            this.startPos = start.cpy();
-            this.targetPos = target.cpy();
-
-            // Calculate a control point for arc movement
-            this.controlPoint = new Vector3(
-                (start.x + target.x) * 0.5f,
-                start.y + ARC_HEIGHT,
-                (start.z + target.z) * 0.5f
-            );
-            this.progress = 0;
-
-            Gdx.app.log("PawnAnimation", String.format(
-                "Creating animation for %s pawn: Start(%s) -> Target(%s)",
-                color, start.toString(), target.toString()));
-        }
-
-        Vector3 getCurrentPosition() {
-            float t = progress;
-            Vector3 currentPos = new Vector3();
-
-            // Quadratic Bezier curve for smooth arc movement
-            float oneMinusT = 1 - t;
-            currentPos.x = oneMinusT * oneMinusT * startPos.x + 2 * oneMinusT * t * controlPoint.x + t * t * targetPos.x;
-            currentPos.y = oneMinusT * oneMinusT * startPos.y + 2 * oneMinusT * t * controlPoint.y + t * t * targetPos.y;
-            currentPos.z = oneMinusT * oneMinusT * startPos.z + 2 * oneMinusT * t * controlPoint.z + t * t * targetPos.z;
-
-            return currentPos;
-        }
-
-        boolean update(float deltaTime) {
-            progress = Math.min(1.0f, progress + deltaTime * ANIMATION_SPEED);
-            Gdx.app.log("PawnAnimation", String.format(
-                "Updating animation progress: %f, Current position: %s",
-                progress, getCurrentPosition().toString()));
-            return progress >= 1.0f;
-        }
-    }
 }
