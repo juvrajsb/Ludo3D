@@ -15,7 +15,6 @@ public class PawnAnimation {
         this.startPos = start.cpy();
         this.targetPos = target.cpy();
 
-        // Calculate a control point for arc movement
         this.controlPoint = new Vector3(
             (start.x + target.x) * 0.5f,
             start.y + ARC_HEIGHT,
@@ -23,7 +22,7 @@ public class PawnAnimation {
         );
         this.progress = 0;
 
-        Gdx.app.log("ludo.client.render.PawnAnimation", String.format(
+        Gdx.app.log("PawnAnimation", String.format(
             "Creating animation for %s pawn: Start(%s) -> Target(%s)",
             color, start.toString(), target.toString()));
     }
@@ -43,9 +42,9 @@ public class PawnAnimation {
 
     boolean update(float deltaTime) {
         progress = Math.min(1.0f, progress + deltaTime * ANIMATION_SPEED);
-        Gdx.app.log("ludo.client.render.PawnAnimation", String.format(
-            "Updating animation progress: %f, Current position: %s",
-            progress, getCurrentPosition().toString()));
+        // Gdx.app.log("PawnAnimation", String.format(
+        //     "Updating animation progress: %f, Current position: %s",
+        //     progress, getCurrentPosition().toString()));
         return progress >= 1.0f;
     }
 }
