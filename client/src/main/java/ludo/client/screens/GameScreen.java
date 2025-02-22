@@ -10,8 +10,6 @@ import com.badlogic.gdx.graphics.g3d.attributes.ColorAttribute;
 import com.badlogic.gdx.graphics.g3d.environment.DirectionalLight;
 import com.badlogic.gdx.math.Vector3;
 import com.badlogic.gdx.scenes.scene2d.Actor;
-import com.badlogic.gdx.scenes.scene2d.ui.Label;
-import com.badlogic.gdx.scenes.scene2d.ui.Table;
 import com.badlogic.gdx.scenes.scene2d.ui.TextButton;
 import com.badlogic.gdx.scenes.scene2d.utils.ChangeListener;
 import com.badlogic.gdx.utils.Timer;
@@ -37,23 +35,24 @@ public class GameScreen extends BaseScreen {
     private final Environment environment;
     final PerspectiveCamera camera;
     private final TextButton rollButton;
-    private final TextButton saveLoadButton;
     private final List<Player> players;
     private final Vector3 cameraTarget = new Vector3(0, 0, 0);
     final float zoomSpeed = 2f;
-    final float minZoom = 5f;
+    final float minZoom = 2f;
     final float maxZoom = 20f;
-    final float minHeight = 2f;
-    final float maxHeight = 20f;
+    final float minHeight = -2f;
+    final float maxHeight = 30f;
+
     // Game state
     private Player currentPlayer;
     private boolean canMove;
     private int lastDiceRoll;
     private boolean isRolling = false;
+
     // Camera control variables
     float cameraRotation = 0;
-    float cameraDistance = 12f;
-    float cameraHeight = 8f;
+    float cameraDistance = 14f;
+    float cameraHeight = 10f;
     private float timeSinceLastAutoSave = 0f;
 
     public GameScreen(final LudoGame game) {
@@ -81,23 +80,12 @@ public class GameScreen extends BaseScreen {
             }
         });
 
-        saveLoadButton = new TextButton("Save/Load", skin);
-        saveLoadButton.setSize(100, 50);
-        saveLoadButton.setPosition(Gdx.graphics.getWidth() - 120, 80);
-        saveLoadButton.addListener(new ChangeListener() {
-            @Override
-            public void changed(ChangeEvent event, Actor actor) {
-                game.setScreen(new SaveGameScreen(game));
-            }
-        });
-
         this.renderer = new GameRenderer(Gdx.graphics.getWidth(), Gdx.graphics.getHeight());
 
         stage.addActor(hud);
         stage.addActor(rollButton);
-        stage.addActor(saveLoadButton);
 
-        createTestPanel();
+        // createTestPanel();
         setupInputHandling();
         game.getGameStateManager().initialize(this);
     }
@@ -165,7 +153,7 @@ public class GameScreen extends BaseScreen {
     }
 
     void updateCameraPosition() {
-        float x = (float) (cameraDistance * Math.cos(Math.toRadians(cameraRotation)));
+        float x = - (float) (cameraDistance * Math.cos(Math.toRadians(cameraRotation))); //todo to fix
         float z = (float) (cameraDistance * Math.sin(Math.toRadians(cameraRotation)));
         camera.position.set(x, cameraHeight, z);
         camera.lookAt(cameraTarget);
@@ -177,7 +165,6 @@ public class GameScreen extends BaseScreen {
     public void render(float delta) {
         handleContinuousInput(delta);
 
-        // Handle auto-save
         timeSinceLastAutoSave += delta;
         if (timeSinceLastAutoSave >= AUTO_SAVE_INTERVAL && game.getGameStateManager().isGameStarted()) {
             performAutoSave();
@@ -248,15 +235,15 @@ public class GameScreen extends BaseScreen {
         renderer.dispose();
     }
 
-    public void updateGameState(String state) {
-        if (currentPlayer != null) {
-            renderer.updateAllPawnPositions();
-            hud.updateCurrentPlayer(currentPlayer.getColor());  // Use color instead of name
-        } else {
-            LOGGER.warning("Current player is null in updateGameState");
-        }
-        hud.showMessage(state);
-    }
+//    public void updateGameState(String state) {
+//        if (currentPlayer != null) {
+//            renderer.updateAllPawnPositions();
+//            hud.updateCurrentPlayer(currentPlayer.getColor());  // Use color instead of name
+//        } else {
+//            LOGGER.warning("Current player is null in updateGameState");
+//        }
+//        hud.showMessage(state);
+//    }
 
     public void updatePlayerPawns(String color, List<Integer> positions) {
         // Only update pawns that have actually moved
@@ -285,7 +272,7 @@ public class GameScreen extends BaseScreen {
                 hud.updateCurrentPlayer(player.getColor());
                 boolean isMyTurn = player.getName().equals(game.getGameStateManager().getCurrentUsername());
                 rollButton.setDisabled(!isMyTurn);
-                createTestPanel();
+                // createTestPanel();
 
                 LOGGER.info("Current player set - Name: " + player.getName() +
                     ", Color: " + player.getColor() +
@@ -322,21 +309,24 @@ public class GameScreen extends BaseScreen {
         }, 0.5f);
     }
 
-    private void updateGameState() { //TODO check usage not used currently
-        if (currentPlayer != null) {
-            renderer.updateAllPawnPositions();
-            hud.updateCurrentPlayer(currentPlayer.getName());
-        }
-    }
+    // private void updateGameState() { //TODO check usage not used currently
+    //     if (currentPlayer != null) {
+    //         renderer.updateAllPawnPositions();
+    //         hud.updateCurrentPlayer(currentPlayer.getName());
+    //     }
+    // }
 
     public void showMessage(String message) {
         hud.showMessage(message);
     }
 
     public void enablePawnSelection() {
-        disableControls();
+        LOGGER.info("=== Enable Pawn Selection ===");
+        LOGGER.info("Before enable - canMove: " + canMove);
         canMove = true;
+        disableControls();
         showMessage("Select a pawn to move");
+        LOGGER.info("After enable - canMove: " + canMove);
     }
 
     public void removePlayer(String playerName) {
@@ -378,62 +368,63 @@ public class GameScreen extends BaseScreen {
         }
     }
 
-    private void createTestPanel() {
-        Table testPanel = new Table(skin);
-        testPanel.setPosition(30, 10);  // Bottom left corner
+    // private void createTestPanel() {
+    //     Table testPanel = new Table(skin);
+    //     testPanel.setPosition(30, 10);  // Bottom left corner
 
-        Label title = new Label("Debug Controls", skin);
-        testPanel.add(title).row();
+    //     Label title = new Label("Debug Controls", skin);
+    //     testPanel.add(title).row();
 
-        // Get current color from GameState
-        String currentColor = game.getGameStateManager().getCurrentColor();
+    //     // Get current color from GameState
+    //     String currentColor = game.getGameStateManager().getCurrentColor();
 
-        // Create 4 buttons for the pawns
-        for (int i = 0; i < 4; i++) {
-            final int pawnIndex = i;
-            TextButton pawnButton = new TextButton("Select " + currentColor + " Pawn " + i, skin);
-            pawnButton.addListener(new ChangeListener() {
-                @Override
-                public void changed(ChangeEvent event, Actor actor) {
-                    Gdx.app.log("GameScreen", "Test button selecting pawn " + pawnIndex);
-                    // This bypasses ray casting and directly sends the move request
-                    if (canMove) {
-                        game.getGameStateManager().requestMove(pawnIndex);
-                        canMove = false;
-                    }
-                }
-            });
-            testPanel.add(pawnButton).pad(5).row();
-        }
+    //     // Create 4 buttons for the pawns
+    //     for (int i = 0; i < 4; i++) {
+    //         final int pawnIndex = i;
+    //         TextButton pawnButton = new TextButton("Select " + currentColor + " Pawn " + i, skin);
+    //         pawnButton.addListener(new ChangeListener() {
+    //             @Override
+    //             public void changed(ChangeEvent event, Actor actor) {
+    //                 Gdx.app.log("GameScreen", "Test button selecting pawn " + pawnIndex);
+    //                 // This bypasses ray casting and directly sends the move request
+    //                 if (canMove) {
+    //                     game.getGameStateManager().requestMove(pawnIndex);
+    //                     canMove = false;
+    //                 }
+    //             }
+    //         });
+    //         testPanel.add(pawnButton).pad(5).row();
+    //     }
 
-        stage.addActor(testPanel);
-    }
+    //     stage.addActor(testPanel);
+    // }
 
     void handlePawnSelection(int screenX, int screenY) {
+        LOGGER.info("=== Pawn Selection Handler Start ===");
+        LOGGER.info("Selection state - canMove: " + canMove +
+            ", currentPlayer: " + (currentPlayer != null ? currentPlayer.getColor() : "null"));
+
         if (!canMove || currentPlayer == null ||
             !currentPlayer.getName().equals(game.getGameStateManager().getCurrentUsername())) {
-            Gdx.app.log(TAG, "Pawn selection disabled - " +
-                (!canMove ? "canMove is false" :
-                    currentPlayer == null ? "currentPlayer is null" :
-                        "not current player's turn"));
+            LOGGER.info("Selection blocked - canMove: " + canMove +
+                ", currentPlayer: " + (currentPlayer != null ? currentPlayer.getName() : "null") +
+                ", currentUsername: " + game.getGameStateManager().getCurrentUsername());
             return;
         }
 
-        // Debug logging
-        Gdx.app.log(TAG, String.format("Processing pawn selection - Player: %s, Color: %s",
-            currentPlayer.getName(), currentPlayer.getColor()));
-
         int selectedPawn = renderer.getPawnAtScreenCoords(screenX, screenY, camera, currentPlayer.getColor());
         if (selectedPawn != -1) {
-            Gdx.app.log(TAG, String.format("Selected pawn %d for player %s",
-                selectedPawn, currentPlayer.getColor()));
+            LOGGER.info("Valid pawn selected: " + selectedPawn + " for player " + currentPlayer.getColor());
             game.getGameStateManager().requestMove(selectedPawn);
             canMove = false;
+//        } else {
+//            Vector3 worldPos = new Vector3(screenX, screenY, 0);
+//            camera.unproject(worldPos);
+//            Gdx.app.log(TAG, "No valid pawn selected at world position: " + worldPos);
+//        }
         } else {
-            Vector3 worldPos = new Vector3(screenX, screenY, 0);
-            camera.unproject(worldPos);
-            Gdx.app.log(TAG, "No valid pawn selected at world position: " + worldPos);
+            LOGGER.info("No valid pawn selected at coordinates: " + screenX + "," + screenY);
         }
+        LOGGER.info("=== Pawn Selection Handler End ===");
     }
-
 }
