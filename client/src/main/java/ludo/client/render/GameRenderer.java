@@ -256,6 +256,12 @@ public class GameRenderer {
     private void positionPawn(ModelInstance pawnInstance, int boardPosition, int pawnIndex, String playerColor) {
         Vector3 position;
 
+        Gdx.app.log("PawnPositioning", String.format(
+            "Processing pawn - Color: %s, Index: %d, Global Index: %d, Base Coords: (%d,%d)",
+            playerColor, pawnIndex, getGlobalPawnIndex(playerColor, pawnIndex),
+            getHomeBaseStartX(playerColor), getHomeBaseStartY(playerColor)
+        ));
+
         if (boardPosition == -1) {
             int baseX = getHomeBaseStartX(playerColor);
             int baseY = getHomeBaseStartY(playerColor);
@@ -286,12 +292,12 @@ public class GameRenderer {
 
     private int getHomeBaseStartX(String color) {
         switch(color.toUpperCase()) {
-            case "BLUE":
-            case "YELLOW":
-                return 0;  // Right side of board
             case "RED":
             case "GREEN":
-                return 13;   // Left side of board
+                return 9;  // Right side starts at 9
+            case "BLUE":
+            case "YELLOW":
+                return 0;  // Left side starts at 0
             default:
                 return 0;
         }
@@ -301,10 +307,10 @@ public class GameRenderer {
         switch(color.toUpperCase()) {
             case "RED":
             case "BLUE":
-                return 13;  // Bottom of board
+                return 9;  // Top of board starts at 9
             case "YELLOW":
             case "GREEN":
-                return 0;   // Top of board
+                return 0;  // Bottom of board starts at 0
             default:
                 return 0;
         }
@@ -583,14 +589,20 @@ public class GameRenderer {
     }
 
     private int getGlobalPawnIndex(String playerColor, int localPawnIndex) {
-        // Calculate offset based on player color
         int colorOffset = 0;
         switch(playerColor.toUpperCase()) {
-            case "RED": colorOffset = 0; break;
+            case "YELLOW": colorOffset = 0; break;
             case "BLUE": colorOffset = 4; break;
-            case "GREEN": colorOffset = 8; break;
-            case "YELLOW": colorOffset = 12; break;
+            case "RED": colorOffset = 8; break;
+            case "GREEN": colorOffset = 12; break;
         }
-        return colorOffset + localPawnIndex;
+        int globalIndex = colorOffset + localPawnIndex;
+
+        Gdx.app.log("PawnIndexing", String.format(
+            "Color: %s, Local Index: %d, Color Offset: %d, Global Index: %d",
+            playerColor, localPawnIndex, colorOffset, globalIndex
+        ));
+
+        return globalIndex;
     }
 }

@@ -24,7 +24,7 @@ public class DiceRenderer {
     public DiceRenderer() {
         Model diceModel = GameAssets.getInstance().getDiceModel();
         diceInstance = new ModelInstance(diceModel);
-        position = new Vector3(7.5f, 1f, 7.5f); // Position the dice on the board
+        position = new Vector3(0, 1f, 0); // Position the dice on the board
         rotation = new Vector3();
         quaternion = new Quaternion();
         initializeFaceRotations();

@@ -101,6 +101,10 @@ public class GameScreen extends BaseScreen {
     }
 
     private void setupCamera() {
+        cameraRotation = 0;
+        cameraDistance = 14f;
+        cameraHeight = 10f;
+
         updateCameraPosition();
         camera.near = 1f;
         camera.far = 300f;
@@ -153,8 +157,11 @@ public class GameScreen extends BaseScreen {
     }
 
     void updateCameraPosition() {
-        float x = - (float) (cameraDistance * Math.cos(Math.toRadians(cameraRotation))); //todo to fix
-        float z = (float) (cameraDistance * Math.sin(Math.toRadians(cameraRotation)));
+        double angleInRadians = Math.toRadians(cameraRotation + 225);
+
+        float x = (float)(cameraDistance * Math.cos(angleInRadians));
+        float z = (float)(cameraDistance * Math.sin(angleInRadians));
+
         camera.position.set(x, cameraHeight, z);
         camera.lookAt(cameraTarget);
         camera.up.set(Vector3.Y);
