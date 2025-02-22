@@ -94,7 +94,7 @@ public class ServerGameStateManager implements MessageListener {
             networkHandler.broadcast(resultEvent);
 
             // If no valid moves are possible with this roll, automatically end turn
-            if (!gameManager.hasValidMovesAvailable(gameManager.getCurrentPlayer(), diceValue)) {
+            if (!gameManager.hasValidMovesAvailable(gameManager.getCurrentPlayer(), diceValue)) { //todo has valid moves
                 LOGGER.info("No valid moves available - automatically ending turn");
                 handleTurnEnd(event);
             }
@@ -104,6 +104,11 @@ public class ServerGameStateManager implements MessageListener {
     private void handleMoveRequest(MoveRequestEvent event) {
         String connectionId = event.getConnection().getConnectionID();
         String playerName = connectionToPlayerMap.get(connectionId);
+
+        LOGGER.info(String.format("Move request from %s (connection: %s)", playerName, connectionId));
+        LOGGER.info(String.format("Current server player is: %s",
+            gameManager.getCurrentPlayer().getName()));
+        LOGGER.info("Is player's turn? " + gameManager.isPlayerTurn(playerName));
 
         // Validate it's the player's turn
         if (!gameManager.isPlayerTurn(playerName)) {
@@ -171,19 +176,24 @@ public class ServerGameStateManager implements MessageListener {
                     // Don't end turn, let them roll again
                 }
             } else {
-                boolean hasValidMove = gameManager.hasValidMovesAvailable(gameManager.getCurrentPlayer(), steps);
-                if (!hasValidMove) {
-                    LOGGER.info("No valid moves left - ending turn");
-                    gameManager.nextTurn();
-
-                    // Send turn change event
-                    String nextPlayer = gameManager.getCurrentPlayer().getName();
-                    LOGGER.info("Next player: " + nextPlayer);
-                    TurnChangeEvent turnEvent = new TurnChangeEvent(nextPlayer);
-                    networkHandler.broadcast(turnEvent);
-                } else {
-                    LOGGER.info("Valid moves available - player continues turn");
-                }
+//                boolean hasValidMove = gameManager.hasValidMovesAvailable(gameManager.getCurrentPlayer(), steps); //todo has valid moves
+//                if (!hasValidMove) {
+//                    LOGGER.info("No valid moves left - ending turn");
+//                    gameManager.nextTurn();
+//
+//                    // Send turn change event
+//                    String nextPlayer = gameManager.getCurrentPlayer().getName();
+//                    LOGGER.info("Next player: " + nextPlayer);
+////                    TurnChangeEvent turnEvent = new TurnChangeEvent(nextPlayer);
+////                    networkHandler.broadcast(turnEvent);
+//                } else {
+//                    LOGGER.info("Valid moves available - player continues turn");
+//                }
+                gameManager.nextTurn();
+                String nextPlayer = gameManager.getCurrentPlayer().getName();
+                LOGGER.info("Next player: " + nextPlayer);
+                TurnChangeEvent turnEvent = new TurnChangeEvent(nextPlayer);
+                networkHandler.broadcast(turnEvent);
             }
         } else {
             LOGGER.warning("Move failed for pawn " + pawnIndex);
@@ -429,30 +439,32 @@ public class ServerGameStateManager implements MessageListener {
             gameManager.getPlayers().size())
         );
     }
-    private void checkGameStart() {
-        if (gameManager.getPlayers().size() >= 2 && !gameManager.isGameStarted()) {
-            // Automatically start game with 4 players
-            if (gameManager.getPlayers().size() == 4) {
-                startGame();
-            }
-        }
-    }
 
-    private void startGame() {
-        gameManager.startGame();
+//    private void checkGameStart() {
+//        if (gameManager.getPlayers().size() >= 2 && !gameManager.isGameStarted()) {
+//            // Automatically start game with 4 players
+//            if (gameManager.getPlayers().size() == 4) {
+//                startGame();
+//            }
+//        }
+//    }
 
-        GameStartedEvent gameStartEvent = new GameStartedEvent(
-            gameManager.getPlayers(),
-            gameManager.getCurrentPlayer().getName(),
-            gameManager.getPlayers().size()
-        );
-        networkHandler.broadcast(gameStartEvent);
-
-        // Start first turn
-        TurnChangeEvent turnEvent = new TurnChangeEvent(gameManager.getCurrentPlayer().getName());
-        networkHandler.broadcast(turnEvent);
-
-        // Send initial game state
-        broadcastGameState();
-    }
+//    private void startGame() {
+//        gameManager.startGame();
+//
+//        GameStartedEvent gameStartEvent = new GameStartedEvent(
+//            gameManager.getPlayers(),
+//            gameManager.getCurrentPlayer().getName(),
+//            gameManager.getPlayers().size()
+//        );
+//        networkHandler.broadcast(gameStartEvent);
+//
+//        // Start first turn
+//        TurnChangeEvent turnEvent = new TurnChangeEvent(gameManager.getCurrentPlayer().getName());
+//        LOGGER.info("Starting game with player: " + gameManager.getCurrentPlayer().getName());
+//        networkHandler.broadcast(turnEvent);
+//
+//        // Send initial game state
+//        broadcastGameState();
+//    }
 }
