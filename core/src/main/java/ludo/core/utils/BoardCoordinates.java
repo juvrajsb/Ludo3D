@@ -70,6 +70,13 @@ public class BoardCoordinates {
         return gridToWorld(coords[0], coords[1]);
     }
 
+    public static int[] getGridCoordsForPosition(int boardPosition) {
+        if (boardPosition < 0 || boardPosition >= MAIN_PATH.length) {
+            return null;
+        }
+        return MAIN_PATH[boardPosition];
+    }
+
     private static int getColorIndex(String color) {
         switch(color.toUpperCase()) {
             case "RED": return 0;
@@ -80,9 +87,9 @@ public class BoardCoordinates {
         }
     }
 
-    private static Vector3 gridToWorld(int x, int y) {
-        float worldX = (x - BOARD_SIZE/2f) * CELL_SIZE;
-        float worldZ = (BOARD_SIZE/2f - y) * CELL_SIZE;
-        return new Vector3(worldX, 0.2f, worldZ);
+    public static Vector3 gridToWorld(int x, int y) {
+        float worldX = -7.5f + (x * 1.0f);
+        float worldZ = -7.5f + ((14 - y) * 1.0f);
+        return new Vector3(worldX, 0, worldZ);
     }
 }
