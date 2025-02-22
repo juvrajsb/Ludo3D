@@ -8,6 +8,10 @@ import com.badlogic.gdx.scenes.scene2d.utils.ChangeListener;
 import com.badlogic.gdx.utils.Align;
 import ludo.client.LudoGame;
 import ludo.core.events.serverToClient.Response;
+import ludo.core.persistence.GamePersistence;
+import ludo.core.persistence.GamePersistence.GameSaveData;
+import ludo.core.entities.Player;
+import ludo.core.entities.Pawn;
 
 public class UsernameScreen extends BaseScreen {
     private TextField usernameField;
@@ -27,6 +31,16 @@ public class UsernameScreen extends BaseScreen {
 
         game.getGameStateManager().setCurrentScreen(this);
 
+        // Check if the user is the first player and if there is a saved game
+        if (game.getGameStateManager().isFirstPlayer() && GamePersistence.hasSaveGame()) {
+            showLoadGameDialog();
+            return;
+        }
+
+        createUI();
+    }
+
+    private void createUI() {
         Table mainTable = new Table();
         mainTable.setFillParent(true);
         mainTable.defaults().pad(10).width(200);
@@ -65,6 +79,48 @@ public class UsernameScreen extends BaseScreen {
             playerCountSelect.setItems(2, 3, 4);
             playerCountTable.add(playerCountSelect).align(Align.left);
             mainTable.add(playerCountTable).colspan(2).row();
+        }
+    }
+
+    private void showLoadGameDialog() {
+        Dialog dialog = new Dialog("Load Game", skin) {
+            @Override
+            protected void result(Object object) {
+                if ((Boolean) object) {
+                    loadSavedGame();
+                } else {
+                    createUI();
+                }
+            }
+        };
+        dialog.text("Do you want to load the previous game?");
+        dialog.button("Yes", true);
+        dialog.button("No", false);
+        dialog.show(stage);
+    }
+
+    private void loadSavedGame() {
+        GameSaveData saveData = GamePersistence.loadGame();
+        if (saveData != null) {
+            game.reset();
+
+            saveData.players.forEach(playerData -> {
+                Player player = new Player(playerData.name, playerData.color);
+                for (int i = 0; i < playerData.pawns.size(); i++) {
+                    GamePersistence.PawnSaveData pawnData = playerData.pawns.get(i);
+                    Pawn pawn = player.getPawns().get(i);
+                    pawn.setPosition(pawnData.position);
+                    if (pawnData.isHome) pawn.sendHome();
+                    if (pawnData.isFinished) pawn.setFinished(true);
+                }
+                game.addPlayer(player);
+            });
+
+            game.getGameStateManager().setCurrentPlayer(saveData.currentPlayerColor);
+            game.setScreen(new GameScreen(game));
+        } else {
+            Gdx.app.error("UsernameScreen", "Failed to load saved game");
+            createUI();
         }
     }
 
