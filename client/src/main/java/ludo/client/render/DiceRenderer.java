@@ -9,13 +9,12 @@ import ludo.client.assets.GameAssets;
 
 public class DiceRenderer {
     private static final float ROLL_DURATION = 1.0f;
-    private static final float DICE_SCALE = 12f;
+    private static final float DICE_SCALE = 40f;
     private final ModelInstance diceInstance;
     private final Vector3 position;
     private final Vector3 rotation;
     private final Quaternion quaternion;
     private final Matrix4[] valueFaceRotations = new Matrix4[6];
-    private final Vector3 tempPosition = new Vector3();
     private final Quaternion tempRotation = new Quaternion();
     private float animationTime;
     private boolean isRolling;
@@ -25,7 +24,7 @@ public class DiceRenderer {
     public DiceRenderer() {
         Model diceModel = GameAssets.getInstance().getDiceModel();
         diceInstance = new ModelInstance(diceModel);
-        position = new Vector3(5f, 2f, 5f); // Position the dice on the board
+        position = new Vector3(7.5f, 1f, 7.5f); // Position the dice on the board
         rotation = new Vector3();
         quaternion = new Quaternion();
         initializeFaceRotations();
@@ -39,13 +38,12 @@ public class DiceRenderer {
     }
 
     private void initializeFaceRotations() { //TODO put the correct numbers
-        // Define rotations for each face to show correct number
-        valueFaceRotations[2] = new Matrix4().setToRotation(Vector3.X, 0);  // 1
-        valueFaceRotations[3] = new Matrix4().setToRotation(Vector3.X, 90); // 2
-        valueFaceRotations[4] = new Matrix4().setToRotation(Vector3.Y, 90); // 3
-        valueFaceRotations[5] = new Matrix4().setToRotation(Vector3.Y, -90); // 4
-        valueFaceRotations[0] = new Matrix4().setToRotation(Vector3.X, -90); // 5
-        valueFaceRotations[1] = new Matrix4().setToRotation(Vector3.X, 180); // 6
+        valueFaceRotations[0] = new Matrix4().setToRotation(Vector3.Z, -90); // 1
+        valueFaceRotations[1] = new Matrix4().setToRotation(Vector3.X, 180); // 2
+        valueFaceRotations[2] = new Matrix4().setToRotation(Vector3.X, 90);  // 3
+        valueFaceRotations[3] = new Matrix4().setToRotation(Vector3.X, -90); // 4
+        valueFaceRotations[4] = new Matrix4().setToRotation(Vector3.X, 0); // 5
+        valueFaceRotations[5] = new Matrix4().setToRotation(Vector3.Z, 90); // 6
     }
 
     public void update(float deltaTime) {
@@ -85,7 +83,6 @@ public class DiceRenderer {
         animationTime = 0;
         targetValue = newValue;
 
-        // Add initial impulse rotation
         rotation.set(
             (float)(Math.random() * 360),
             (float)(Math.random() * 360),
