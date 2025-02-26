@@ -3,6 +3,11 @@ package ludo.client.networking;
 import ludo.core.network.*;
 import java.io.IOException;
 import java.util.Objects;
+import java.util.Queue;
+import java.util.concurrent.ConcurrentLinkedQueue;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
 import java.util.logging.Logger;
 import ludo.core.events.serverToClient.PingEvent;
 import ludo.core.events.clientToServer.PongEvent;
@@ -20,11 +25,16 @@ public class ClientNetworkHandler implements NetworkHandler {
     private Thread listenerThread;
     private volatile boolean running;
 
+    private final Queue<NetworkMessage> outgoingQueue;
+    private final ScheduledExecutorService scheduler;
+
     public ClientNetworkHandler() {
         this.isConnected = new AtomicBoolean(false);
+        this.outgoingQueue = new ConcurrentLinkedQueue<>();
+        this.scheduler = Executors.newSingleThreadScheduledExecutor();
     }
 
-//for testing
+    //for testing
     public String getPlayerId() {
         return null;
     }
@@ -42,6 +52,8 @@ public class ClientNetworkHandler implements NetworkHandler {
             isConnected.set(true);
             running = true;
             LOGGER.info("Connected to server at " + host + ":" + port);
+
+            startOutgoingQueueProcessor();
         } catch (Exception e) {
             LOGGER.severe("Failed to connect: " + e.getMessage());
             disconnect();
@@ -64,6 +76,9 @@ public class ClientNetworkHandler implements NetworkHandler {
             listenerThread.interrupt();
             listenerThread = null;
         }
+
+        scheduler.shutdownNow();
+
         isConnected.set(false);
         LOGGER.info("Disconnected from server");
     }
@@ -86,6 +101,21 @@ public class ClientNetworkHandler implements NetworkHandler {
             }
         }, "NetworkListener");
         listenerThread.start();
+    }
+
+    private void startOutgoingQueueProcessor(){
+        Runnable processor = () -> {
+            NetworkMessage message = outgoingQueue.poll();
+            if (message != null && isConnected()){
+                try {
+                    sendMessageDirect(message);
+                } catch (Exception e) {
+                    LOGGER.warning("Failed to queued message: " + e.getMessage());
+                    outgoingQueue.add(message);
+                }
+            }
+        };
+        scheduler.scheduleAtFixedRate(processor, 100, 100, TimeUnit.MILLISECONDS);
     }
 
     private void handleMessage(NetworkMessage message) {
@@ -123,16 +153,25 @@ public class ClientNetworkHandler implements NetworkHandler {
 
     @Override
     public void sendMessage(NetworkMessage message) {
+        if (!isConnected.get()) {
+            LOGGER.warning("Cannot send message, not connected to server");
+            outgoingQueue.add(message);
+            return;
+        }
+        outgoingQueue.add(message);
+    }
+
+    private void sendMessageDirect(NetworkMessage message) {
         if (!isConnected.get() || connection == null) {
             throw new IllegalStateException("Not connected to server");
         }
 
         try {
             connection.send(message);
-        } catch (Exception e) {
-            LOGGER.severe("Failed to send message: " + e.getMessage());
+        } catch (IOException e){
+            LOGGER.warning("Failed to send message: " + e.getMessage());
             handleConnectionError(e);
-            throw new RuntimeException("Send failed", e);
+            throw new RuntimeException("Failed to send message", e);
         }
     }
 

@@ -4,9 +4,15 @@ import ludo.core.events.Event;
 
 public class StartGameRequestEvent extends Event {
     private static final long serialVersionUID = 1L;
+    private final boolean enableBots;
 
-    public StartGameRequestEvent() {
+    public StartGameRequestEvent(boolean enableBots) {
         super("START_GAME_REQUEST");
+        this.enableBots = enableBots;
+    }
+
+    public boolean isBotsEnabled() {
+        return enableBots;
     }
 
     @Override

@@ -20,34 +20,27 @@ public class Pawn implements Serializable {
     }
 
     public boolean canMove(int spaces, Board board) {
-        // Can only leave home with a 6
         if (isHome && spaces != 6) {
             return false;
         }
 
-        // Cannot move if finished
         if (isFinished) {
             return false;
         }
 
-        // If in home, any 6 is valid
         if (isHome && spaces == 6) {
             return true;
         }
 
         int newPosition = position + spaces;
-        
-        // Check if entering home column
+
         int startPos = board.getStartPosition(color);
         int entryPoint = (startPos + board.getTotalSpaces() - 1) % board.getTotalSpaces();
-        
+
         if (position <= entryPoint && newPosition > entryPoint) {
             int stepsIntoHome = newPosition - entryPoint - 1;
-            // Check if would overshoot home column
             return stepsIntoHome < board.getHomeColumnSize();
         }
-
-        // Regular movement is always valid if not entering home column
         return true;
     }
 
@@ -60,24 +53,17 @@ public class Pawn implements Serializable {
         int entryPoint = (startPos + board.getTotalSpaces() - 1) % board.getTotalSpaces();
         int potentialNewPos = position + spaces;
 
-        // Calculate new position
         if (position <= entryPoint && potentialNewPos > entryPoint) {
-            // Entering home column
             int stepsAfterEntry = potentialNewPos - entryPoint - 1;
 
-            // Check if would overshoot home
             if (stepsAfterEntry >= board.getHomeColumnSize()) {
                 return;
             }
-
-            // Calculate home column position
             position = board.getTotalSpaces() + (startPos / 13) * board.getHomeColumnSize() + stepsAfterEntry;
         } else {
-            // Regular board movement
             position = potentialNewPos % board.getTotalSpaces();
         }
 
-        // Check if pawn finished
         if (board.isHomeColumn(position, color)) {
             int finalHomePosition = board.getTotalSpaces() + (startPos / 13) * board.getHomeColumnSize() + (board.getHomeColumnSize() - 1);
             if (position == finalHomePosition) {
