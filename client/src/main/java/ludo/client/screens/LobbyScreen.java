@@ -7,7 +7,9 @@ import com.badlogic.gdx.scenes.scene2d.ui.*;
 import com.badlogic.gdx.scenes.scene2d.utils.ChangeListener;
 import com.badlogic.gdx.scenes.scene2d.Touchable;
 import ludo.client.LudoGame;
+import ludo.core.entities.BotPlayer;
 import ludo.core.entities.Player;
+import ludo.core.utils.Constants;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -18,6 +20,7 @@ public class LobbyScreen extends BaseScreen {
     private final TextButton startButton;
     private final List<Player> players = new ArrayList<>();
     private boolean isAdmin = false;
+    private CheckBox botPlayersCheckbox;
 
     public LobbyScreen(final LudoGame game) {
         super(game);
@@ -31,16 +34,28 @@ public class LobbyScreen extends BaseScreen {
         mainTable.add(titleLabel).colspan(2).pad(50);
         mainTable.row();
 
+        // Players list section
         playersTable = new Table(skin);
         playersTable.defaults().pad(5);
 
-        // Players list
         Label playersLabel = new Label("Players:", skin);
         mainTable.add(playersLabel).colspan(2).pad(20);
         mainTable.row();
 
         ScrollPane scrollPane = new ScrollPane(playersTable, skin);
         mainTable.add(scrollPane).width(300).height(200);
+        mainTable.row();
+
+        // Bot players checkbox (only visible for admin)
+        botPlayersCheckbox = new CheckBox(" Enable Bot Players", skin);
+        botPlayersCheckbox.setVisible(false);
+        botPlayersCheckbox.addListener(new ChangeListener() {
+            @Override
+            public void changed(ChangeEvent event, Actor actor) {
+                handleBotPlayersToggle(botPlayersCheckbox.isChecked());
+            }
+        });
+        mainTable.add(botPlayersCheckbox).colspan(2).pad(10);
         mainTable.row();
 
         // Status label
@@ -50,12 +65,12 @@ public class LobbyScreen extends BaseScreen {
 
         // Start button
         startButton = new TextButton("Start Game", skin);
-        startButton.setVisible(false); // Hidden by default
+        startButton.setVisible(false);
         startButton.addListener(new ChangeListener() {
             @Override
             public void changed(ChangeEvent event, Actor actor) {
                 if (isAdmin && !startButton.isDisabled()) {
-                    game.getGameStateManager().startGame();
+                    game.getGameStateManager().startGame(botPlayersCheckbox.isChecked());
                 }
             }
         });
@@ -74,16 +89,28 @@ public class LobbyScreen extends BaseScreen {
 
         stage.addActor(mainTable);
         game.getGameStateManager().setLobbyScreen(this);
-
         checkAdminStatus();
     }
 
+    private void handleBotPlayersToggle(boolean enableBots) {
+        if (enableBots) {
+            // Only enable if we have room for bots
+            int currentPlayers = players.size();
+            if (currentPlayers < Constants.MAX_PLAYERS) {
+                statusLabel.setText("Bot players will fill remaining slots");
+                updateStartButtonState();
+            }
+        } else {
+            updatePlayersList(players);
+        }
+    }
+
     private void checkAdminStatus() {
-        // First player to join becomes admin
         isAdmin = game.getGameStateManager().isFirstPlayer();
         startButton.setVisible(isAdmin);
+        botPlayersCheckbox.setVisible(isAdmin);
         if (isAdmin) {
-            startButton.setDisabled(true); // Initially disabled until enough players
+            startButton.setDisabled(true);
         }
     }
 
@@ -96,33 +123,31 @@ public class LobbyScreen extends BaseScreen {
         playersTable.clear();
         for (Player player : players) {
             Label nameLabel = new Label(player.getName(), skin);
-            Label colorLabel = new Label(player.getColor(), skin);
+            Label colorLabel = new Label(player.getColor() + (player instanceof BotPlayer ? " (Bot)" : ""), skin);
             playersTable.add(nameLabel).padRight(20);
             playersTable.add(colorLabel);
             playersTable.row();
         }
     }
+
     public void updatePlayersList(List<Player> updatedPlayers) {
-        // Clear and update players list
         players.clear();
         players.addAll(updatedPlayers);
 
-        // Update table display
         playersTable.clear();
         for (Player player : players) {
             Label nameLabel = new Label(player.getName(), skin);
-            Label colorLabel = new Label(player.getColor(), skin);
+            Label colorLabel = new Label(player.getColor() + (player instanceof BotPlayer ? " (Bot)" : ""), skin);
             playersTable.add(nameLabel).padRight(20);
             playersTable.add(colorLabel);
             playersTable.row();
         }
 
-        // Update status with correct player count
-        int playerCount = players.size();  // Use the actual size of our players list
+        int playerCount = players.size();
         if (playerCount < 2) {
             statusLabel.setText("Waiting for more players... (" + playerCount + "/4)");
             if (isAdmin) {
-                startButton.setDisabled(true);
+                startButton.setDisabled(!botPlayersCheckbox.isChecked());
             }
         } else {
             statusLabel.setText("Ready to start! (" + playerCount + "/4)");
@@ -131,13 +156,12 @@ public class LobbyScreen extends BaseScreen {
             }
         }
 
-        // Make sure start button state is updated
         updateStartButtonState();
     }
 
     public void updateStartButtonState() {
         if (isAdmin) {
-            boolean enoughPlayers = players.size() >= 2;
+            boolean enoughPlayers = players.size() >= 2 || botPlayersCheckbox.isChecked();
             startButton.setVisible(true);
             startButton.setDisabled(!enoughPlayers);
             startButton.setTouchable(enoughPlayers ? Touchable.enabled : Touchable.disabled);
@@ -147,7 +171,6 @@ public class LobbyScreen extends BaseScreen {
         }
     }
 
-
     @Override
     public void render(float delta) {
         Gdx.gl.glClearColor(0.2f, 0.2f, 0.2f, 1);
@@ -155,7 +178,6 @@ public class LobbyScreen extends BaseScreen {
 
         super.render(delta);
 
-        // Check for game start
         if (game.getGameStateManager().isGameStarted()) {
             game.setScreen(new GameScreen(game));
         }
@@ -176,10 +198,11 @@ public class LobbyScreen extends BaseScreen {
     public void setFirstPlayer() {
         isAdmin = true;
         startButton.setVisible(true);
-        startButton.setDisabled(true); // Initially disabled
-        // Also update status
+        botPlayersCheckbox.setVisible(true);
+        startButton.setDisabled(true);
+
         int playerCount = players.size();
-        if (playerCount >= 2) {
+        if (playerCount >= 2 || botPlayersCheckbox.isChecked()) {
             statusLabel.setText("Ready to start! (" + playerCount + "/4)");
             startButton.setDisabled(false);
         } else {
