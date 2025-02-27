@@ -57,19 +57,19 @@ public class NetworkListener implements Runnable {
         }
     }
 
-    private void startPingRoutine(Connection clientConnection) {//TODO check usage not used currently
-        ServerPingSender pingSender = new ServerPingSender(clientConnection);
-        clientConnection.setPingSender(pingSender);
-        pingSender.start();
-    }
-
-    private static Thread getClientDedicatedThread(Connection clientConnection, Queue<Event> eventsQueue) {//TODO check usage not used currently
-        Thread clientDedicatedThread;
-        clientDedicatedThread = new Thread(
-                new EventListener(clientConnection, eventsQueue, true),
-                "EventListener"
-        );
-        clientDedicatedThread.start();
-        return clientDedicatedThread;
-    }
+//    private void startPingRoutine(Connection clientConnection) {//TODO check usage not used currently
+//        ServerPingSender pingSender = new ServerPingSender(clientConnection);
+//        clientConnection.setPingSender(pingSender);
+//        pingSender.start();
+//    }
+//
+//    private static Thread getClientDedicatedThread(Connection clientConnection, Queue<Event> eventsQueue) {//TODO check usage not used currently
+//        Thread clientDedicatedThread;
+//        clientDedicatedThread = new Thread(
+//                new EventListener(clientConnection, eventsQueue, true),
+//                "EventListener"
+//        );
+//        clientDedicatedThread.start();
+//        return clientDedicatedThread;
+//    }
 }

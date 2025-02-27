@@ -127,8 +127,7 @@ public class ConnectionScreen extends BaseScreen {
         stage.draw();
     }
 
-    public boolean isConnected() {//TODO check usage not used currently
-        return isConnected;
-    }
-
+//    public boolean isConnected() {//TODO check usage not used currently
+//        return isConnected;
+//    }
 }

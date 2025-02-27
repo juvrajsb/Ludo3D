@@ -1,5 +1,6 @@
 package ludo.core.entities;
 
+import ludo.core.utils.Constants;
 import ludo.core.utils.GameUtils;
 import java.util.*;
 import java.util.logging.Logger;
@@ -58,7 +59,7 @@ public class BotPlayer extends Player {
 
             // Check if move is valid
             if (canMovePawn(pawn, board, diceRoll)) {
-                int newPosition = calculateNewPosition(pawn.getPosition(), diceRoll, board);
+                int newPosition = calculateNewPosition(pawn.getPosition(), diceRoll);
                 moves.add(new PawnMove(i, pawn.getPosition(), newPosition));
             }
         }
@@ -233,7 +234,10 @@ public class BotPlayer extends Player {
         }
     }
 
-    private int calculateNewPosition(int currentPosition, int steps, Board board) {
-        return GameUtils.calculateNextPosition(currentPosition, steps);
+    private int calculateNewPosition(int currentPosition, int steps) {
+        if (currentPosition >= Constants.BOARD_SIZE) {
+            return currentPosition + steps;
+        }
+        return (currentPosition + steps) % Constants.BOARD_SIZE;
     }
 }

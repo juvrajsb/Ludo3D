@@ -495,80 +495,80 @@ public class GameRenderer {
         return indices;
     }
 
-    private void highlightPawn(int pawnIndex) { //todo should add return pawn color so that we can see if its being render correctly
-        if (pawnIndex < 0 || pawnIndex >= pawnInstances.size) {
-            Gdx.app.error(TAG, "Invalid pawn index: " + pawnIndex);
-            return;
-        }
-
-        ModelInstance pawn = pawnInstances.get(pawnIndex);
-        if (pawn == null || pawn.userData == null) {
-            Gdx.app.error(TAG, "Pawn or pawn color data is null");
-            return;
-        }
-
-        String colorName = (String) pawn.userData;
-        final Color baseColor = playerColors.get(colorName.toUpperCase());
-        if (baseColor == null) {
-            Gdx.app.error(TAG, "Could not find color for: " + colorName);
-            return;
-        }
-
-        // Store final values for use in Timer task
-        final float ambientR = baseColor.r * 0.5f;
-        final float ambientG = baseColor.g * 0.5f;
-        final float ambientB = baseColor.b * 0.5f;
-
-        // Create a brighter version of the base color for highlighting
-        Color highlightColor = new Color(
-            Math.min(baseColor.r * 1.5f, 1f),
-            Math.min(baseColor.g * 1.5f, 1f),
-            Math.min(baseColor.b * 1.5f, 1f),
-            1f
-        );
-
-        try {
-            Material highlightMaterial = new Material(
-                ColorAttribute.createDiffuse(highlightColor),
-                ColorAttribute.createSpecular(1, 1, 1, 1),
-                ColorAttribute.createAmbient(highlightColor.r * 0.5f,
-                    highlightColor.g * 0.5f,
-                    highlightColor.b * 0.5f,
-                    1f)
-            );
-
-            // Apply highlight material
-            for (Material mat : pawn.materials) {
-                mat.clear();
-                mat.set(highlightMaterial);
-            }
-
-            // Schedule reset of material
-            Timer.schedule(new Timer.Task() {
-                @Override
-                public void run() {
-                    try {
-                        Material originalMaterial = new Material(
-                            ColorAttribute.createDiffuse(new Color(baseColor)),
-                            ColorAttribute.createSpecular(1, 1, 1, 1),
-                            ColorAttribute.createAmbient(ambientR, ambientG, ambientB, 1f)
-                        );
-
-                        if (pawn.materials != null) {
-                            for (Material mat : pawn.materials) {
-                                mat.clear();
-                                mat.set(originalMaterial);
-                            }
-                        }
-                    } catch (Exception e) {
-                        Gdx.app.error(TAG, "Error resetting pawn material: " + e.getMessage());
-                    }
-                }
-            }, 0.2f);
-        } catch (Exception e) {
-            Gdx.app.error(TAG, "Error applying highlight material: " + e.getMessage());
-        }
-    }
+//    private void highlightPawn(int pawnIndex) { //todo not used also should add return pawn color so that we can see if its being render correctly
+//        if (pawnIndex < 0 || pawnIndex >= pawnInstances.size) {
+//            Gdx.app.error(TAG, "Invalid pawn index: " + pawnIndex);
+//            return;
+//        }
+//
+//        ModelInstance pawn = pawnInstances.get(pawnIndex);
+//        if (pawn == null || pawn.userData == null) {
+//            Gdx.app.error(TAG, "Pawn or pawn color data is null");
+//            return;
+//        }
+//
+//        String colorName = (String) pawn.userData;
+//        final Color baseColor = playerColors.get(colorName.toUpperCase());
+//        if (baseColor == null) {
+//            Gdx.app.error(TAG, "Could not find color for: " + colorName);
+//            return;
+//        }
+//
+//        // Store final values for use in Timer task
+//        final float ambientR = baseColor.r * 0.5f;
+//        final float ambientG = baseColor.g * 0.5f;
+//        final float ambientB = baseColor.b * 0.5f;
+//
+//        // Create a brighter version of the base color for highlighting
+//        Color highlightColor = new Color(
+//            Math.min(baseColor.r * 1.5f, 1f),
+//            Math.min(baseColor.g * 1.5f, 1f),
+//            Math.min(baseColor.b * 1.5f, 1f),
+//            1f
+//        );
+//
+//        try {
+//            Material highlightMaterial = new Material(
+//                ColorAttribute.createDiffuse(highlightColor),
+//                ColorAttribute.createSpecular(1, 1, 1, 1),
+//                ColorAttribute.createAmbient(highlightColor.r * 0.5f,
+//                    highlightColor.g * 0.5f,
+//                    highlightColor.b * 0.5f,
+//                    1f)
+//            );
+//
+//            // Apply highlight material
+//            for (Material mat : pawn.materials) {
+//                mat.clear();
+//                mat.set(highlightMaterial);
+//            }
+//
+//            // Schedule reset of material
+//            Timer.schedule(new Timer.Task() {
+//                @Override
+//                public void run() {
+//                    try {
+//                        Material originalMaterial = new Material(
+//                            ColorAttribute.createDiffuse(new Color(baseColor)),
+//                            ColorAttribute.createSpecular(1, 1, 1, 1),
+//                            ColorAttribute.createAmbient(ambientR, ambientG, ambientB, 1f)
+//                        );
+//
+//                        if (pawn.materials != null) {
+//                            for (Material mat : pawn.materials) {
+//                                mat.clear();
+//                                mat.set(originalMaterial);
+//                            }
+//                        }
+//                    } catch (Exception e) {
+//                        Gdx.app.error(TAG, "Error resetting pawn material: " + e.getMessage());
+//                    }
+//                }
+//            }, 0.2f);
+//        } catch (Exception e) {
+//            Gdx.app.error(TAG, "Error applying highlight material: " + e.getMessage());
+//        }
+//    }
 
     public void updatePawnPosition(int pawnIndex, int newPosition, String playerColor) {
         int globalPawnIndex = getGlobalPawnIndex(playerColor, pawnIndex);

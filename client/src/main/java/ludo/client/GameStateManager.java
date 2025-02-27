@@ -48,7 +48,7 @@ public class GameStateManager implements MessageListener {
         this.isMyTurn = false;
         this.gameStarted = false;
         this.canMovePawn = false;
-        this.gameManager = new GameManager(); // todo potential bug
+        this.gameManager = new GameManager();
     }
 
     //for testing

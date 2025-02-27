@@ -40,20 +40,20 @@ public class LudoGame extends Game {
         return gameStateManager;
     }
 
-    public void startGame(String playerName, String color) {//TODO check usage not used currently
-        this.currentPlayerName = playerName;
+//    public void startGame(String playerName, String color) {//TODO check usage not used currently
+//        this.currentPlayerName = playerName;
+//
+//        // Create initial player
+//        Player localPlayer = new Player(playerName, color);
+//        players.clear(); // Clear any existing players
+//        players.add(localPlayer);
+//
+//        // Switch to game screen
+//        gameScreen = new GameScreen(this);
+//        setScreen(gameScreen);
+//    }
 
-        // Create initial player
-        Player localPlayer = new Player(playerName, color);
-        players.clear(); // Clear any existing players
-        players.add(localPlayer);
-
-        // Switch to game screen
-        gameScreen = new GameScreen(this);
-        setScreen(gameScreen);
-    }
-
-    public void addPlayer(Player player) {//TODO check usage not used currently
+    public void addPlayer(Player player) {
         if (players.size() < 4 && !players.stream().anyMatch(p ->
             p.getColor().equals(player.getColor()) ||
                 p.getName().equals(player.getName()))) {
@@ -65,16 +65,16 @@ public class LudoGame extends Game {
         return new ArrayList<>(players);
     }
 
-    public String getCurrentPlayerName() {//TODO check usage not used currently
-        return currentPlayerName;
-    }
-
-    public Player getLocalPlayer() {//TODO check usage not used currently
-        return players.stream()
-            .filter(p -> p.getName().equals(currentPlayerName))
-            .findFirst()
-            .orElse(null);
-    }
+//    public String getCurrentPlayerName() {//TODO check usage not used currently
+//        return currentPlayerName;
+//    }
+//
+//    public Player getLocalPlayer() {//TODO check usage not used currently
+//        return players.stream()
+//            .filter(p -> p.getName().equals(currentPlayerName))
+//            .findFirst()
+//            .orElse(null);
+//    }
 
     public void reset() {
         players.clear();

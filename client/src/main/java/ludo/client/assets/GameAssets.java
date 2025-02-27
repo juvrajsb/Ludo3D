@@ -84,17 +84,17 @@ public class GameAssets {
         return diceModel;
     }
 
-    public Texture getPawnBaseColorTexture() { //TODO check usage not used currently
-        return pawnBaseColorTexture;
-    }
-
-    public Texture getPawnNormalTexture() {//TODO check usage not used currently
-        return pawnNormalTexture;
-    }
-
-    public Texture getPawnRoughnessTexture() {//TODO check usage not used currently
-        return pawnRoughnessTexture;
-    }
+//    public Texture getPawnBaseColorTexture() { //TODO check usage not used currently
+//        return pawnBaseColorTexture;
+//    }
+//
+//    public Texture getPawnNormalTexture() {//TODO check usage not used currently
+//        return pawnNormalTexture;
+//    }
+//
+//    public Texture getPawnRoughnessTexture() {//TODO check usage not used currently
+//        return pawnRoughnessTexture;
+//    }
 
     public void dispose() {
         Gdx.app.log(TAG, "Disposing GameAssets");

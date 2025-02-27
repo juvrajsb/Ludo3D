@@ -131,9 +131,9 @@ public class Server {
         return connectedClients.keySet().stream().toList();
     }
 
-    public ServerGameStateManager getGameStateManager() { //TODO check usage not used currently
-        return gameStateManager;
-    }
+//    public ServerGameStateManager getGameStateManager() { //TODO check usage not used currently
+//        return gameStateManager;
+//    }
 
     public ServerNetworkHandler getNetworkHandler() {
         return networkHandler;

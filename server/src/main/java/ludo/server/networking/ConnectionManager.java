@@ -51,63 +51,63 @@ public class ConnectionManager{
         }
     }
 
-    public void broadcastEvent(Event event) {//TODO check usage not used currently
-        List<String> failedConnections = new ArrayList<>();
-
-        for (Map.Entry<String, Connection> entry : connections.entrySet()) {
-            try {
-                entry.getValue().send(event);
-            } catch (IOException e) {
-                failedConnections.add(entry.getKey());
-                errorHandler.handleConnectionError(entry.getValue(), e);
-            }
-        }
-
-        // Clean up failed connections
-        failedConnections.forEach(this::removeConnection);
-    }
-
-    public void sendToPlayer(String playerId, Event event) {//TODO check usage not used currently
-        Connection connection = connections.get(playerId);
-        if (connection != null) {
-            try {
-                connection.send(event);
-            } catch (IOException e) {
-                errorHandler.handleConnectionError(connection, e);
-                removeConnection(playerId);
-            }
-        }
-    }
-
-    public boolean isConnected(String playerId) {//TODO check usage not used currently
-        return connections.containsKey(playerId);
-    }
-
-    public List<Connection> getAllConnections() {//TODO check usage not used currently
-        return new ArrayList<>(connections.values());
-    }
-
-    public void handleReconnection(String playerId, Connection newConnection) {//TODO check usage not used currently
-        removeConnection(playerId);
-        addConnection(newConnection);
-        errorHandler.handleReconnection(playerId, newConnection);
-    }
-
-    public void shutdown() {//TODO check usage not used currently
-        for (Connection connection : connections.values()) {
-            try {
-                connection.close();
-            } catch (IOException e) {
-                Server.LOGGER.warning("Error during connection shutdown: " + e.getMessage());
-            }
-        }
-        connections.clear();
-        errorHandler.shutdown();
-    }
-
-    public EventTransmitter getEventTransmitter() {//TODO check usage not used currently
-        return eventTransmitter;
-    }
+//    public void broadcastEvent(Event event) {//TODO check usage not used currently
+//        List<String> failedConnections = new ArrayList<>();
+//
+//        for (Map.Entry<String, Connection> entry : connections.entrySet()) {
+//            try {
+//                entry.getValue().send(event);
+//            } catch (IOException e) {
+//                failedConnections.add(entry.getKey());
+//                errorHandler.handleConnectionError(entry.getValue(), e);
+//            }
+//        }
+//
+//        // Clean up failed connections
+//        failedConnections.forEach(this::removeConnection);
+//    }
+//
+//    public void sendToPlayer(String playerId, Event event) {//TODO check usage not used currently
+//        Connection connection = connections.get(playerId);
+//        if (connection != null) {
+//            try {
+//                connection.send(event);
+//            } catch (IOException e) {
+//                errorHandler.handleConnectionError(connection, e);
+//                removeConnection(playerId);
+//            }
+//        }
+//    }
+//
+//    public boolean isConnected(String playerId) {//TODO check usage not used currently
+//        return connections.containsKey(playerId);
+//    }
+//
+//    public List<Connection> getAllConnections() {//TODO check usage not used currently
+//        return new ArrayList<>(connections.values());
+//    }
+//
+//    public void handleReconnection(String playerId, Connection newConnection) {//TODO check usage not used currently
+//        removeConnection(playerId);
+//        addConnection(newConnection);
+//        errorHandler.handleReconnection(playerId, newConnection);
+//    }
+//
+//    public void shutdown() {//TODO check usage not used currently
+//        for (Connection connection : connections.values()) {
+//            try {
+//                connection.close();
+//            } catch (IOException e) {
+//                Server.LOGGER.warning("Error during connection shutdown: " + e.getMessage());
+//            }
+//        }
+//        connections.clear();
+//        errorHandler.shutdown();
+//    }
+//
+//    public EventTransmitter getEventTransmitter() {//TODO check usage not used currently
+//        return eventTransmitter;
+//    }
 
     public void handleDisconnection(String connectionId) {
         removeConnection(connectionId);

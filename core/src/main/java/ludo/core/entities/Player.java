@@ -51,23 +51,23 @@ public class Player implements Serializable {
         return board.isHomeColumn(pawns.get(pawnIndex).getPosition(), color);
     }
 
-    public int getPawnsInHomeColumn(Board board) {//TODO check usage not used currently
-        int count = 0;
-        for (int i = 0; i < pawns.size(); i++) {
-            if (isInHomeColumn(i, board)) {
-                count++;
-            }
-        }
-        return count;
-    }
-
-    public void setUseSingleDie(boolean useSingleDie) {//TODO check usage not used currently
-        this.useSingleDie = useSingleDie;
-    }
-
-    public boolean isUseSingleDie() {//TODO check usage not used currently
-        return useSingleDie;
-    }
+//    public int getPawnsInHomeColumn(Board board) {//TODO check usage not used currently
+//        int count = 0;
+//        for (int i = 0; i < pawns.size(); i++) {
+//            if (isInHomeColumn(i, board)) {
+//                count++;
+//            }
+//        }
+//        return count;
+//    }
+//
+//    public void setUseSingleDie(boolean useSingleDie) {//TODO check usage not used currently
+//        this.useSingleDie = useSingleDie;
+//    }
+//
+//    public boolean isUseSingleDie() {//TODO check usage not used currently
+//        return useSingleDie;
+//    }
 
     public int getStartPosition() {
         return startPosition;
@@ -81,7 +81,7 @@ public class Player implements Serializable {
     public void initializePawns() {
         pawns = new ArrayList<>();
         for (int i = 0; i < Constants.PAWNS_PER_PLAYER; i++) {
-            pawns.add(new Pawn(color)); // Initialize pawns at the starting position (-1)
+            pawns.add(new Pawn(color));
         }
     }
 }

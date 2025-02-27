@@ -122,7 +122,7 @@ public class GameScreen extends BaseScreen {
         stage.addActor(hud);
         stage.addActor(rollButton);
 
-        createTestPanel();
+//        createTestPanel();
         setupInputHandling();
         game.getGameStateManager().initialize(this);
         this.currentGameState = GameState.IN_PROGRESS;

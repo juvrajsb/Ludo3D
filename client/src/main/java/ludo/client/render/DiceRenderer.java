@@ -37,7 +37,7 @@ public class DiceRenderer {
         updateTransform();
     }
 
-    private void initializeFaceRotations() { //TODO put the correct numbers
+    private void initializeFaceRotations() {
         valueFaceRotations[0] = new Matrix4().setToRotation(Vector3.Z, -90); // 1
         valueFaceRotations[1] = new Matrix4().setToRotation(Vector3.X, 180); // 2
         valueFaceRotations[2] = new Matrix4().setToRotation(Vector3.X, 90);  // 3
@@ -125,13 +125,13 @@ public class DiceRenderer {
         setFaceRotation(currentValue);
     }
 
-    public boolean isRolling() {
-        return isRolling;
-    }//TODO check usage not used currently
-
-    public int getCurrentValue() {
-        return currentValue;
-    }//TODO check usage not used currently
+//    public boolean isRolling() {
+//        return isRolling;
+//    }//TODO check usage not used currently
+//
+//    public int getCurrentValue() {
+//        return currentValue;
+//    }//TODO check usage not used currently
 
     public void dispose() {
         // Model disposal is handled by GameAssets
