@@ -29,16 +29,6 @@ public class MoveValidator {
                 return false;
             }
 
-            // Check if start position is already occupied by own pawn
-            int startPos = board.getStartPosition(player.getColor());
-            for (Pawn otherPawn : player.getPawns()) {
-                if (otherPawn != pawn && !otherPawn.isHome() &&
-                    otherPawn.getPosition() == startPos) {
-                    LOGGER.info("Invalid move: Start position occupied by own pawn");
-                    return false;
-                }
-            }
-
             return true;
         }
 
@@ -72,14 +62,6 @@ public class MoveValidator {
                 (playerStartPos / 13) * board.getHomeColumnSize();
             int homePosition = homeColumnStart + stepsAfterEntry;
 
-            // Check for collision with own pawns in home column
-            for (Pawn otherPawn : player.getPawns()) {
-                if (otherPawn != pawn && otherPawn.getPosition() == homePosition) {
-                    LOGGER.info("Invalid move: Home column position occupied by own pawn");
-                    return false;
-                }
-            }
-
             LOGGER.fine("Move into home column valid");
             return true;
         }
@@ -99,31 +81,12 @@ public class MoveValidator {
                 return false;
             }
 
-            // Check for collision with own pawns in home column
-            for (Pawn otherPawn : player.getPawns()) {
-                if (otherPawn != pawn && otherPawn.getPosition() == newPosition) {
-                    LOGGER.info("Invalid move: Home column position occupied by own pawn");
-                    return false;
-                }
-            }
-
             LOGGER.fine("Move within home column valid");
             return true;
         }
 
         // Regular board movement
         int boardPosition = newPosition % board.getTotalSpaces();
-
-        // Check for collision with own pawns on the board (not in safe spots)
-        if (!board.isSafeSpot(boardPosition)) {
-            for (Pawn otherPawn : player.getPawns()) {
-                if (otherPawn != pawn && !otherPawn.isHome() &&
-                    otherPawn.getPosition() == boardPosition) {
-                    LOGGER.info("Invalid move: Board position occupied by own pawn");
-                    return false;
-                }
-            }
-        }
 
         LOGGER.fine("Regular board move valid");
         return true;

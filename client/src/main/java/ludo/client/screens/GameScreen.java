@@ -16,12 +16,12 @@ import com.badlogic.gdx.utils.Timer;
 import ludo.client.LudoGame;
 import ludo.client.render.GameRenderer;
 import ludo.client.ui.GameHUD;
+import ludo.core.entities.Pawn;
 import ludo.core.entities.Player;
 import ludo.core.persistence.GamePersistence;
 import ludo.core.game.GameState;
 
-import java.util.ArrayList;
-import java.util.List;
+import java.util.*;
 import java.util.logging.Logger;
 
 public class GameScreen extends BaseScreen {
@@ -43,17 +43,49 @@ public class GameScreen extends BaseScreen {
     final float minHeight = -2f;
     final float maxHeight = 30f;
 
-    // Game state
+    /// Game state
     private Player currentPlayer;
     private boolean canMove;
     private int lastDiceRoll;
     private boolean isRolling = false;
+
+    private Map<Integer, PawnUIState> pawnUIStates = new HashMap<>();
+    private Queue<PendingAnimation> animationQueue = new LinkedList<>();
+    private boolean processingAnimations = false;
+    private GameState currentGameState = GameState.WAITING_FOR_PLAYERS;
 
     // Camera control variables
     float cameraRotation = 0;
     float cameraDistance = 14f;
     float cameraHeight = 10f;
     private float timeSinceLastAutoSave = 0f;
+
+    private static class PawnUIState {
+        boolean highlighted = false;
+        boolean moving = false;
+        boolean selectable = false;
+
+        @Override
+        public String toString() {
+            return "PawnUIState{highlighted=" + highlighted +
+                ", moving=" + moving +
+                ", selectable=" + selectable + "}";
+        }
+    }
+
+    private static class PendingAnimation {
+        String color;
+        int pawnIndex;
+        int fromPosition;
+        int toPosition;
+
+        PendingAnimation(String color, int pawnIndex, int fromPosition, int toPosition) {
+            this.color = color;
+            this.pawnIndex = pawnIndex;
+            this.fromPosition = fromPosition;
+            this.toPosition = toPosition;
+        }
+    }
 
     public GameScreen(final LudoGame game) {
         super(game);
@@ -74,20 +106,26 @@ public class GameScreen extends BaseScreen {
         rollButton.addListener(new ChangeListener() {
             @Override
             public void changed(ChangeEvent event, Actor actor) {
+                LOGGER.info("Roll button clicked - isRolling: " + isRolling +
+                    ", canMove: " + canMove +
+                    ", isMyTurn: " + (currentPlayer != null &&
+                    currentPlayer.getName().equals(game.getGameStateManager().getCurrentUsername())));
+
                 if (!isRolling) {
+                    Gdx.app.log(TAG, "Roll button clicked");
                     requestDiceRoll();
                 }
             }
         });
-
         this.renderer = new GameRenderer(Gdx.graphics.getWidth(), Gdx.graphics.getHeight());
 
         stage.addActor(hud);
         stage.addActor(rollButton);
 
-        // createTestPanel();
+        createTestPanel();
         setupInputHandling();
         game.getGameStateManager().initialize(this);
+        this.currentGameState = GameState.IN_PROGRESS;
     }
 
     private void setupLighting() {
@@ -119,7 +157,6 @@ public class GameScreen extends BaseScreen {
         float rotationAmount = 100f * delta;
         float heightAmount = 5f * delta;
 
-        // Check for continuous keyboard input
         if (Gdx.input.isKeyPressed(Input.Keys.LEFT)) {
             cameraRotation += rotationAmount;
             updateCameraPosition();
@@ -178,6 +215,8 @@ public class GameScreen extends BaseScreen {
             timeSinceLastAutoSave = 0f;
         }
 
+        processPendingAnimations();
+
         Gdx.gl.glClearColor(0.2f, 0.2f, 0.3f, 1);
         Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT | GL20.GL_DEPTH_BUFFER_BIT);
 
@@ -202,6 +241,26 @@ public class GameScreen extends BaseScreen {
         }
     }
 
+    private void processPendingAnimations() {
+        if (processingAnimations) {
+            return;
+        }
+
+        if (!animationQueue.isEmpty() && !renderer.isAnimating()) {
+            processingAnimations = true;
+            PendingAnimation anim = animationQueue.poll();
+
+            renderer.updatePawnPosition(anim.pawnIndex, anim.toPosition, anim.color);
+
+            Timer.schedule(new Timer.Task() {
+                @Override
+                public void run() {
+                    processingAnimations = false;
+                }
+            }, 0.2f); // Adjust timing based on your animation duration
+        }
+    }
+
     private void performAutoSave() {
         try {
             GamePersistence.autoSave(
@@ -223,10 +282,6 @@ public class GameScreen extends BaseScreen {
         }
     }
 
-    public int getPlayerCount() {//TODO check usage not used currently
-        return players.size();
-    }
-
     @Override
     public void resize(int width, int height) {
         super.resize(width, height);
@@ -242,28 +297,57 @@ public class GameScreen extends BaseScreen {
         renderer.dispose();
     }
 
-//    public void updateGameState(String state) {
-//        if (currentPlayer != null) {
-//            renderer.updateAllPawnPositions();
-//            hud.updateCurrentPlayer(currentPlayer.getColor());  // Use color instead of name
-//        } else {
-//            LOGGER.warning("Current player is null in updateGameState");
-//        }
-//        hud.showMessage(state);
-//    }
-
     public void updatePlayerPawns(String color, List<Integer> positions) {
-        // Only update pawns that have actually moved
-        Gdx.app.log(TAG, "Inside updatePlayerPawns");
         for (Player player : players) {
-            if (player.getColor().toUpperCase().equals(color)) {
+            if (player.getColor().equalsIgnoreCase(color)) {
                 for (int i = 0; i < positions.size(); i++) {
-                    renderer.updatePawnPosition(i, positions.get(i), color);
+                    int newPosition = positions.get(i);
+                    int oldPosition = player.getPawns().get(i).getPosition();
+
+                    if (newPosition != oldPosition) {
+                        player.getPawns().get(i).setPosition(newPosition);
+                        animationQueue.add(new PendingAnimation(
+                            color, i, oldPosition, newPosition
+                        ));
+
+                        LOGGER.info(String.format("Queued animation for %s pawn %d: %d -> %d",
+                            color, i, oldPosition, newPosition));
+                    }
                 }
                 break;
             }
         }
     }
+
+    public void highlightPawnAsMoving(int pawnIndex) {
+        PawnUIState state = pawnUIStates.computeIfAbsent(pawnIndex, k -> new PawnUIState());
+        state.moving = true;
+
+        renderer.setPawnMovingState(pawnIndex, true);
+    }
+
+//    public void clearPawnMovingState(int pawnIndex) {
+//        PawnUIState state = pawnUIStates.get(pawnIndex);
+//        if (state != null) {
+//            state.moving = false;
+//
+//            renderer.setPawnMovingState(pawnIndex, false);
+//        }
+//    }
+//
+//    public void setSelectablePawns(List<Integer> selectablePawnIndices) {
+//        for (PawnUIState state : pawnUIStates.values()) {
+//            state.selectable = false;
+//        }
+//
+//        for (Integer index : selectablePawnIndices) {
+//            PawnUIState state = pawnUIStates.computeIfAbsent(index, k -> new PawnUIState());
+//            state.selectable = true;
+//        }
+//
+//        renderer.setSelectablePawns(selectablePawnIndices);
+//    }
+
 
     public Player getCurrentPlayer() {
         return currentPlayer;
@@ -271,15 +355,22 @@ public class GameScreen extends BaseScreen {
 
     public void setCurrentPlayer(String identifier) {
         LOGGER.info("Setting current player to: " + identifier);
-        // Try finding player by color first
+
         for (Player player : players) {
             if (player.getColor().toUpperCase().equals(identifier.toUpperCase()) ||
                 player.getName().equals(identifier)) {
                 currentPlayer = player;
                 hud.updateCurrentPlayer(player.getColor());
                 boolean isMyTurn = player.getName().equals(game.getGameStateManager().getCurrentUsername());
+
                 rollButton.setDisabled(!isMyTurn);
-                // createTestPanel();
+                LOGGER.info("Roll button disabled state set to: " + rollButton.isDisabled());
+
+                if (isMyTurn) {
+                    enableControls();
+                } else {
+                    disableControls();
+                }
 
                 LOGGER.info("Current player set - Name: " + player.getName() +
                     ", Color: " + player.getColor() +
@@ -288,12 +379,6 @@ public class GameScreen extends BaseScreen {
             }
         }
         LOGGER.severe("Player not found for identifier: " + identifier);
-    }
-
-    private void requestDiceRoll() {
-        isRolling = true;
-        rollButton.setDisabled(true);
-        game.getGameStateManager().requestDiceRoll();
     }
 
     public void updateDiceDisplay(int value) {
@@ -316,12 +401,60 @@ public class GameScreen extends BaseScreen {
         }, 0.5f);
     }
 
-    // private void updateGameState() { //TODO check usage not used currently
-    //     if (currentPlayer != null) {
-    //         renderer.updateAllPawnPositions();
-    //         hud.updateCurrentPlayer(currentPlayer.getName());
-    //     }
-    // }
+    public void updateGameState(GameState state) {
+        this.currentGameState = state;
+
+        switch (state) {
+            case WAITING_FOR_PLAYERS:
+                showMessage("Waiting for players to join...");
+                disableControls();
+                break;
+
+            case IN_PROGRESS:
+                if (isMyTurn()) {
+                    showMessage("Your turn! Roll the dice");
+                    enableControls();
+                } else {
+                    showMessage("Waiting for " + (currentPlayer != null ? currentPlayer.getColor() : "other player"));
+                    disableControls();
+                }
+                break;
+
+            case DICE_ROLLED:
+                showMessage("Dice rolled: " + lastDiceRoll);
+                disableControls();
+                break;
+
+            case WAITING_FOR_MOVE:
+                if (isMyTurn()) {
+                    showMessage("Select a pawn to move");
+                    enablePawnSelection();
+                } else {
+                    showMessage("Waiting for " + currentPlayer.getColor() + " to move");
+                    disableControls();
+                }
+                break;
+
+            case PLAYER_MOVED:
+                disableControls();
+                break;
+
+            case GAME_OVER:
+                showMessage("Game over!");
+                disableControls();
+                break;
+
+            case DISCONNECTED:
+                showMessage("Disconnected from server. Reconnecting...");
+                disableControls();
+                break;
+        }
+    }
+
+    private boolean isMyTurn() {
+        return currentPlayer != null &&
+            currentPlayer.getName().equals(game.getGameStateManager().getCurrentUsername());
+    }
 
     public void showMessage(String message) {
         hud.showMessage(message);
@@ -331,8 +464,40 @@ public class GameScreen extends BaseScreen {
         LOGGER.info("=== Enable Pawn Selection ===");
         LOGGER.info("Before enable - canMove: " + canMove);
         canMove = true;
-        disableControls();
+        rollButton.setDisabled(true);
         showMessage("Select a pawn to move");
+
+        if (pawnUIStates == null) {
+            pawnUIStates = new HashMap<>();
+        }
+
+        for (int i = 0; i < 4; i++) {
+            PawnUIState state = pawnUIStates.get(i);
+            if (state != null) {
+                state.selectable = false;
+            }
+        }
+
+        if (lastDiceRoll == 6 && currentPlayer != null) {
+            List<Integer> selectablePawns = new ArrayList<>();
+
+            for (int i = 0; i < currentPlayer.getPawns().size(); i++) {
+                Pawn pawn = currentPlayer.getPawns().get(i);
+                if (pawn.isHome()) {
+                    selectablePawns.add(i);
+                    PawnUIState state = pawnUIStates.computeIfAbsent(i, k -> new PawnUIState());
+                    state.selectable = true;
+                    LOGGER.info("Marked pawn " + i + " as selectable (home pawn with 6)");
+                } else if (!pawn.isFinished()) {
+                    selectablePawns.add(i);
+                    PawnUIState state = pawnUIStates.computeIfAbsent(i, k -> new PawnUIState());
+                    state.selectable = true;
+                    LOGGER.info("Marked pawn " + i + " as selectable (board pawn)");
+                }
+            }
+
+            LOGGER.info("Selectable pawns: " + selectablePawns);
+        }
         LOGGER.info("After enable - canMove: " + canMove);
     }
 
@@ -364,74 +529,104 @@ public class GameScreen extends BaseScreen {
 
     public void playMoveAnimation(int pawnIndex, int newPosition) {
         Gdx.app.log(TAG, String.format("Inside playMoveAnimation"));
-        String color = null;
-        int playerIndex = pawnIndex / 4;
-        if (playerIndex < players.size()) {
-            color = players.get(playerIndex).getColor();
-        }
 
-        if (color != null) {
-            renderer.updatePawnPosition(pawnIndex, newPosition, color);
-        }
+        Player currentPlayer = getCurrentPlayer();
+        String color = currentPlayer.getColor();
+
+        Gdx.app.log(TAG, "Moving pawn for player: " + color + ", pawn index: " + pawnIndex);
+
+        renderer.updatePawnPosition(pawnIndex, newPosition, color);
     }
 
-    // private void createTestPanel() {
-    //     Table testPanel = new Table(skin);
-    //     testPanel.setPosition(30, 10);  // Bottom left corner
-
-    //     Label title = new Label("Debug Controls", skin);
-    //     testPanel.add(title).row();
-
-    //     // Get current color from GameState
-    //     String currentColor = game.getGameStateManager().getCurrentColor();
-
-    //     // Create 4 buttons for the pawns
-    //     for (int i = 0; i < 4; i++) {
-    //         final int pawnIndex = i;
-    //         TextButton pawnButton = new TextButton("Select " + currentColor + " Pawn " + i, skin);
-    //         pawnButton.addListener(new ChangeListener() {
-    //             @Override
-    //             public void changed(ChangeEvent event, Actor actor) {
-    //                 Gdx.app.log("GameScreen", "Test button selecting pawn " + pawnIndex);
-    //                 // This bypasses ray casting and directly sends the move request
-    //                 if (canMove) {
-    //                     game.getGameStateManager().requestMove(pawnIndex);
-    //                     canMove = false;
-    //                 }
-    //             }
-    //         });
-    //         testPanel.add(pawnButton).pad(5).row();
-    //     }
-
-    //     stage.addActor(testPanel);
-    // }
+//     private void createTestPanel() {
+//         Table testPanel = new Table(skin);
+//         testPanel.setPosition(30, 10);  // Bottom left corner
+//
+//         Label title = new Label("Debug Controls", skin);
+//         testPanel.add(title).row();
+//
+//         String currentColor = game.getGameStateManager().getCurrentColor();
+//
+//         for (int i = 0; i < 4; i++) {
+//             final int pawnIndex = i;
+//             TextButton pawnButton = new TextButton("Select " + currentColor + " Pawn " + i, skin);
+//             pawnButton.addListener(new ChangeListener() {
+//                 @Override
+//                 public void changed(ChangeEvent event, Actor actor) {
+//                     Gdx.app.log("GameScreen", "Test button selecting pawn " + pawnIndex);
+//                     // This bypasses ray casting and directly sends the move request
+//                     if (canMove) {
+//                         game.getGameStateManager().requestMove(pawnIndex);
+//                         canMove = false;
+//                     }
+//                 }
+//             });
+//             testPanel.add(pawnButton).pad(5).row();
+//         }
+//
+//         stage.addActor(testPanel);
+//     }
 
     void handlePawnSelection(int screenX, int screenY) {
-        LOGGER.info("=== Pawn Selection Handler Start ===");
-        LOGGER.info("Selection state - canMove: " + canMove +
-            ", currentPlayer: " + (currentPlayer != null ? currentPlayer.getColor() : "null"));
-
         if (!canMove || currentPlayer == null ||
             !currentPlayer.getName().equals(game.getGameStateManager().getCurrentUsername())) {
-            LOGGER.info("Selection blocked - canMove: " + canMove +
-                ", currentPlayer: " + (currentPlayer != null ? currentPlayer.getName() : "null") +
-                ", currentUsername: " + game.getGameStateManager().getCurrentUsername());
+            LOGGER.info("Pawn selection disabled");
             return;
         }
 
+        LOGGER.info("Handling pawn selection at screen coords: " + screenX + ", " + screenY);
+
         int selectedPawn = renderer.getPawnAtScreenCoords(screenX, screenY, camera, currentPlayer.getColor());
+        LOGGER.info("Selected pawn index: " + selectedPawn);
+
         if (selectedPawn != -1) {
-            LOGGER.info("Valid pawn selected: " + selectedPawn + " for player " + currentPlayer.getColor());
-            game.getGameStateManager().requestMove(selectedPawn);
-            canMove = false;
-//        } else {
-//            Vector3 worldPos = new Vector3(screenX, screenY, 0);
-//            camera.unproject(worldPos);
-//            Gdx.app.log(TAG, "No valid pawn selected at world position: " + worldPos);
-//        }
+            PawnUIState state = pawnUIStates.get(selectedPawn);
+//            LOGGER.info("Pawn state exists: " + (state != null));
+//            LOGGER.info("Pawn state selectable: " + (state != null ? state.selectable : "N/A"));
+//            LOGGER.info("Current dice roll: " + lastDiceRoll);
+//            LOGGER.info("Pawn in home: " + (currentPlayer.getPawns().get(selectedPawn).isHome()));
+
+            boolean isHome = currentPlayer.getPawns().get(selectedPawn).isHome();
+            boolean canLeaveHome = lastDiceRoll == 6 && isHome;
+
+            if (canLeaveHome || (state != null && state.selectable)) {
+                LOGGER.info(String.format("Selected pawn %d for player %s",
+                    selectedPawn, currentPlayer.getColor()));
+
+                // Visual feedback before server responds
+                highlightPawnAsMoving(selectedPawn);
+
+                // Request move from server
+                game.getGameStateManager().requestMove(selectedPawn);
+                canMove = false;
+            } else {
+                // Invalid selection feedback
+                showMessage("Cannot move this pawn");
+                LOGGER.info("Cannot move pawn - not selectable");
+                renderer.flashInvalidSelection(selectedPawn);
+            }
         } else {
-            LOGGER.info("No valid pawn selected at coordinates: " + screenX + "," + screenY);
+            LOGGER.info("No valid pawn selected");
         }
-        LOGGER.info("=== Pawn Selection Handler End ===");
+    }
+
+    private void requestDiceRoll() {
+        boolean isPlayersTurn = currentPlayer != null &&
+            currentPlayer.getName().equals(game.getGameStateManager().getCurrentUsername());
+
+        LOGGER.info("requestDiceRoll called - isPlayersTurn: " + isPlayersTurn +
+            ", rollButton disabled: " + rollButton.isDisabled());
+
+        if (!isPlayersTurn) {
+            LOGGER.warning("Attempted to roll dice when it's not player's turn");
+            return;
+        }
+
+        isRolling = true;
+        rollButton.setDisabled(true);
+
+        renderer.startDiceRollAnimation();
+
+        game.getGameStateManager().requestDiceRoll();
     }
 }

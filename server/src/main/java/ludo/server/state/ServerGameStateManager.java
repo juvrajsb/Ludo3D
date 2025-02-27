@@ -8,6 +8,7 @@ import ludo.core.game.GameManager;
 import ludo.core.network.MessageListener;
 import ludo.core.network.NetworkMessage;
 import ludo.core.utils.Constants;
+import ludo.core.validation.MoveValidator;
 import ludo.server.networking.ServerNetworkHandler;
 import ludo.core.events.serverToClient.*;
 
@@ -20,6 +21,7 @@ public class ServerGameStateManager implements MessageListener {
     private final GameManager gameManager;
     private final ServerNetworkHandler networkHandler;
     private final Map<String, String> connectionToPlayerMap;
+    private static final String[] COLOR_ORDER = {"YELLOW", "BLUE", "RED", "GREEN"};
 
     public ServerGameStateManager(ServerNetworkHandler networkHandler) {
         this.networkHandler = networkHandler;
@@ -83,7 +85,6 @@ public class ServerGameStateManager implements MessageListener {
         String connectionId = event.getConnection().getConnectionID();
         String playerName = connectionToPlayerMap.get(connectionId);
 
-        // ENHANCED VALIDATION: More detailed checks
         if (playerName == null) {
             LOGGER.warning("Dice roll rejected - player not found");
             sendErrorResponse(connectionId, "Player not found");
@@ -102,7 +103,6 @@ public class ServerGameStateManager implements MessageListener {
             return;
         }
 
-        // Check if player has already rolled and needs to move
         if (gameManager.getLastDiceRoll() > 0) {
             LOGGER.warning("Dice roll rejected - player has already rolled");
             sendErrorResponse(connectionId, "You have already rolled");
@@ -112,10 +112,8 @@ public class ServerGameStateManager implements MessageListener {
         int diceValue = gameManager.rollDice();
         LOGGER.info(String.format("Player %s rolled %d", playerName, diceValue));
 
-        // Update game state
         gameManager.setGameState(GameState.DICE_ROLLED);
 
-        // Send dice result to all players
         DiceRollResultEvent resultEvent = new DiceRollResultEvent(
             diceValue,
             gameManager.getCurrentPlayer().getColor()
@@ -126,7 +124,6 @@ public class ServerGameStateManager implements MessageListener {
         if (!gameManager.hasValidMovesAvailable(gameManager.getCurrentPlayer(), diceValue)) {
             LOGGER.info("No valid moves available - automatically ending turn");
 
-            // Create a proper Timer instance
             Timer timer = new Timer();
             timer.schedule(new TimerTask() {
                 @Override
@@ -134,35 +131,38 @@ public class ServerGameStateManager implements MessageListener {
                     handleTurnEnd(event);
                     timer.cancel(); // Clean up timer
                 }
-            }, 1500); // 1.5 second delay
+            }, 1000); // 1 second delay
         } else {
-            // Set state to waiting for move
             gameManager.setGameState(GameState.WAITING_FOR_MOVE);
             broadcastGameState();
         }
     }
 
-    // Helper method to send error responses
     private void sendErrorResponse(String connectionId, String message) {
         ErrorEvent errorEvent = new ErrorEvent(message);
         networkHandler.sendToClient(connectionId, errorEvent);
     }
 
-    private void handleMoveRequest(MoveRequestEvent event) {
+    /**
+     * This method handles move requests from clients with improved error handling.
+     * The key fix is maintaining the proper game state after a failed move.
+     */
+    public void handleMoveRequest(MoveRequestEvent event) {
         String connectionId = event.getConnection().getConnectionID();
-        String playerName = connectionToPlayerMap.get(connectionId);
+        String playerName = getPlayerNameForConnection(connectionId);
 
         LOGGER.info(String.format("Move request from %s (connection: %s)", playerName, connectionId));
 
-        // ENHANCED VALIDATION: Check if game is in progress
+        // Validate game state
         if (gameManager.getGameState() != GameState.IN_PROGRESS &&
-            gameManager.getGameState() != GameState.WAITING_FOR_MOVE) {
+            gameManager.getGameState() != GameState.WAITING_FOR_MOVE &&
+            gameManager.getGameState() != GameState.PLAYER_MOVED) {
             LOGGER.warning("Move rejected - game not in proper state: " + gameManager.getGameState());
             sendMoveResponse(connectionId, false, "Game not in proper state", event.getPawnIndex(), -1);
             return;
         }
 
-        // Validate it's the player's turn
+        // Validate player turn
         if (!gameManager.isPlayerTurn(playerName)) {
             LOGGER.warning("Move rejected - not player's turn");
             sendMoveResponse(connectionId, false, "Not your turn", event.getPawnIndex(), -1);
@@ -179,14 +179,12 @@ public class ServerGameStateManager implements MessageListener {
         int pawnIndex = event.getPawnIndex();
         int steps = event.getSteps();
 
-        // ENHANCED VALIDATION: Check if pawn index is valid
-        if (pawnIndex < 0 || pawnIndex >= Constants.PAWNS_PER_PLAYER) {
+        if (pawnIndex < 0 || pawnIndex >= currentPlayer.getPawns().size()) {
             LOGGER.warning("Invalid pawn index: " + pawnIndex);
             sendMoveResponse(connectionId, false, "Invalid pawn index", pawnIndex, -1);
             return;
         }
 
-        // ENHANCED VALIDATION: Check if steps match last dice roll
         if (steps != gameManager.getLastDiceRoll()) {
             LOGGER.warning(String.format("Move rejected - steps (%d) don't match dice roll (%d)",
                 steps, gameManager.getLastDiceRoll()));
@@ -195,87 +193,108 @@ public class ServerGameStateManager implements MessageListener {
         }
 
         int playerIndex = gameManager.getPlayers().indexOf(currentPlayer);
+        LOGGER.info("Positions before move: " + gameManager.getCurrentPawnPositions());
 
-        // Log before state
-        Map<String, List<Integer>> beforePositions = gameManager.getCurrentPawnPositions();
-        LOGGER.info("Positions before move: " + beforePositions);
-
-        // ENHANCED: Get pawn details for better logging
         Pawn selectedPawn = currentPlayer.getPawns().get(pawnIndex);
         boolean isLeavingHome = selectedPawn.isHome() && steps == 6;
         int currentPosition = selectedPawn.isHome() ? -1 : selectedPawn.getPosition();
 
-        // Delegate to GameManager for actual move validation and execution
         boolean moveSuccess = gameManager.movePawn(playerIndex, pawnIndex, steps);
         LOGGER.info("Move result: " + (moveSuccess ? "Success" : "Failed"));
 
         if (moveSuccess) {
-            Map<String, List<Integer>> afterPositions = gameManager.getCurrentPawnPositions();
-            LOGGER.info("Positions after move: " + afterPositions);
+            LOGGER.info("Positions after move: " + gameManager.getCurrentPawnPositions());
             int newPosition = currentPlayer.getPawns().get(pawnIndex).getPosition();
 
-            // ENHANCED LOGGING: Include more details about the move
             LOGGER.info(String.format("Pawn moved from %d to %d (isLeavingHome: %b)",
                 currentPosition, newPosition, isLeavingHome));
 
-            // Send successful move response
             MoveResultEvent resultEvent = new MoveResultEvent(
-                true,
-                "Move successful",
-                pawnIndex,
-                newPosition
-            );
-
-            // Broadcast to all players
+                true, "Move successful", pawnIndex, newPosition);
             networkHandler.broadcast(resultEvent);
 
-            // Update game state
             gameManager.setGameState(GameState.PLAYER_MOVED);
             broadcastGameState();
 
-            // Check for win condition
             if (gameManager.hasPlayerWon(playerName)) {
                 handleGameOver(playerName);
                 return;
             }
 
-            // Handle turn logic - delegated to a dedicated method for clarity
-            handleTurnLogicAfterMove(steps, isLeavingHome, currentPlayer);
-        } else {
-            LOGGER.warning("Move failed for pawn " + pawnIndex);
-            sendMoveResponse(connectionId, false, "Invalid move", pawnIndex, -1);
-        }
-    }
-
-    private void handleTurnLogicAfterMove(int steps, boolean isLeavingHome, Player currentPlayer) {
-        if (steps == 6) {
-            // If player rolled a 6, they get another turn
-            if (isLeavingHome) {
-                LOGGER.info("Pawn left home with a 6 - player gets another roll");
-                // Don't end turn, just let them roll again
+            if (steps == 6) {
+                LOGGER.info("Player rolled a 6 - gets another turn");
                 gameManager.setGameState(GameState.IN_PROGRESS);
+                networkHandler.sendToClient(connectionId, new ludo.core.events.serverToClient.CanRollAgainEvent());
             } else {
-                LOGGER.info("Player moved with a 6 - player gets another roll");
-                // Don't end turn, let them roll again
-                gameManager.setGameState(GameState.IN_PROGRESS);
+                gameManager.nextTurn();
+                String nextPlayer = gameManager.getCurrentPlayer().getName();
+                LOGGER.info("Next player: " + nextPlayer);
+
+                networkHandler.broadcast(new ludo.core.events.serverToClient.TurnChangeEvent(nextPlayer));
             }
 
-            // In both cases, we need to broadcast that the player can roll again
-            networkHandler.sendToClient(
-                gameManager.getCurrentPlayer().getName(),
-                new CanRollAgainEvent()  // We'll need to create this event
-            );
+            broadcastGameState();
         } else {
-            // Move to next player's turn
-            gameManager.nextTurn();
-            String nextPlayer = gameManager.getCurrentPlayer().getName();
-            LOGGER.info("Next player: " + nextPlayer);
+            LOGGER.warning("Move failed for pawn " + pawnIndex);
 
-            // Send turn change event
-            TurnChangeEvent turnEvent = new TurnChangeEvent(nextPlayer);
-            networkHandler.broadcast(turnEvent);
+            String failureReason = getFailureReason(selectedPawn, steps);
+            sendMoveResponse(connectionId, false, failureReason, pawnIndex, -1);
+
+            gameManager.setGameState(GameState.WAITING_FOR_MOVE);
+
+            broadcastGameState();
         }
     }
+
+    private String getPlayerNameForConnection(String connectionId) {
+        return connectionToPlayerMap.get(connectionId);
+    }
+
+    private String getFailureReason(Pawn pawn, int steps) {
+        if (pawn.isHome() && steps != 6) {
+            return "Cannot leave home without a 6";
+        } else if (pawn.isFinished()) {
+            return "Pawn has already reached home";
+        } else {
+            return "Invalid move";
+        }
+    }
+
+//    private void handleTurnLogicAfterMove(int steps, boolean isLeavingHome, Player currentPlayer) {
+//        if (steps == 6) {
+//            // If player rolled a 6, they get another turn
+//            if (isLeavingHome) {
+//                LOGGER.info("Pawn left home with a 6 - player gets another roll");
+//                // Reset last dice roll to 0 to allow another roll
+//                gameManager.setLastDiceRoll(0);
+//
+//                // Set game state to allow another roll
+//                gameManager.setGameState(GameState.IN_PROGRESS);
+//            } else {
+//                LOGGER.info("Player moved with a 6 - player gets another roll");
+//                // Reset last dice roll to 0 to allow another roll
+//                gameManager.setLastDiceRoll(0);
+//
+//                // Set game state to allow another roll
+//                gameManager.setGameState(GameState.IN_PROGRESS);
+//            }
+//
+//            // Notify client they can roll again
+//            networkHandler.sendToClient(
+//                gameManager.getCurrentPlayer().getName(),
+//                new CanRollAgainEvent()
+//            );
+//        } else {
+//            // Move to next player's turn
+//            gameManager.nextTurn();
+//            String nextPlayer = gameManager.getCurrentPlayer().getName();
+//            LOGGER.info("Next player: " + nextPlayer);
+//
+//            // Send turn change event
+//            TurnChangeEvent turnEvent = new TurnChangeEvent(nextPlayer);
+//            networkHandler.broadcast(turnEvent);
+//        }
+//    }
 
     private void handleTurnEnd(Event event) {
         String connectionId = event.getConnection().getConnectionID();
@@ -284,19 +303,14 @@ public class ServerGameStateManager implements MessageListener {
         if (playerName != null && gameManager.isPlayerTurn(playerName)) {
             LOGGER.info("Turn ended for player: " + playerName);
 
-            // Move to next player
             gameManager.nextTurn();
-
-            // Send turn change event
             TurnChangeEvent turnEvent = new TurnChangeEvent(
                 gameManager.getCurrentPlayer().getName()
             );
             networkHandler.broadcast(turnEvent);
 
-            // Update game state
             broadcastGameState();
 
-            // Check if the next player is a bot
             checkAndPlayBotTurn();
         }
     }
@@ -322,8 +336,55 @@ public class ServerGameStateManager implements MessageListener {
         LOGGER.fine("Received pong from client: " + connectionId);
     }
 
+    private void initializePlayersWithColors(List<Player> realPlayers, boolean enableBots) {
+        gameManager.clearPlayers();
+
+        List<Player> playersToAdd = new ArrayList<>(realPlayers);
+
+        Random random = new Random();
+        int startingColorIndex = random.nextInt(COLOR_ORDER.length);
+
+        LOGGER.info("Randomizing starting color. Selected index: " + startingColorIndex +
+            " (" + COLOR_ORDER[startingColorIndex] + ")");
+
+        for (int i = 0; i < realPlayers.size(); i++) {
+            Player player = realPlayers.get(i);
+            String newColor = COLOR_ORDER[(startingColorIndex + i) % COLOR_ORDER.length];
+
+            LOGGER.info("Assigning color " + newColor + " to player " + player.getName() +
+                " (original color: " + player.getColor() + ")");
+
+            Player recoloredPlayer = new Player(player.getName(), newColor);
+            playersToAdd.set(i, recoloredPlayer);
+        }
+
+        if (enableBots) {
+            int realPlayerCount = realPlayers.size();
+
+            for (int i = 0; i < COLOR_ORDER.length - realPlayerCount; i++) {
+                int colorIndex = (startingColorIndex + realPlayerCount + i) % COLOR_ORDER.length;
+                String botColor = COLOR_ORDER[colorIndex];
+                String botName = "Bot-" + botColor;
+
+                BotPlayer bot = new BotPlayer(botName, botColor);
+                playersToAdd.add(bot);
+
+                LOGGER.info("Added bot player: " + botName + " (" + botColor + ")");
+            }
+        }
+
+        for (Player player : playersToAdd) {
+            gameManager.addPlayer(player);
+        }
+
+        LOGGER.info("Final player order:");
+        for (int i = 0; i < gameManager.getPlayers().size(); i++) {
+            Player p = gameManager.getPlayers().get(i);
+            LOGGER.info(i + ": " + p.getName() + " (" + p.getColor() + ")");
+        }
+    }
+
     private void handleStartGameRequest(StartGameRequestEvent event) {
-        // First check if sender is the admin/first player
         String connectionId = event.getConnection().getConnectionID();
         if (!isFirstPlayer(connectionId)) {
             LOGGER.warning("Non-admin player attempted to start game: " + connectionId);
@@ -334,7 +395,6 @@ public class ServerGameStateManager implements MessageListener {
             return;
         }
 
-        // Check minimum players requirement
         int realPlayerCount = gameManager.getPlayers().size();
         boolean enableBots = event.isBotsEnabled();
 
@@ -347,7 +407,6 @@ public class ServerGameStateManager implements MessageListener {
             return;
         }
 
-        // Check if game already started
         if (gameManager.isGameStarted()) {
             networkHandler.sendToClient(
                 connectionId,
@@ -359,32 +418,31 @@ public class ServerGameStateManager implements MessageListener {
         LOGGER.info("Starting game with " + realPlayerCount + " real players" +
             (enableBots ? " and bot players" : ""));
 
-        // Add bot players if needed and enabled
         if (enableBots) {
             addBotPlayers();
         }
 
-        // Start the game
+        LOGGER.info("Starting game with " + realPlayerCount + " real players" +
+            (enableBots ? " and bot players" : ""));
+
+        initializePlayersWithColors(gameManager.getPlayers(), enableBots);
+
         gameManager.startGame();
 
-        // Create and broadcast GameStartedEvent with required parameters
         GameStartedEvent gameStartedEvent = new GameStartedEvent(
-            gameManager.getPlayers(),                  // List of all players
-            gameManager.getCurrentPlayer().getName(),   // Starting player
-            gameManager.getPlayers().size()            // Total number of players
+            gameManager.getPlayers(),
+            gameManager.getCurrentPlayer().getName(),
+            gameManager.getPlayers().size()
         );
         networkHandler.broadcast(gameStartedEvent);
 
-        // Send success response to admin
         networkHandler.sendToClient(
             connectionId,
             new StartGameResponseEvent(StartGameResponseEvent.Response.OK)
         );
 
-        // Broadcast initial game state
         broadcastGameState();
 
-        // Start bot turn if current player is a bot
         checkAndPlayBotTurn();
 
         logGameState();
@@ -393,12 +451,10 @@ public class ServerGameStateManager implements MessageListener {
     private void addBotPlayers() {
         List<String> availableColors = new ArrayList<>(Arrays.asList("RED", "BLUE", "GREEN", "YELLOW"));
 
-        // Remove colors already in use by real players
         for (Player player : gameManager.getPlayers()) {
             availableColors.remove(player.getColor().toUpperCase());
         }
 
-        // Add bots until we have 4 players or run out of colors
         int currentPlayerCount = gameManager.getPlayers().size();
         int botsToAdd = Math.min(Constants.MAX_PLAYERS - currentPlayerCount, availableColors.size());
 
@@ -406,7 +462,6 @@ public class ServerGameStateManager implements MessageListener {
             String botColor = availableColors.get(i);
             String botName = "Bot-" + botColor;
 
-            // Create bot player and add to game
             BotPlayer bot = new BotPlayer(botName, botColor);
             gameManager.addPlayer(bot);
 
@@ -416,93 +471,159 @@ public class ServerGameStateManager implements MessageListener {
 
     private void checkAndPlayBotTurn() {
         Player currentPlayer = gameManager.getCurrentPlayer();
+
+        LOGGER.info("Checking if current player is a bot: " +
+            currentPlayer.getName() + " (" + currentPlayer.getColor() + ")");
+
         if (currentPlayer instanceof BotPlayer) {
-            // Use a thread with delay to simulate bot "thinking"
-            new Thread(() -> {
+            LOGGER.info("Current player is a bot - preparing to handle bot turn");
+
+            Thread botThread = new Thread(() -> {
                 try {
-                    // Small delay before bot makes a move
-                    Thread.sleep(1500);
+                    LOGGER.info("Bot will take its turn in 1 seconds");
+                    Thread.sleep(1000);
+
+                    LOGGER.info("Starting bot turn execution for " + currentPlayer.getName());
                     playBotTurn((BotPlayer) currentPlayer);
+
                 } catch (InterruptedException e) {
                     LOGGER.warning("Bot turn interrupted: " + e.getMessage());
+                } catch (Exception e) {
+                    LOGGER.severe("Unexpected error in bot turn: " + e.getMessage());
+                    e.printStackTrace();
+
+                    gameManager.nextTurn();
+
+                    TurnChangeEvent turnEvent = new TurnChangeEvent(
+                        gameManager.getCurrentPlayer().getName()
+                    );
+                    networkHandler.broadcast(turnEvent);
+
+                    checkAndPlayBotTurn();
                 }
-            }).start();
+            }, "BotTurn-" + currentPlayer.getColor());
+
+            botThread.setDaemon(true);
+            botThread.start();
+
+            LOGGER.info("Bot turn thread started for " + currentPlayer.getName());
+        } else {
+            LOGGER.info("Current player is human: " + currentPlayer.getName());
         }
     }
 
     private void playBotTurn(BotPlayer bot) {
         LOGGER.info("Bot " + bot.getName() + " taking turn");
 
-        // Roll dice for bot
-        int diceRoll = gameManager.rollDice();
-        LOGGER.info("Bot rolled: " + diceRoll);
+        LOGGER.info("Bot state before rolling: " +
+            "Player color=" + bot.getColor() +
+            ", Pawns=" + getDetailedPawnPositions(bot));
 
-        // Broadcast dice roll event
-        DiceRollResultEvent diceEvent = new DiceRollResultEvent(
-            diceRoll,
-            bot.getColor()
-        );
-        networkHandler.broadcast(diceEvent);
+        try {
+            int diceRoll = gameManager.rollDice();
+            LOGGER.info("Bot rolled: " + diceRoll);
 
-        // Let bot choose best move
-        int playerIndex = gameManager.getPlayers().indexOf(bot);
-        int pawnIndex = bot.chooseBestMove(gameManager.getBoard(), diceRoll, gameManager.getPlayers());
+            DiceRollResultEvent diceEvent = new DiceRollResultEvent(
+                diceRoll,
+                bot.getColor()
+            );
+            networkHandler.broadcast(diceEvent);
 
-        if (pawnIndex >= 0) {
-            // Execute bot's chosen move
-            LOGGER.info("Bot moving pawn " + pawnIndex + " with roll " + diceRoll);
+            int[] validMoves = MoveValidator.getValidMoves(bot, diceRoll, gameManager.getBoard());
+            LOGGER.info("Valid moves for bot: " + Arrays.toString(validMoves));
 
-            boolean moveSuccess = gameManager.movePawn(playerIndex, pawnIndex, diceRoll);
-            if (moveSuccess) {
-                // Broadcast move result
-                Pawn movedPawn = bot.getPawns().get(pawnIndex);
-                MoveResultEvent moveEvent = new MoveResultEvent(
-                    true,
-                    "Bot moved successfully",
-                    pawnIndex,
-                    movedPawn.getPosition()
-                );
-                networkHandler.broadcast(moveEvent);
+            int playerIndex = gameManager.getPlayers().indexOf(bot);
+            int pawnIndex = bot.chooseBestMove(gameManager.getBoard(), diceRoll, gameManager.getPlayers());
 
-                // Update game state
-                broadcastGameState();
+            LOGGER.info("Bot choosing move - Player index: " + playerIndex +
+                ", Pawn index: " + pawnIndex +
+                ", Dice roll: " + diceRoll);
 
-                // Check for win condition
-                if (gameManager.hasPlayerWon(bot.getName())) {
-                    handleGameOver(bot.getName());
-                    return;
+            if (pawnIndex >= 0) {
+                // Execute bot's chosen move
+                LOGGER.info("Bot moving pawn " + pawnIndex + " with roll " + diceRoll);
+
+                boolean moveSuccess = gameManager.movePawn(playerIndex, pawnIndex, diceRoll);
+                if (moveSuccess) {
+                    Pawn movedPawn = bot.getPawns().get(pawnIndex);
+                    LOGGER.info("Bot move successful - New position: " + movedPawn.getPosition());
+
+                    MoveResultEvent moveEvent = new MoveResultEvent(
+                        true,
+                        "Bot moved successfully",
+                        pawnIndex,
+                        movedPawn.getPosition()
+                    );
+                    networkHandler.broadcast(moveEvent);
+
+                    broadcastGameState();
+
+                    if (gameManager.hasPlayerWon(bot.getName())) {
+                        handleGameOver(bot.getName());
+                        return;
+                    }
+                } else {
+                    LOGGER.warning("Bot move failed - Details: Player=" + playerIndex +
+                        ", Pawn=" + pawnIndex +
+                        ", Roll=" + diceRoll);
                 }
             } else {
-                LOGGER.warning("Bot move failed");
+                LOGGER.info("Bot has no valid moves");
             }
-        } else {
-            LOGGER.info("Bot has no valid moves");
-        }
 
-        // Handle turn logic based on dice roll
-        if (diceRoll == 6) {
-            // Bot gets another turn
-            try {
-                Thread.sleep(1000); // Brief pause before next bot action
-                playBotTurn(bot);
-            } catch (InterruptedException e) {
-                LOGGER.warning("Bot turn interrupted: " + e.getMessage());
+            if (diceRoll == 6) {
+                try {
+                    LOGGER.info("Bot rolled 6, taking another turn");
+                    Thread.sleep(1000); // Brief pause before next bot action
+                    playBotTurn(bot);
+                } catch (InterruptedException e) {
+                    LOGGER.warning("Bot turn interrupted: " + e.getMessage());
+                }
+            } else {
+                gameManager.nextTurn();
+                LOGGER.info("Bot turn complete, moving to next player: " +
+                    gameManager.getCurrentPlayer().getName());
+
+                TurnChangeEvent turnEvent = new TurnChangeEvent(
+                    gameManager.getCurrentPlayer().getName()
+                );
+                networkHandler.broadcast(turnEvent);
+
+                checkAndPlayBotTurn();
             }
-        } else {
-            // Move to next player
+        } catch (Exception e) {
+            LOGGER.severe("Error during bot turn: " + e.getMessage());
+            e.printStackTrace();
+
             gameManager.nextTurn();
-
-            // Send turn change event
             TurnChangeEvent turnEvent = new TurnChangeEvent(
                 gameManager.getCurrentPlayer().getName()
             );
             networkHandler.broadcast(turnEvent);
-
-            // Check if next player is also a bot
             checkAndPlayBotTurn();
         }
     }
 
+    private String getDetailedPawnPositions(Player player) {
+        StringBuilder sb = new StringBuilder("[");
+        for (int i = 0; i < player.getPawns().size(); i++) {
+            Pawn pawn = player.getPawns().get(i);
+            sb.append("Pawn").append(i).append("(");
+            if (pawn.isHome()) {
+                sb.append("home");
+            } else if (pawn.isFinished()) {
+                sb.append("finished");
+            } else {
+                sb.append("pos=").append(pawn.getPosition());
+            }
+            sb.append(")");
+            if (i < player.getPawns().size() - 1) {
+                sb.append(", ");
+            }
+        }
+        sb.append("]");
+        return sb.toString();
+    }
     private void logGameState() {
         StringBuilder state = new StringBuilder("Current Game State:\n");
         state.append("Players: ").append(gameManager.getPlayers().size()).append("\n");
@@ -594,26 +715,22 @@ public class ServerGameStateManager implements MessageListener {
         String playerName = event.getPlayerName();
         String color = event.getDesiredColor().toUpperCase();
 
-        // Validate name
         if (isNameTaken(playerName.toUpperCase(), color.toUpperCase())) {
             networkHandler.sendToClient(connectionId,
                 new JoinGameResponseEvent(Response.USERNAME_TAKEN));
             return;
         }
-        // Validate color
         if (isColorTaken(color.toUpperCase())) {
             networkHandler.sendToClient(connectionId,
                 new JoinGameResponseEvent(Response.COLOR_TAKEN));
             return;
         }
 
-        // Add player
         Player newPlayer = new Player(playerName, color);
         if (gameManager.addPlayer(newPlayer)) {
             connectionToPlayerMap.put(connectionId, playerName);
             LOGGER.info("Player joined successfully: " + event.getPlayerName());
 
-            // Send responses
             networkHandler.sendToClient(connectionId,
                 new JoinGameResponseEvent(Response.OK));
 
@@ -623,7 +740,6 @@ public class ServerGameStateManager implements MessageListener {
                 LOGGER.info("First player joined: " + event.getPlayerName());
             }
 
-            // Broadcast update
             networkHandler.broadcast(new PlayerJoinedEvent(newPlayer));
             broadcastPlayerList();
         } else {
@@ -645,32 +761,4 @@ public class ServerGameStateManager implements MessageListener {
             gameManager.getPlayers().size())
         );
     }
-
-//    private void checkGameStart() {
-//        if (gameManager.getPlayers().size() >= 2 && !gameManager.isGameStarted()) {
-//            // Automatically start game with 4 players
-//            if (gameManager.getPlayers().size() == 4) {
-//                startGame();
-//            }
-//        }
-//    }
-
-//    private void startGame() {
-//        gameManager.startGame();
-//
-//        GameStartedEvent gameStartEvent = new GameStartedEvent(
-//            gameManager.getPlayers(),
-//            gameManager.getCurrentPlayer().getName(),
-//            gameManager.getPlayers().size()
-//        );
-//        networkHandler.broadcast(gameStartEvent);
-//
-//        // Start first turn
-//        TurnChangeEvent turnEvent = new TurnChangeEvent(gameManager.getCurrentPlayer().getName());
-//        LOGGER.info("Starting game with player: " + gameManager.getCurrentPlayer().getName());
-//        networkHandler.broadcast(turnEvent);
-//
-//        // Send initial game state
-//        broadcastGameState();
-//    }
 }

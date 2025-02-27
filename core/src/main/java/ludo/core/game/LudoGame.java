@@ -76,15 +76,6 @@ public class LudoGame {
             newPosition = potentialNewPos % BOARD_SIZE;
         }
 
-        // Check for collisions with own pawns
-        if (!board.isSafeSpot(newPosition)) {
-            for (Pawn otherPawn : player.getPawns()) {
-                if (otherPawn != pawn && otherPawn.getPosition() == newPosition) {
-                    return false;
-                }
-            }
-        }
-
         // Execute move
         pawn.setPosition(newPosition);
         handleCaptures(player, newPosition);
@@ -113,16 +104,6 @@ public class LudoGame {
         if (player.isInHomeColumn(pawn.getPosition())) {
             int newPosition = pawn.getPosition() + steps;
             return newPosition < BOARD_SIZE + HOME_COLUMN_SIZE;
-        }
-
-        // Check for collisions with own pawns on regular spaces
-        int newPosition = calculateNewPosition(player, pawn.getPosition(), steps);
-        if (newPosition < BOARD_SIZE && !board.isSafeSpot(newPosition)) {
-            for (Pawn otherPawn : player.getPawns()) {
-                if (otherPawn != pawn && otherPawn.getPosition() == newPosition) {
-                    return false;
-                }
-            }
         }
 
         return true;

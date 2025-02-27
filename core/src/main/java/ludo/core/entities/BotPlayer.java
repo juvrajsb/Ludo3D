@@ -2,9 +2,11 @@ package ludo.core.entities;
 
 import ludo.core.utils.GameUtils;
 import java.util.*;
-import java.util.stream.Collectors;
+import java.util.logging.Logger;
 
-public class BotPlayer extends Player {//TODO check usage not used currently
+public class BotPlayer extends Player {
+    private static final Logger LOGGER = Logger.getLogger(BotPlayer.class.getName());
+
     private static final int CAPTURE_SCORE = 100;
     private static final int SAFETY_SCORE = 50;
     private static final int PROGRESS_SCORE = 30;
@@ -19,16 +21,33 @@ public class BotPlayer extends Player {//TODO check usage not used currently
         List<PawnMove> possibleMoves = generatePossibleMoves(board, diceRoll);
 
         if (possibleMoves.isEmpty()) {
+            LOGGER.info("No valid moves available for " + getColor());
             return -1; // No valid moves
         }
 
-        // Evaluate each move and choose the best one
-        PawnMove bestMove = possibleMoves.stream()
-            .max(Comparator.comparingInt(move ->
-                evaluateMove(move, board, allPlayers)))
-            .orElse(possibleMoves.get(0));
+        PawnMove bestMove = null;
+        int bestScore = Integer.MIN_VALUE;
 
-        return bestMove.pawnIndex;
+        for (PawnMove move : possibleMoves) {
+            int score = evaluateMove(move, board, allPlayers);
+            LOGGER.info("Evaluating move: Pawn " + move.pawnIndex +
+                " to position " + move.newPosition + " - Score: " + score);
+
+            if (score > bestScore) {
+                bestScore = score;
+                bestMove = move;
+            }
+        }
+
+        if (bestMove != null) {
+            LOGGER.info("Best move selected: Pawn " + bestMove.pawnIndex +
+                " from " + bestMove.startPosition + " to " + bestMove.newPosition +
+                " with score " + bestScore);
+            return bestMove.pawnIndex;
+        } else {
+            LOGGER.warning("Failed to select a best move despite having possible moves");
+            return possibleMoves.get(0).pawnIndex; // Fallback to first move
+        }
     }
 
     private List<PawnMove> generatePossibleMoves(Board board, int diceRoll) {
@@ -49,7 +68,14 @@ public class BotPlayer extends Player {//TODO check usage not used currently
 
     private boolean canMovePawn(Pawn pawn, Board board, int diceRoll) {
         if (pawn.isHome()) {
-            return diceRoll == 6;  // Can only leave home with a 6
+            boolean result = diceRoll == 6;
+            LOGGER.fine("Checking if pawn can leave home with roll " + diceRoll + ": " + result);
+            return result;
+        }
+
+        if (pawn.isFinished()) {
+            LOGGER.fine("Pawn is already finished, cannot move");
+            return false;
         }
 
         int currentPosition = pawn.getPosition();
@@ -57,7 +83,9 @@ public class BotPlayer extends Player {//TODO check usage not used currently
         int newPosition = currentPosition + diceRoll;
         int entryPoint = (playerStart - 1 + board.getTotalSpaces()) % board.getTotalSpaces();
 
-        // Check if pawn will enter home column
+        LOGGER.fine("Calculated new position: current=" + currentPosition +
+            ", start=" + playerStart + ", new=" + newPosition);
+
         if (currentPosition <= entryPoint && newPosition > entryPoint) {
             int stepsIntoHome = newPosition - entryPoint - 1;
             if (stepsIntoHome >= board.getHomeColumnSize()) {

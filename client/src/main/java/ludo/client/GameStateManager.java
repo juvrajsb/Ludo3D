@@ -15,7 +15,6 @@ import ludo.client.screens.GameScreen;
 import ludo.core.entities.Player;
 
 import java.util.ArrayList;
-import java.util.Map;
 import java.util.logging.Logger;
 import java.util.List;
 
@@ -25,6 +24,7 @@ public class GameStateManager implements MessageListener {
     private final ClientNetworkHandler networkHandler;
     private GameManager gameManager;
     private GameScreen gameScreen;
+    private GameState gameState;
     private boolean isMyTurn;
     private int currentDiceValue;
     private boolean isFirstPlayer;
@@ -110,11 +110,11 @@ public class GameStateManager implements MessageListener {
         }
     }
 
-    public void checkFirstPlayer(MessageListener callback) { //TODO check usage not used currently
-        if (isFirstPlayer) {
-            callback.onMessageReceived(new FirstPlayerEvent());
-        }
-    }
+//    public void checkFirstPlayer(MessageListener callback) { //TODO check usage not used currently
+//        if (isFirstPlayer) {
+//            callback.onMessageReceived(new FirstPlayerEvent());
+//        }
+//    }
 
     public boolean isFirstPlayer() {
         return isFirstPlayer;
@@ -130,9 +130,9 @@ public class GameStateManager implements MessageListener {
         }
     }
 
-    public void startGame() {
-        startGame(false);
-    }
+//    public void startGame() {
+//        startGame(false);
+//    }
 
     public void leaveGame() {
         networkHandler.sendMessage(new LeaveGameRequestEvent());
@@ -216,7 +216,7 @@ public class GameStateManager implements MessageListener {
                     ErrorEvent errorEvent = (ErrorEvent) message;
                     LOGGER.warning("Error from server: " + errorEvent.getMessage());
                     gameScreen.showMessage("Error: " + errorEvent.getMessage());
-                    gameScreen.enableControls(); // Re-enable controls for retry
+                    gameScreen.enableControls();
                     break;
                 case "CAN_ROLL_AGAIN":
                     LOGGER.info("Player can roll again");
@@ -254,34 +254,48 @@ public class GameStateManager implements MessageListener {
 
         LOGGER.info("Requesting move - Pawn: " + pawnIndex + ", Steps: " + currentDiceValue);
 
-        // Client-side prediction (visually)
         gameScreen.highlightPawnAsMoving(pawnIndex);
 
-        // Send request to server
         networkHandler.sendMessage(new MoveRequestEvent(pawnIndex, currentDiceValue));
 
-        // Temporarily disable controls while waiting for server response
         gameScreen.disableControls();
     }
 
+    /**
+     * This method handles the move result response from the server with improved
+     * error handling to maintain proper game state after failed moves.
+     */
     private void handleMoveResult(NetworkMessage message) {
         MoveResultEvent event = (MoveResultEvent) message;
+
+        LOGGER.info("Handling move result - Success: " + event.isSuccess() +
+            ", Message: " + event.getMessage());
+
         if (event.isSuccess()) {
-//            gameScreen.updatePawnPosition(event.getPawnIndex(), event.getNewPosition());
             gameScreen.playMoveAnimation(event.getPawnIndex(), event.getNewPosition());
             gameScreen.disableControls();
         } else {
+            LOGGER.warning("Move failed: " + event.getMessage());
             gameScreen.showMessage(event.getMessage());
-            gameScreen.enableControls();
+
+            if (isMyTurn) {
+                LOGGER.info("Re-enabling pawn selection after failed move");
+                int currentDiceValue = this.currentDiceValue;
+                gameScreen.enablePawnSelection();
+                this.currentDiceValue = currentDiceValue;
+                setGameState(GameState.WAITING_FOR_MOVE);
+            }
         }
     }
 
-//    public void endTurn() {
-//        if (isMyTurn) {
-//            networkHandler.sendMessage(new TurnEndEvent());
-//            isMyTurn = false;
-//        }
-//    }
+    public void setGameState(GameState state) {
+        this.gameState = state;
+        if (gameScreen != null) {
+            gameScreen.updateGameState(state);
+        }
+
+        LOGGER.info("Game state set to: " + state);
+    }
 
     public String getCurrentUsername() {
         return currentUsername;
@@ -305,7 +319,6 @@ public class GameStateManager implements MessageListener {
     private void handleFirstPlayer() {
         LOGGER.info("Setting first player flag from first player event");
         isFirstPlayer = true;
-        // If we're already in lobby screen, update it
         if (lobbyScreen != null) {
             lobbyScreen.setFirstPlayer();
         }
@@ -314,7 +327,6 @@ public class GameStateManager implements MessageListener {
     public void handleWaitingRoomUpdate(WaitingRoomUpdateEvent event) {
         LOGGER.info("Updating lobby with " + event.getUsernames().size() + " players");
 
-        // Store players in GameStateManager
         currentPlayers.clear();
         for (String username : event.getUsernames()) {
             currentPlayers.add(new Player(username, event.getColorForPlayer(username)));
@@ -361,7 +373,6 @@ public class GameStateManager implements MessageListener {
                 LOGGER.info("This client is the first player");
             }
 
-            // Move to lobby screen
             Gdx.app.postRunnable(() -> {
                 if (currentScreen instanceof UsernameScreen) {
                     UsernameScreen screen = (UsernameScreen) currentScreen;
@@ -372,7 +383,6 @@ public class GameStateManager implements MessageListener {
                 }
             });
         } else {
-            // Handle error responses
             if (currentScreen instanceof UsernameScreen) {
                 Gdx.app.postRunnable(() -> {
                     UsernameScreen screen = (UsernameScreen) currentScreen;
@@ -401,7 +411,6 @@ public class GameStateManager implements MessageListener {
                 newGameScreen.addPlayer(player);
             });
 
-            // Use player name instead of color for comparison
             String startingPlayerName = event.getStartingPlayer();
             newGameScreen.setCurrentPlayer(startingPlayerName);
             isMyTurn = currentUsername.equals(startingPlayerName);
@@ -420,9 +429,9 @@ public class GameStateManager implements MessageListener {
         });
     }
 
-    public List<Player> getCurrentPlayers() {
-        return new ArrayList<>(currentPlayers);
-    }
+//    public List<Player> getCurrentPlayers() {
+//        return new ArrayList<>(currentPlayers);
+//    }
 
     public void handleStartGameResponse(StartGameResponseEvent event) {
         LOGGER.info("Start game response received: " + event.getResponse());
@@ -446,10 +455,8 @@ public class GameStateManager implements MessageListener {
             ", currentDiceValue: " + currentDiceValue);
         LOGGER.info("Dice roll result: " + currentDiceValue + " for " + event.getPlayerColor());
 
-        // Always update the UI to show the roll
         gameScreen.updateDiceDisplay(currentDiceValue);
 
-        // Only handle move logic if it's our turn
         if (isMyTurn) {
             if (currentDiceValue == 6) {
                 consecutiveSixes++;
@@ -494,12 +501,6 @@ public class GameStateManager implements MessageListener {
                 } else {
                     gameScreen.showMessage("Select a pawn to move");
                 }
-//            } else {
-//                LOGGER.info("No valid moves available with roll: " + currentDiceValue);
-//                gameScreen.showMessage("No valid moves - turn passed");
-//                networkHandler.sendMessage(new TurnEndEvent());
-//                isMyTurn = false;
-//                consecutiveSixes = 0;
             }
         }
         LOGGER.info("=== Dice Roll Handler End ===");
@@ -508,11 +509,9 @@ public class GameStateManager implements MessageListener {
     private boolean hasValidMovesAvailable(Player player, int roll) {
         int playerIndex = gameManager.getPlayers().indexOf(player);
 
-        // Check each pawn
         for (int i = 0; i < player.getPawns().size(); i++) {
             Pawn pawn = player.getPawns().get(i);
 
-            // For pawns in home, only 6 is valid to move out of home
             if (pawn.isHome()) {
                 if (roll == 6) {
                     return true;
@@ -520,7 +519,6 @@ public class GameStateManager implements MessageListener {
                 continue;
             }
 
-            // For pawns on board, any valid move is possible
             if (!pawn.isHome() && gameManager.movePawn(playerIndex, i, roll)) {
                 LOGGER.info("Found valid move for pawn " + i + " at position " + pawn.getPosition());
                 return true;
@@ -544,59 +542,52 @@ public class GameStateManager implements MessageListener {
         }
     }
 
-    public void handleGameStateUpdate(NetworkMessage message) {
+    private void handleGameStateUpdate(NetworkMessage message) {
         GameStateUpdateEvent event = (GameStateUpdateEvent) message;
 
-        // Always accept the server's state as authoritative
-        Map<String, List<Integer>> serverPositions = event.getPawnPositions();
-
-        // Update client game state
         if (gameScreen != null) {
-            // Update pawn positions based on server state
-            for (Map.Entry<String, List<Integer>> entry : serverPositions.entrySet()) {
-                String color = entry.getKey();
-                List<Integer> positions = entry.getValue();
-                gameScreen.updatePlayerPawns(color, positions);
-            }
+            event.getPawnPositions().forEach((color, positions) ->
+                gameScreen.updatePlayerPawns(color, positions)
+            );
 
-            // Update current player
             gameScreen.setCurrentPlayer(event.getCurrentPlayer());
 
-            // Update UI based on game state
-            updateUIForGameState(event.getGameState(), event.getCurrentPlayer());
-        }
-    }
-
-    private void updateUIForGameState(GameState state, String currentPlayerColor) {
-        isMyTurn = currentPlayerColor.equals(currentColor);
-
-        if (isMyTurn) {
-            switch (state) {
-                case IN_PROGRESS:
-                    gameScreen.enableControls();
-                    gameScreen.showMessage("Your turn! Roll the dice");
-                    break;
-
-                case DICE_ROLLED:
-                    gameScreen.disableControls();
-                    gameScreen.showMessage("Dice rolled. Wait for server...");
-                    break;
-
-                case WAITING_FOR_MOVE:
-                    gameScreen.enablePawnSelection();
-                    gameScreen.showMessage("Select a pawn to move");
-                    break;
-
-                default:
-                    gameScreen.disableControls();
-                    gameScreen.showMessage("Waiting for server...");
-                    break;
+            if (isMyTurn) {
+                gameScreen.enableControls();
             }
-        } else {
-            gameScreen.disableControls();
-            gameScreen.showMessage("Waiting for " + currentPlayerColor);
         }
     }
+
+//    private void updateUIForGameState(GameState state, String currentPlayerColor) {
+//        isMyTurn = currentPlayerColor.equals(currentColor);
+//
+//        if (isMyTurn) {
+//            switch (state) {
+//                case IN_PROGRESS:
+//                    gameScreen.enableControls();
+//                    gameScreen.showMessage("Your turn! Roll the dice");
+//                    break;
+//
+//                case DICE_ROLLED:
+//                    gameScreen.disableControls();
+//                    gameScreen.showMessage("Dice rolled. Wait for server...");
+//                    break;
+//
+//                case WAITING_FOR_MOVE:
+//                    gameScreen.enablePawnSelection();
+//                    gameScreen.showMessage("Select a pawn to move");
+//                    break;
+//
+//                default:
+//                    gameScreen.disableControls();
+//                    gameScreen.showMessage("Waiting for server...");
+//                    break;
+//            }
+//        } else {
+//            gameScreen.disableControls();
+//            gameScreen.showMessage("Waiting for " + currentPlayerColor);
+//        }
+//    }
 
     private void handlePlayerJoined(NetworkMessage message) {
         PlayerJoinedEvent event = (PlayerJoinedEvent) message;
@@ -618,6 +609,7 @@ public class GameStateManager implements MessageListener {
         gameScreen.disableControls();
 
         if (gameScreen != null) {
+            gameScreen.setCurrentPlayer(event.getCurrentPlayer());
             if (isMyTurn) {
                 gameScreen.enableControls();
                 gameScreen.showMessage("Your turn! Roll the dice");
@@ -640,21 +632,21 @@ public class GameStateManager implements MessageListener {
         }
     }
 
-    public void handlePlayerLeft(String playerName) { //TODO check usage not used currently
-        gameScreen.removePlayer(playerName);
-    }
-
-    public GameScreen getGameScreen() { //TODO check usage not used currently
-        return gameScreen;
-    }
-
-    public NetworkHandler getNetworkHandler() { //TODO check usage not used currently
-        return networkHandler;
-    }
-
-    public void addPlayer(Player player) { //TODO check usage not used currently
-        gameScreen.addPlayer(player);
-    }
+//    public void handlePlayerLeft(String playerName) { //TODO check usage not used currently
+//        gameScreen.removePlayer(playerName);
+//    }
+//
+//    public GameScreen getGameScreen() { //TODO check usage not used currently
+//        return gameScreen;
+//    }
+//
+//    public NetworkHandler getNetworkHandler() { //TODO check usage not used currently
+//        return networkHandler;
+//    }
+//
+//    public void addPlayer(Player player) { //TODO check usage not used currently
+//        gameScreen.addPlayer(player);
+//    }
 
     public boolean isConnected() {
         return networkHandler.isConnected();

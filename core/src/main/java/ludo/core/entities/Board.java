@@ -72,39 +72,37 @@ public class Board implements Serializable {
         playerStartPositions.put("GREEN", 39);
     }
 
-    public int getHomeBase(String color) {
-        switch (color.toUpperCase()) {
-            case "YELLOW": return BOARD_SIZE + 3 * HOME_COLUMN_SIZE;
-            case "BLUE": return BOARD_SIZE + 2 * HOME_COLUMN_SIZE;
-            case "RED": return BOARD_SIZE;
-            case "GREEN": return BOARD_SIZE + HOME_COLUMN_SIZE;
-            default: return -1;
-        }
-    }
+//    public int getHomeBase(String color) {
+//        switch (color.toUpperCase()) {
+//            case "YELLOW": return BOARD_SIZE + 3 * HOME_COLUMN_SIZE;
+//            case "BLUE": return BOARD_SIZE + 2 * HOME_COLUMN_SIZE;
+//            case "RED": return BOARD_SIZE;
+//            case "GREEN": return BOARD_SIZE + HOME_COLUMN_SIZE;
+//            default: return -1;
+//        }
+//    }
 
     public int getStartPosition(String color) {
         return playerStartPositions.getOrDefault(color.toUpperCase(), -1);
     }
 
-    public int getSafeSpot(String color) {
-        switch (color.toUpperCase()) {
-            case "YELLOW": return 45;
-            case "BLUE": return 32;
-            case "RED": return 6;
-            case "GREEN": return 19;
-            default: return -1;
-        }
-    }
+//    public int getSafeSpot(String color) {
+//        switch (color.toUpperCase()) {
+//            case "YELLOW": return 45;
+//            case "BLUE": return 32;
+//            case "RED": return 6;
+//            case "GREEN": return 19;
+//            default: return -1;
+//        }
+//    }
 
-    // Add new helper method for position validation
-    public boolean isValidPosition(int position) {
-        if (position < 0) return false;
-        if (position < BOARD_SIZE) return true;
-        if (position < BOARD_SIZE + (HOME_COLUMN_SIZE * 4)) return true;
-        return false;
-    }
+//    public boolean isValidPosition(int position) {
+//        if (position < 0) return false;
+//        if (position < BOARD_SIZE) return true;
+//        if (position < BOARD_SIZE + (HOME_COLUMN_SIZE * 4)) return true;
+//        return false;
+//    }
 
-    // Update getStartPosition to return position index when needed
     public int getStartPositionIndex(String color) {
         return playerStartPositions.getOrDefault(color.toUpperCase(), -1);
     }
