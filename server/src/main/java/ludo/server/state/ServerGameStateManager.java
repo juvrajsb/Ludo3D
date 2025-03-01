@@ -131,7 +131,7 @@ public class ServerGameStateManager implements MessageListener {
                     handleTurnEnd(event);
                     timer.cancel(); // Clean up timer
                 }
-            }, 1000); // 1 second delay
+            }, 1500); // 1.5 second delay
         } else {
             gameManager.setGameState(GameState.WAITING_FOR_MOVE);
             broadcastGameState();
@@ -224,13 +224,19 @@ public class ServerGameStateManager implements MessageListener {
             if (steps == 6) {
                 LOGGER.info("Player rolled a 6 - gets another turn");
                 gameManager.setGameState(GameState.IN_PROGRESS);
+
+//                boolean isBot = currentPlayer instanceof BotPlayer;
+
+//                if (!isBot) {
+                    gameManager.setLastDiceRoll(0);
+//                }
                 networkHandler.sendToClient(connectionId, new ludo.core.events.serverToClient.CanRollAgainEvent());
             } else {
                 gameManager.nextTurn();
                 String nextPlayer = gameManager.getCurrentPlayer().getName();
                 LOGGER.info("Next player: " + nextPlayer);
-
                 networkHandler.broadcast(new ludo.core.events.serverToClient.TurnChangeEvent(nextPlayer));
+                checkAndPlayBotTurn();
             }
 
             broadcastGameState();
@@ -339,42 +345,37 @@ public class ServerGameStateManager implements MessageListener {
     private void initializePlayersWithColors(List<Player> realPlayers, boolean enableBots) {
         gameManager.clearPlayers();
 
-        List<Player> playersToAdd = new ArrayList<>(realPlayers);
+        Map<String, Player> playersByColor = new HashMap<>();
 
-        Random random = new Random();
-        int startingColorIndex = random.nextInt(COLOR_ORDER.length);
-
-        LOGGER.info("Randomizing starting color. Selected index: " + startingColorIndex +
-            " (" + COLOR_ORDER[startingColorIndex] + ")");
-
-        for (int i = 0; i < realPlayers.size(); i++) {
-            Player player = realPlayers.get(i);
-            String newColor = COLOR_ORDER[(startingColorIndex + i) % COLOR_ORDER.length];
-
-            LOGGER.info("Assigning color " + newColor + " to player " + player.getName() +
-                " (original color: " + player.getColor() + ")");
-
-            Player recoloredPlayer = new Player(player.getName(), newColor);
-            playersToAdd.set(i, recoloredPlayer);
+        for (Player player : realPlayers) {
+            playersByColor.put(player.getColor().toUpperCase(), player);
         }
 
         if (enableBots) {
-            int realPlayerCount = realPlayers.size();
-
-            for (int i = 0; i < COLOR_ORDER.length - realPlayerCount; i++) {
-                int colorIndex = (startingColorIndex + realPlayerCount + i) % COLOR_ORDER.length;
-                String botColor = COLOR_ORDER[colorIndex];
-                String botName = "Bot-" + botColor;
-
-                BotPlayer bot = new BotPlayer(botName, botColor);
-                playersToAdd.add(bot);
-
-                LOGGER.info("Added bot player: " + botName + " (" + botColor + ")");
+            for (String color : COLOR_ORDER) {
+                if (!playersByColor.containsKey(color) && playersByColor.size() < Constants.MAX_PLAYERS) {
+                    String botName = "Bot-" + color;
+                    BotPlayer bot = new BotPlayer(botName, color);
+                    playersByColor.put(color, bot);
+                    LOGGER.info("Added bot player: " + botName + " (" + color + ")");
+                }
             }
         }
 
-        for (Player player : playersToAdd) {
-            gameManager.addPlayer(player);
+        Random random = new Random();
+        int startingColorIndex = random.nextInt(COLOR_ORDER.length);
+        LOGGER.info("Randomizing starting color. Selected index: " + startingColorIndex +
+            " (" + COLOR_ORDER[startingColorIndex] + ")");
+
+        for (int i = 0; i < COLOR_ORDER.length; i++) {
+            int colorIndex = (startingColorIndex + i) % COLOR_ORDER.length;
+            String color = COLOR_ORDER[colorIndex];
+
+            Player player = playersByColor.get(color);
+            if (player != null) {
+                gameManager.addPlayer(player);
+                LOGGER.info("Adding player to game: " + player.getName() + " with color: " + player.getColor());
+            }
         }
 
         LOGGER.info("Final player order:");
@@ -480,8 +481,8 @@ public class ServerGameStateManager implements MessageListener {
 
             Thread botThread = new Thread(() -> {
                 try {
-                    LOGGER.info("Bot will take its turn in 1 seconds");
-                    Thread.sleep(1000);
+                    LOGGER.info("Bot will take its turn in 1.5 seconds");
+                    Thread.sleep(1500);
 
                     LOGGER.info("Starting bot turn execution for " + currentPlayer.getName());
                     playBotTurn((BotPlayer) currentPlayer);
@@ -574,7 +575,7 @@ public class ServerGameStateManager implements MessageListener {
             if (diceRoll == 6) {
                 try {
                     LOGGER.info("Bot rolled 6, taking another turn");
-                    Thread.sleep(1000); // Brief pause before next bot action
+                    Thread.sleep(1500); // Brief pause before next bot action
                     playBotTurn(bot);
                 } catch (InterruptedException e) {
                     LOGGER.warning("Bot turn interrupted: " + e.getMessage());

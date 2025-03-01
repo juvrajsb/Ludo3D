@@ -107,9 +107,9 @@ public class Server {
         return welcomeSocket;
     }
 
-    public EventReceiver getEventReceiver() {
-        return eventReceiver;
-    }
+//    public EventReceiver getEventReceiver() {
+//        return eventReceiver;
+//    }
 
     public synchronized void addClient(Connection connection, Thread clientThread) {
         connectedClients.put(connection, clientThread);

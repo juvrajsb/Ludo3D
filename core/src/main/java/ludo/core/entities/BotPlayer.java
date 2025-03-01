@@ -1,7 +1,6 @@
 package ludo.core.entities;
 
 import ludo.core.utils.Constants;
-import ludo.core.utils.GameUtils;
 import java.util.*;
 import java.util.logging.Logger;
 

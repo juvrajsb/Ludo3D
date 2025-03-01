@@ -47,14 +47,16 @@ public class BoardCoordinates {
 
     // Home column paths
     private static final int[][][] HOME_COLUMNS = {
-        // RED (goes up)
-        {{7, 9}, {7, 10}, {7, 11}, {7, 12}, {7, 13}, {7, 14}},
-        // BLUE (goes left)
-        {{12, 7}, {11, 7}, {10, 7}, {9, 7}, {8, 7}, {7, 7}},
-        // GREEN (goes right)
-        {{1, 7}, {2, 7}, {3, 7}, {4, 7}, {5, 7}, {6, 7}},
-        // YELLOW (goes down)
+        // YELLOW
         {{7, 5}, {7, 4}, {7, 3}, {7, 2}, {7, 1}, {7, 0}}
+        // BLUE
+        {{12, 7}, {11, 7}, {10, 7}, {9, 7}, {8, 7}, {7, 7}},
+        // RED
+        {{7, 9}, {7, 10}, {7, 11}, {7, 12}, {7, 13}, {7, 14}},
+        // GREEN
+        {{1, 7}, {2, 7}, {3, 7}, {4, 7}, {5, 7}, {6, 7}},
+
+
     };
 
     public static Vector3 getMainPathPosition(int position) {
