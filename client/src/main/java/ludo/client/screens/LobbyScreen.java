@@ -70,7 +70,7 @@ public class LobbyScreen extends BaseScreen {
             @Override
             public void changed(ChangeEvent event, Actor actor) {
                 if (isAdmin && !startButton.isDisabled()) {
-                    game.getGameStateManager().startGame(botPlayersCheckbox.isChecked());
+                    checkForSavedGame();
                 }
             }
         });
@@ -90,6 +90,29 @@ public class LobbyScreen extends BaseScreen {
         stage.addActor(mainTable);
         game.getGameStateManager().setLobbyScreen(this);
         checkAdminStatus();
+    }
+
+    private void checkForSavedGame() {
+        if (game.getGameStateManager().hasSavedGameWithMatchingPlayers()) {
+            showLoadSavedGameDialog();
+        } else {
+            // No saved game or no matching players
+            game.getGameStateManager().startGame(botPlayersCheckbox.isChecked(), false);
+        }
+    }
+
+    private void showLoadSavedGameDialog() {
+        Dialog dialog = new Dialog("Load Saved Game", skin) {
+            @Override
+            protected void result(Object object) {
+                boolean loadSavedGame = (Boolean) object;
+                game.getGameStateManager().startGame(botPlayersCheckbox.isChecked(), loadSavedGame);
+            }
+        };
+        dialog.text("A saved game with matching players was found.\nWould you like to load it?");
+        dialog.button("Yes", true);
+        dialog.button("No", false);
+        dialog.show(stage);
     }
 
     private void handleBotPlayersToggle(boolean enableBots) {

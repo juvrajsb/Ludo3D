@@ -7,6 +7,7 @@ import ludo.core.game.GameState;
 import ludo.core.game.GameManager;
 import ludo.core.network.MessageListener;
 import ludo.core.network.NetworkMessage;
+import ludo.core.persistence.GamePersistence;
 import ludo.core.utils.Constants;
 import ludo.core.validation.MoveValidator;
 import ludo.server.networking.ServerNetworkHandler;
@@ -416,15 +417,31 @@ public class ServerGameStateManager implements MessageListener {
             return;
         }
 
-        LOGGER.info("Starting game with " + realPlayerCount + " real players" +
+        // Check if we should load a saved game
+        boolean loadSavedGame = event.isLoadSavedGame();
+        if (loadSavedGame && GamePersistence.hasSaveGame()) {
+            GamePersistence.GameSaveData saveData = GamePersistence.loadGame();
+            if (saveData != null) {
+                LOGGER.info("Loading saved game");
+                loadSavedGameState(saveData);
+
+                networkHandler.sendToClient(
+                    connectionId,
+                    new StartGameResponseEvent(StartGameResponseEvent.Response.OK)
+                );
+
+                broadcastGameState();
+                checkAndPlayBotTurn();
+                return;
+            }
+        }
+
+        LOGGER.info("Starting new game with " + realPlayerCount + " real players" +
             (enableBots ? " and bot players" : ""));
 
         if (enableBots) {
             addBotPlayers();
         }
-
-        LOGGER.info("Starting game with " + realPlayerCount + " real players" +
-            (enableBots ? " and bot players" : ""));
 
         initializePlayersWithColors(gameManager.getPlayers(), enableBots);
 
@@ -447,6 +464,42 @@ public class ServerGameStateManager implements MessageListener {
         checkAndPlayBotTurn();
 
         logGameState();
+    }
+
+    private void loadSavedGameState(GamePersistence.GameSaveData saveData) {
+        gameManager.clearPlayers();
+
+        for (GamePersistence.PlayerSaveData playerData : saveData.players) {
+            Player player = new Player(playerData.name, playerData.color);
+            gameManager.addPlayer(player);
+
+            for (int i = 0; i < playerData.pawns.size(); i++) {
+                GamePersistence.PawnSaveData pawnData = playerData.pawns.get(i);
+                Pawn pawn = player.getPawns().get(i);
+                pawn.setPosition(pawnData.position);
+                if (pawnData.isHome) pawn.sendHome();
+                if (pawnData.isFinished) pawn.setFinished(true);
+            }
+        }
+
+        gameManager.setGameState(saveData.gameState);
+        gameManager.startGame();
+
+        String currentPlayerColor = saveData.currentPlayerColor;
+        for (Player player : gameManager.getPlayers()) {
+            if (player.getColor().equalsIgnoreCase(currentPlayerColor)) {
+                break;
+            }
+        }
+
+        GameStartedEvent gameStartedEvent = new GameStartedEvent(
+            gameManager.getPlayers(),
+            saveData.currentPlayerColor,
+            gameManager.getPlayers().size()
+        );
+        networkHandler.broadcast(gameStartedEvent);
+
+        LOGGER.info("Saved game loaded successfully");
     }
 
     private void addBotPlayers() {

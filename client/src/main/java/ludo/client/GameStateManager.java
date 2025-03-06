@@ -13,10 +13,13 @@ import ludo.core.network.*;
 import ludo.client.networking.ClientNetworkHandler;
 import ludo.client.screens.GameScreen;
 import ludo.core.entities.Player;
+import ludo.core.persistence.GamePersistence;
 
 import java.util.ArrayList;
+import java.util.Set;
 import java.util.logging.Logger;
 import java.util.List;
+import java.util.stream.Collectors;
 
 public class GameStateManager implements MessageListener {
     private static final Logger LOGGER = Logger.getLogger(GameStateManager.class.getName());
@@ -120,19 +123,57 @@ public class GameStateManager implements MessageListener {
         return isFirstPlayer;
     }
 
-    public void startGame(boolean enableBots) {
+    public void startGame(boolean enableBots, boolean loadSavedGame) {
         if (isFirstPlayer && !gameStarted) {
-            LOGGER.info("First player requesting game start with bots: " + enableBots);
-            networkHandler.sendMessage(new StartGameRequestEvent(enableBots));
+            LOGGER.info("First player requesting game start with bots: " + enableBots +
+                ", load saved game: " + loadSavedGame);
+            networkHandler.sendMessage(new StartGameRequestEvent(enableBots, loadSavedGame));
         } else {
             LOGGER.warning("Invalid game start request - isFirstPlayer: " +
                 isFirstPlayer + ", gameStarted: " + gameStarted);
         }
     }
 
+    public void startGame(boolean enableBots) {
+        startGame(enableBots, false);
+    }
+
 //    public void startGame() {
 //        startGame(false);
 //    }
+
+    /**
+     * Checks if there's a saved game with matching player names
+     */
+    public boolean hasSavedGameWithMatchingPlayers() {
+        if (!GamePersistence.hasSaveGame()) {
+            return false;
+        }
+
+        GamePersistence.GameSaveData saveData = GamePersistence.loadGame();
+        if (saveData == null) {
+            return false;
+        }
+
+        return checkIfSavedGameMatchesCurrentPlayers(saveData);
+    }
+
+    private boolean checkIfSavedGameMatchesCurrentPlayers(GamePersistence.GameSaveData saveData) {
+        if (saveData.players.size() != currentPlayers.size()) {
+            return false;
+        }
+
+        // Create sets of player names for comparison
+        Set<String> currentPlayerNames = currentPlayers.stream()
+            .map(Player::getName)
+            .collect(Collectors.toSet());
+
+        Set<String> savedPlayerNames = saveData.players.stream()
+            .map(playerData -> playerData.name)
+            .collect(Collectors.toSet());
+
+        return currentPlayerNames.equals(savedPlayerNames);
+    }
 
     public void leaveGame() {
         networkHandler.sendMessage(new LeaveGameRequestEvent());
