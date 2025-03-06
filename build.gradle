@@ -5,6 +5,10 @@ buildscript {
     maven { url "https://oss.sonatype.org/content/repositories/snapshots/" }
     google()
   }
+  dependencies {
+    // Update to a newer Android Gradle Plugin
+    classpath 'com.android.tools.build:gradle:8.1.4'
+  }
 }
 
 allprojects {
@@ -22,6 +26,7 @@ allprojects {
     mavenCentral()
     maven { url "https://oss.sonatype.org/content/repositories/snapshots/" }
     maven { url "https://oss.sonatype.org/content/repositories/releases/" }
+    google()
   }
 }
 
@@ -61,31 +66,44 @@ project(":client") {
   }
 }
 
-  project(":lwjgl3") {
-    apply plugin: 'application'
+// LWJGL3 module
+project(":lwjgl3") {
+  apply plugin: 'application'
 
-    dependencies {
-        implementation project(":core")
-        implementation "com.badlogicgames.gdx:gdx-backend-lwjgl3:$gdxVersion"
-        implementation "com.badlogicgames.gdx:gdx-platform:$gdxVersion:natives-desktop"
+  dependencies {
+    implementation project(":core")
+    implementation "com.badlogicgames.gdx:gdx-backend-lwjgl3:$gdxVersion"
+    implementation "com.badlogicgames.gdx:gdx-platform:$gdxVersion:natives-desktop"
+  }
+
+  application {
+    mainClass = 'main.java.ludo.lwjgl3.Lwjgl3Launcher'
+  }
+
+  jar {
+    dependsOn configurations.runtimeClasspath
+    from { configurations.runtimeClasspath.collect { it.isDirectory() ? it : zipTree(it) } }
+    duplicatesStrategy = DuplicatesStrategy.INCLUDE
+  }
+
+  tasks.withType(JavaExec) {
+    workingDir = rootProject.file("assets")
+
+    if (System.getProperty("os.name").toLowerCase().contains("mac")) {
+      jvmArgs += "-XstartOnFirstThread"
     }
+  }
+}
 
-    application {
-        mainClass = 'main.java.ludo.lwjgl3.Lwjgl3Launcher'
-    }
+// Android module
+project(":android") {
+  apply plugin: "com.android.application"
 
-    jar {
-      dependsOn configurations.runtimeClasspath
-      from { configurations.runtimeClasspath.collect { it.isDirectory() ? it : zipTree(it) } }
-      duplicatesStrategy = DuplicatesStrategy.INCLUDE
-    }
+  configurations { natives }
 
-    tasks.withType(JavaExec) {
-      workingDir = rootProject.file("assets")
-
-      if (System.getProperty("os.name").toLowerCase().contains("mac")) {
-        jvmArgs += "-XstartOnFirstThread"
-    }
+  dependencies {
+    implementation project(":core")
+    implementation project(":client")
   }
 }
 

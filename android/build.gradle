@@ -1,0 +1,49 @@
+android {
+//  compileSdkVersion 34
+  sourceSets {
+    main {
+      manifest.srcFile 'src/main/AndroidManifest.xml'
+      java.srcDirs = ['src/main/java']
+      aidl.srcDirs = ['src/main/java']
+      renderscript.srcDirs = ['src/main/java']
+      res.srcDirs = ['src/main/res']
+      assets.srcDirs = ['../assets']
+      jniLibs.srcDirs = ['libs']
+    }
+  }
+  packagingOptions {
+    // Preventing duplicate files in the APK
+    exclude 'META-INF/robovm/ios/robovm.xml'
+  }
+  defaultConfig {
+    compileSdk 34
+    applicationId "ludo.android"
+    minSdkVersion 19  // Updated from 16 to 19 as required by LibGDX
+    targetSdkVersion 34
+    versionCode 1
+    versionName "1.0"
+  }
+  buildTypes {
+    release {
+      minifyEnabled false
+      proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
+    }
+  }
+
+  namespace "ludo.android"
+}
+
+dependencies {
+  implementation project(":core")
+  implementation project(":client")
+  api "com.badlogicgames.gdx:gdx-backend-android:$gdxVersion"
+  api "com.badlogicgames.gdx:gdx-platform:$gdxVersion:natives-armeabi-v7a"
+  api "com.badlogicgames.gdx:gdx-platform:$gdxVersion:natives-arm64-v8a"
+  api "com.badlogicgames.gdx:gdx-platform:$gdxVersion:natives-x86"
+  api "com.badlogicgames.gdx:gdx-platform:$gdxVersion:natives-x86_64"
+  api "com.badlogicgames.gdx:gdx-box2d:$gdxVersion"
+  api "com.badlogicgames.gdx:gdx-box2d-platform:$gdxVersion:natives-armeabi-v7a"
+  api "com.badlogicgames.gdx:gdx-box2d-platform:$gdxVersion:natives-arm64-v8a"
+  api "com.badlogicgames.gdx:gdx-box2d-platform:$gdxVersion:natives-x86"
+  api "com.badlogicgames.gdx:gdx-box2d-platform:$gdxVersion:natives-x86_64"
+}
