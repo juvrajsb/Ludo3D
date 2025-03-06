@@ -1,17 +1,64 @@
+apply plugin: 'java-library'
+
 sourceSets {
   main.java.srcDirs = [ "src/main/java" ]
   main.resources.srcDirs = [ "src/main/resources" ]
 }
 
 dependencies {
-  compileOnly project(":core")
+  // Use api for core
+  api project(":core")
+
+  // Use implementation for everything else to avoid exposing transitive dependencies
+  implementation "com.badlogicgames.gdx:gdx-backend-lwjgl3:$gdxVersion"
+  implementation "com.badlogicgames.gdx:gdx-platform:$gdxVersion:natives-desktop"
+  implementation "com.badlogicgames.gdx:gdx-box2d-platform:$gdxVersion:natives-desktop"
+}
+
+// If this module has application capabilities
+apply plugin: 'application'
+application {
+  mainClass = 'ludo.client.LudoGame'
 }
 
 jar {
-  duplicatesStrategy(DuplicatesStrategy.EXCLUDE)
+  // Only include this project's classes, not LibGDX resources
+  from {
+    sourceSets.main.output.classesDirs
+  }
 
-  from { configurations.compileClasspath.collect { it.isDirectory() ? it : zipTree(it) } }
+  // Only include necessary resources
+  from("src/main/resources") {
+    include "**/*"
+  }
+
+  duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+
   manifest {
-    attributes 'Main-Class': application.mainClass
+    attributes 'Main-Class': 'ludo.client.LudoGame'
+  }
+}
+
+// This is the task for a standalone runnable jar
+task fatJar(type: Jar) {
+  archiveClassifier = 'fat'
+
+  // Include our project classes
+  from sourceSets.main.output.classesDirs
+
+  // Include our resources
+  from("src/main/resources") {
+    include "**/*"
+  }
+
+  // Include all dependencies
+  from {
+    configurations.runtimeClasspath.collect { it.isDirectory() ? it : zipTree(it) }
+  }
+
+  duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+
+  manifest {
+    attributes 'Main-Class': 'ludo.client.LudoGame'
   }
 }

@@ -8,7 +8,6 @@ buildscript {
     google()
   }
   dependencies {
-    // Update to a newer Android Gradle Plugin
     classpath 'com.android.tools.build:gradle:8.1.4'
   }
 }
@@ -52,8 +51,6 @@ project(":core") {
   dependencies {
     api "com.badlogicgames.gdx:gdx:$gdxVersion"
     api "com.badlogicgames.gdx:gdx-box2d:$gdxVersion"
-    api "com.badlogicgames.gdx:gdx-backend-lwjgl3:$gdxVersion"
-    api "com.badlogicgames.gdx:gdx-platform:$gdxVersion:natives-desktop"
 
     implementation "com.google.code.gson:gson:2.10.1"
 
@@ -65,20 +62,9 @@ project(":core") {
 // Client module for desktop game
 project(":client") {
   apply plugin: "java-library"
-  apply plugin: "application"
 
-  dependencies {
-    implementation project(":core")
-    implementation "com.badlogicgames.gdx:gdx-backend-lwjgl3:$gdxVersion"
-    implementation "com.badlogicgames.gdx:gdx-platform:$gdxVersion:natives-desktop"
-    implementation "com.badlogicgames.gdx:gdx-box2d-platform:$gdxVersion:natives-desktop"
-    implementation "org.java-websocket:Java-WebSocket:1.5.3"
-    implementation "com.google.code.gson:gson:2.10.1"
-  }
-
-  application {
-    mainClass = 'main.java.ludo.lwjgl3.Lwjgl3Launcher'
-  }
+  // Ensure client module can access the core classes
+  evaluationDependsOn(":core")
 }
 
 // LWJGL3 module
@@ -87,18 +73,19 @@ project(":lwjgl3") {
 
   dependencies {
     implementation project(":core")
+    implementation project(":client")
     implementation "com.badlogicgames.gdx:gdx-backend-lwjgl3:$gdxVersion"
     implementation "com.badlogicgames.gdx:gdx-platform:$gdxVersion:natives-desktop"
   }
 
   application {
-    mainClass = 'main.java.ludo.lwjgl3.Lwjgl3Launcher'
+    mainClass = 'ludo.lwjgl3.Lwjgl3Launcher'
   }
 
   jar {
     dependsOn configurations.runtimeClasspath
     from { configurations.runtimeClasspath.collect { it.isDirectory() ? it : zipTree(it) } }
-    duplicatesStrategy = DuplicatesStrategy.INCLUDE
+    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
   }
 
   tasks.withType(JavaExec) {
@@ -114,12 +101,9 @@ project(":lwjgl3") {
 project(":android") {
   apply plugin: "com.android.application"
 
-  configurations { natives }
-
-  dependencies {
-    implementation project(":core")
-//    implementation project(":client")
-  }
+  // Ensure Android module waits for core and client to be evaluated
+  evaluationDependsOn(":core")
+  evaluationDependsOn(":client")
 }
 
 // Server module
@@ -136,6 +120,6 @@ project(":server") {
   }
 
   application {
-    mainClass = 'main.java.ludo.server.ServerLauncher'
+    mainClass = 'ludo.server.ServerLauncher'
   }
 }

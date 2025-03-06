@@ -13,3 +13,10 @@ dependencies {
   testImplementation "junit:junit:4.13.2"
   testImplementation "org.mockito:mockito-core:5.3.1"
 }
+
+jar {
+  from sourceSets.main.output
+
+  archiveBaseName = 'core'
+  archiveVersion = '1.0'
+}
