@@ -23,6 +23,7 @@ android {
     compileSdk 34
     applicationId "ludo.android"
     minSdkVersion 21
+    //noinspection EditedTargetSdkVersion
     targetSdkVersion 34
     versionCode 1
     versionName "1.0"
@@ -67,6 +68,9 @@ android {
 
     // Or alternatively, use exclude for these specific files
     exclude 'META-INF/macos/x64/org/lwjgl/glfw/libglfw.dylib.sha1'
+    exclude 'com/badlogic/gdx/graphics/g3d/shaders/default.fragment.glsl'
+    exclude 'com/badlogic/gdx/graphics/g3d/shaders/default.vertex.glsl'
+
   }
 
 //  configurations.all {
