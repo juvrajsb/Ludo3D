@@ -1,4 +1,6 @@
 buildscript {
+  ext.kotlinVersion = '1.8.22'
+
   repositories {
     mavenCentral()
     gradlePluginPortal()
@@ -27,6 +29,19 @@ allprojects {
     maven { url "https://oss.sonatype.org/content/repositories/snapshots/" }
     maven { url "https://oss.sonatype.org/content/repositories/releases/" }
     google()
+  }
+
+  tasks.withType(JavaCompile) {
+    sourceCompatibility = JavaVersion.VERSION_1_8
+    targetCompatibility = JavaVersion.VERSION_1_8
+  }
+
+  configurations.all {
+    resolutionStrategy {
+      force "org.jetbrains.kotlin:kotlin-stdlib:$kotlinVersion"
+      force "org.jetbrains.kotlin:kotlin-stdlib-jdk7:$kotlinVersion"
+      force "org.jetbrains.kotlin:kotlin-stdlib-jdk8:$kotlinVersion"
+    }
   }
 }
 
@@ -103,7 +118,7 @@ project(":android") {
 
   dependencies {
     implementation project(":core")
-    implementation project(":client")
+//    implementation project(":client")
   }
 }
 

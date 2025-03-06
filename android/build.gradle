@@ -11,6 +11,10 @@ android {
       jniLibs.srcDirs = ['libs']
     }
   }
+  compileOptions {
+    sourceCompatibility JavaVersion.VERSION_1_8
+    targetCompatibility JavaVersion.VERSION_1_8
+  }
   packagingOptions {
     // Preventing duplicate files in the APK
     exclude 'META-INF/robovm/ios/robovm.xml'
@@ -18,10 +22,11 @@ android {
   defaultConfig {
     compileSdk 34
     applicationId "ludo.android"
-    minSdkVersion 19  // Updated from 16 to 19 as required by LibGDX
+    minSdkVersion 21
     targetSdkVersion 34
     versionCode 1
     versionName "1.0"
+    multiDexEnabled true
   }
   buildTypes {
     release {
@@ -30,12 +35,61 @@ android {
     }
   }
 
+  packagingOptions {
+    exclude 'META-INF/LICENSE.txt'
+    exclude 'META-INF/NOTICE.txt'
+    exclude 'META-INF/DEPENDENCIES'
+    exclude 'META-INF/MANIFEST.MF'
+    exclude 'META-INF/lwjgl.*'
+    exclude 'META-INF/versions/**'
+    exclude 'META-INF/native-image/**'
+    exclude 'META-INF/INDEX.LIST'
+
+    // Exclude all LWJGL native libraries
+    exclude '**/*.dll'
+    exclude '**/*.so'
+    exclude '**/*.jnilib'
+    exclude '**/*.dylib'
+    exclude 'windows/**'
+    exclude 'linux/**'
+    exclude 'macos/**'
+    exclude 'META-INF/macos/**'
+    exclude 'META-INF/windows/**'
+    exclude 'META-INF/linux/**'
+
+    // More specific exclusions for problematic files
+    pickFirst '**/*.sha1'
+    pickFirst 'META-INF/macos/x64/org/lwjgl/glfw/libglfw.dylib.sha1'
+    pickFirst 'META-INF/macos/x64/org/lwjgl/**'
+    pickFirst 'META-INF/macos/**'
+    pickFirst 'META-INF/AL/**'
+    pickFirst 'META-INF/DEPENDENCIES'
+
+    // Or alternatively, use exclude for these specific files
+    exclude 'META-INF/macos/x64/org/lwjgl/glfw/libglfw.dylib.sha1'
+  }
+
+//  configurations.all {
+//    resolutionStrategy {
+//      // Force a consistent version of Kotlin stdlib
+//      force 'org.jetbrains.kotlin:kotlin-stdlib:1.8.22'
+//      force 'org.jetbrains.kotlin:kotlin-stdlib-jdk7:1.8.22'
+//      force 'org.jetbrains.kotlin:kotlin-stdlib-jdk8:1.8.22'
+//
+//      // Exclude older versions that are causing conflicts
+//      exclude group: 'org.jetbrains.kotlin', module: 'kotlin-stdlib-jdk7', version: '1.6.21'
+//      exclude group: 'org.jetbrains.kotlin', module: 'kotlin-stdlib-jdk8', version: '1.6.21'
+//    }
+//  }
+
   namespace "ludo.android"
 }
 
 dependencies {
   implementation project(":core")
-  implementation project(":client")
+  runtimeOnly project(":client")
+  implementation 'androidx.appcompat:appcompat:1.7.0'
+  implementation 'androidx.multidex:multidex:2.0.1'
   api "com.badlogicgames.gdx:gdx-backend-android:$gdxVersion"
   api "com.badlogicgames.gdx:gdx-platform:$gdxVersion:natives-armeabi-v7a"
   api "com.badlogicgames.gdx:gdx-platform:$gdxVersion:natives-arm64-v8a"
