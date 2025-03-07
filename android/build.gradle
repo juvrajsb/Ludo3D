@@ -1,7 +1,32 @@
+buildscript{
+  repositories{
+    mavenLocal()
+    mavenCentral()
+    google()
+    maven{ url "https://oss.sonatype.org/content/repositories/snapshots/" }
+  }
+
+  dependencies{
+    classpath 'com.android.tools.build:gradle:8.2.2'
+  }
+}
+
+apply plugin: "com.android.application"
+
+//configurations{ natives }
+
+repositories{
+  mavenCentral()
+  maven{ url "https://maven.google.com" }
+}
+
 android {
+  namespace "ludo.android"
+  compileSdk 34
+
   sourceSets {
     main {
-      manifest.srcFile 'src/main/AndroidManifest.xml'
+      manifest.srcFile 'AndroidManifest.xml'
       java.srcDirs = ['src/main/java']
       aidl.srcDirs = ['src/main/java']
       renderscript.srcDirs = ['src/main/java']
@@ -16,15 +41,16 @@ android {
     targetCompatibility JavaVersion.VERSION_1_8
   }
 
-  defaultConfig {
-    compileSdk 34
+  defaultConfig{
     applicationId "ludo.android"
     minSdkVersion 21
     targetSdkVersion 34
-    versionCode 1
-    versionName "1.0"
+
     multiDexEnabled true
   }
+
+  flavorDimensions = ["google"]
+
 
   buildTypes {
     release {
@@ -66,14 +92,11 @@ android {
     exclude 'META-INF/windows/**'
     exclude 'META-INF/linux/**'
   }
-
-  namespace "ludo.android"
 }
 
-//// Define configurations BEFORE using them
-//configurations {
-//  natives
-//}
+configurations {
+  natives
+}
 
 dependencies {
   // Core project dependencies
@@ -140,3 +163,13 @@ dependencies {
 //    task.outputs.upToDateWhen { false }
 //  }
 //}
+
+task copyAndroidNatives(){
+  configurations.natives.files.each{ jar ->
+    copy{
+      from zipTree(jar)
+      into file("libs/")
+      include "**"
+    }
+  }
+}
