@@ -1,0 +1,175 @@
+{
+  "players": [
+    {
+      "name": "Player1",
+      "color": "RED",
+      "pawns": [
+        {
+          "position": 57,
+          "isHome": false,
+          "isFinished": true,
+          "gridPosition": {
+            "x": 13,
+            "y": 13
+          }
+        },
+        {
+          "position": 56,
+          "isHome": false,
+          "isFinished": false,
+          "gridPosition": {
+            "x": 13,
+            "y": 12
+          }
+        },
+        {
+          "position": 55,
+          "isHome": false,
+          "isFinished": false,
+          "gridPosition": {
+            "x": 13,
+            "y": 11
+          }
+        },
+        {
+          "position": 47,
+          "isHome": false,
+          "isFinished": false,
+          "gridPosition": {
+            "x": 14,
+            "y": 3
+          }
+        }
+      ]
+    },
+    {
+      "name": "Player2",
+      "color": "BLUE",
+      "pawns": [
+        {
+          "position": 69,
+          "isHome": false,
+          "isFinished": true,
+          "gridPosition": {
+            "x": 1,
+            "y": 3
+          }
+        },
+        {
+          "position": 68,
+          "isHome": false,
+          "isFinished": false,
+          "gridPosition": {
+            "x": 1,
+            "y": 4
+          }
+        },
+        {
+          "position": 67,
+          "isHome": false,
+          "isFinished": false,
+          "gridPosition": {
+            "x": 1,
+            "y": 5
+          }
+        },
+        {
+          "position": 34,
+          "isHome": false,
+          "isFinished": false,
+          "gridPosition": {
+            "x": 3,
+            "y": 0
+          }
+        }
+      ]
+    },
+    {
+      "name": "Player3",
+      "color": "GREEN",
+      "pawns": [
+        {
+          "position": 63,
+          "isHome": false,
+          "isFinished": true,
+          "gridPosition": {
+            "x": 13,
+            "y": 13
+          }
+        },
+        {
+          "position": 62,
+          "isHome": false,
+          "isFinished": false,
+          "gridPosition": {
+            "x": 12,
+            "y": 13
+          }
+        },
+        {
+          "position": 61,
+          "isHome": false,
+          "isFinished": false,
+          "gridPosition": {
+            "x": 11,
+            "y": 13
+          }
+        },
+        {
+          "position": 21,
+          "isHome": false,
+          "isFinished": false,
+          "gridPosition": {
+            "x": 0,
+            "y": 11
+          }
+        }
+      ]
+    },
+    {
+      "name": "Player4",
+      "color": "YELLOW",
+      "pawns": [
+        {
+          "position": 75,
+          "isHome": false,
+          "isFinished": true,
+          "gridPosition": {
+            "x": 3,
+            "y": 1
+          }
+        },
+        {
+          "position": 74,
+          "isHome": false,
+          "isFinished": false,
+          "gridPosition": {
+            "x": 4,
+            "y": 1
+          }
+        },
+        {
+          "position": 73,
+          "isHome": false,
+          "isFinished": false,
+          "gridPosition": {
+            "x": 5,
+            "y": 1
+          }
+        },
+        {
+          "position": 47,
+          "isHome": false,
+          "isFinished": false,
+          "gridPosition": {
+            "x": 14,
+            "y": 3
+          }
+        }
+      ]
+    }
+  ],
+  "currentPlayerColor": "Yellow",
+  "gameState": "WAITING_FOR_PLAYERS",
+  "timestamp": 1738853797973
+}

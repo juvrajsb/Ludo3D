@@ -7,13 +7,15 @@ android {
       renderscript.srcDirs = ['src/main/java']
       res.srcDirs = ['src/main/res']
       assets.srcDirs = ['../assets']
-      jniLibs.srcDirs = ['libs']
+      jniLibs.srcDirs = ['libs', 'src/main/jniLibs']
     }
   }
+
   compileOptions {
     sourceCompatibility JavaVersion.VERSION_1_8
     targetCompatibility JavaVersion.VERSION_1_8
   }
+
   defaultConfig {
     compileSdk 34
     applicationId "ludo.android"
@@ -23,6 +25,7 @@ android {
     versionName "1.0"
     multiDexEnabled true
   }
+
   buildTypes {
     release {
       minifyEnabled false
@@ -34,31 +37,31 @@ android {
     // =========== COMPREHENSIVE SOLUTION ===========
     // Instead of excluding specific files, let's use pickFirst for all LibGDX resources
     // This ensures that only one version of each file is included (the first one found)
-    pickFirst 'com/badlogic/gdx/**'
-    pickFirst 'com/**/*.glsl'
-    pickFirst 'com/**/*.rl'
-    pickFirst 'com/**/*.fnt'
-    pickFirst 'com/**/*.png'
-    pickFirst 'com/**/*.json'
+//    pickFirst 'com/badlogic/gdx/**'
+//    pickFirst 'com/**/*.glsl'
+//    pickFirst 'com/**/*.rl'
+//    pickFirst 'com/**/*.fnt'
+//    pickFirst 'com/**/*.png'
+//    pickFirst 'com/**/*.json'
 
     // For specific META-INF files, we should still exclude them
-    exclude 'META-INF/LICENSE.txt'
-    exclude 'META-INF/NOTICE.txt'
-    exclude 'META-INF/DEPENDENCIES'
-    exclude 'META-INF/MANIFEST.MF'
-    exclude 'META-INF/lwjgl.*'
-    exclude 'META-INF/versions/**'
-    exclude 'META-INF/native-image/**'
-    exclude 'META-INF/INDEX.LIST'
+//    exclude 'META-INF/LICENSE.txt'
+//    exclude 'META-INF/NOTICE.txt'
+    pickFirst "META-INF/DEPENDENCIES"
+//    exclude 'META-INF/MANIFEST.MF'
+//    exclude 'META-INF/lwjgl.*'
+//    exclude 'META-INF/versions/**'
+//    exclude 'META-INF/native-image/**'
+    pickFirst 'META-INF/INDEX.LIST'
 
     // Exclude all LWJGL native libraries
-    exclude '**/*.dll'
-    exclude '**/*.so'
-    exclude '**/*.jnilib'
-    exclude '**/*.dylib'
-    exclude 'windows/**'
-    exclude 'linux/**'
-    exclude 'macos/**'
+//    exclude '**/*.dll'
+//    exclude '**/*.so'
+//    exclude '**/*.jnilib'
+//    exclude '**/*.dylib'
+//    exclude 'windows/**'
+//    exclude 'linux/**'
+//    exclude 'macos/**'
     exclude 'META-INF/macos/**'
     exclude 'META-INF/windows/**'
     exclude 'META-INF/linux/**'
@@ -67,12 +70,14 @@ android {
   namespace "ludo.android"
 }
 
-dependencies {
-  // Use compileOnly for core since we don't want its transitive dependencies
-  // included twice (they're already in client)
-  compileOnly project(":core")
+//// Define configurations BEFORE using them
+//configurations {
+//  natives
+//}
 
-  // Use implementation for client
+dependencies {
+  // Core project dependencies
+  implementation project(":core")
   implementation project(":client")
 
   // Android dependencies
@@ -80,14 +85,58 @@ dependencies {
   implementation 'androidx.multidex:multidex:2.0.1'
 
   // LibGDX dependencies
-  api "com.badlogicgames.gdx:gdx-backend-android:$gdxVersion"
-  api "com.badlogicgames.gdx:gdx-platform:$gdxVersion:natives-armeabi-v7a"
-  api "com.badlogicgames.gdx:gdx-platform:$gdxVersion:natives-arm64-v8a"
-  api "com.badlogicgames.gdx:gdx-platform:$gdxVersion:natives-x86"
-  api "com.badlogicgames.gdx:gdx-platform:$gdxVersion:natives-x86_64"
-  api "com.badlogicgames.gdx:gdx-box2d:$gdxVersion"
-  api "com.badlogicgames.gdx:gdx-box2d-platform:$gdxVersion:natives-armeabi-v7a"
-  api "com.badlogicgames.gdx:gdx-box2d-platform:$gdxVersion:natives-arm64-v8a"
-  api "com.badlogicgames.gdx:gdx-box2d-platform:$gdxVersion:natives-x86"
-  api "com.badlogicgames.gdx:gdx-box2d-platform:$gdxVersion:natives-x86_64"
+  implementation "com.badlogicgames.gdx:gdx-backend-android:$gdxVersion"
+  implementation "com.badlogicgames.gdx:gdx-platform:$gdxVersion:natives-armeabi-v7a"
+  implementation "com.badlogicgames.gdx:gdx-platform:$gdxVersion:natives-arm64-v8a"
+  implementation "com.badlogicgames.gdx:gdx-platform:$gdxVersion:natives-x86"
+  implementation "com.badlogicgames.gdx:gdx-platform:$gdxVersion:natives-x86_64"
+  implementation "com.badlogicgames.gdx:gdx-box2d:$gdxVersion"
+  implementation "com.badlogicgames.gdx:gdx-box2d-platform:$gdxVersion:natives-armeabi-v7a"
+  implementation "com.badlogicgames.gdx:gdx-box2d-platform:$gdxVersion:natives-arm64-v8a"
+  implementation "com.badlogicgames.gdx:gdx-box2d-platform:$gdxVersion:natives-x86"
+  implementation "com.badlogicgames.gdx:gdx-box2d-platform:$gdxVersion:natives-x86_64"
+
+  // Natives configuration for the copyAndroidNatives task
+//  natives "com.badlogicgames.gdx:gdx-platform:$gdxVersion:natives-armeabi-v7a"
+//  natives "com.badlogicgames.gdx:gdx-platform:$gdxVersion:natives-arm64-v8a"
+//  natives "com.badlogicgames.gdx:gdx-platform:$gdxVersion:natives-x86"
+//  natives "com.badlogicgames.gdx:gdx-platform:$gdxVersion:natives-x86_64"
+//  natives "com.badlogicgames.gdx:gdx-box2d-platform:$gdxVersion:natives-armeabi-v7a"
+//  natives "com.badlogicgames.gdx:gdx-box2d-platform:$gdxVersion:natives-arm64-v8a"
+//  natives "com.badlogicgames.gdx:gdx-box2d-platform:$gdxVersion:natives-x86"
+//  natives "com.badlogicgames.gdx:gdx-box2d-platform:$gdxVersion:natives-x86_64"
 }
+
+//// Task to extract native libraries
+//task copyAndroidNatives() {
+//  doLast {
+//    // Make sure the directory exists
+//    file("src/main/jniLibs").mkdirs()
+//
+//    configurations.natives.files.each { jar ->
+//      copy {
+//        from zipTree(jar)
+//        into file("src/main/jniLibs/")
+//        include "**/*.so"
+//        // Preserve directory structure to maintain ABI folders
+//        includeEmptyDirs = false
+//        eachFile { fileCopyDetails ->
+//          // Make sure we only keep the ABI part of the path (e.g., arm64-v8a, etc.)
+//          fileCopyDetails.path = fileCopyDetails.path.replaceAll(/.+\/([^\/]+)\/[^\/]+\.so/, '$1/$2')
+//        }
+//      }
+//    }
+//  }
+//}
+
+//// Make sure preBuild depends on copyAndroidNatives
+//tasks.matching { it.name == 'preBuild' }.all { preBuildTask ->
+//  preBuildTask.dependsOn 'copyAndroidNatives'
+//}
+//
+//// Force the task to run every time
+//tasks.whenTaskAdded { task ->
+//  if (task.name == 'copyAndroidNatives') {
+//    task.outputs.upToDateWhen { false }
+//  }
+//}
