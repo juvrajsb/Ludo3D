@@ -1,29 +1,4 @@
-buildscript{
-  repositories{
-    mavenLocal()
-    mavenCentral()
-    google()
-    maven{ url "https://oss.sonatype.org/content/repositories/snapshots/" }
-  }
-
-  dependencies{
-    classpath 'com.android.tools.build:gradle:8.2.2'
-  }
-}
-
-apply plugin: "com.android.application"
-
-//configurations{ natives }
-
-repositories{
-  mavenCentral()
-  maven{ url "https://maven.google.com" }
-}
-
 android {
-  namespace "ludo.android"
-  compileSdk 34
-
   sourceSets {
     main {
       manifest.srcFile 'AndroidManifest.xml'
@@ -32,7 +7,7 @@ android {
       renderscript.srcDirs = ['src/main/java']
       res.srcDirs = ['src/main/res']
       assets.srcDirs = ['../assets']
-      jniLibs.srcDirs = ['libs', 'src/main/jniLibs']
+      jniLibs.srcDirs = ['src/main/jniLibs']
     }
   }
 
@@ -41,59 +16,33 @@ android {
     targetCompatibility JavaVersion.VERSION_1_8
   }
 
-  defaultConfig{
+  defaultConfig {
+    compileSdk 34
     applicationId "ludo.android"
     minSdkVersion 21
     targetSdkVersion 34
-
+    versionCode 1
+    versionName "1.0"
     multiDexEnabled true
   }
 
-  flavorDimensions = ["google"]
-
-
-  buildTypes {
-    release {
-      minifyEnabled false
-      proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
-    }
-  }
-
   packagingOptions {
-    // =========== COMPREHENSIVE SOLUTION ===========
-    // Instead of excluding specific files, let's use pickFirst for all LibGDX resources
-    // This ensures that only one version of each file is included (the first one found)
-//    pickFirst 'com/badlogic/gdx/**'
-//    pickFirst 'com/**/*.glsl'
-//    pickFirst 'com/**/*.rl'
-//    pickFirst 'com/**/*.fnt'
-//    pickFirst 'com/**/*.png'
-//    pickFirst 'com/**/*.json'
-
-    // For specific META-INF files, we should still exclude them
-//    exclude 'META-INF/LICENSE.txt'
-//    exclude 'META-INF/NOTICE.txt'
+    // Handle duplicate files
     pickFirst "META-INF/DEPENDENCIES"
-//    exclude 'META-INF/MANIFEST.MF'
-//    exclude 'META-INF/lwjgl.*'
-//    exclude 'META-INF/versions/**'
-//    exclude 'META-INF/native-image/**'
     pickFirst 'META-INF/INDEX.LIST'
 
-    // Exclude all LWJGL native libraries
-//    exclude '**/*.dll'
-//    exclude '**/*.so'
-//    exclude '**/*.jnilib'
-//    exclude '**/*.dylib'
-//    exclude 'windows/**'
-//    exclude 'linux/**'
-//    exclude 'macos/**'
+    // Exclude unnecessary files for Android
+    exclude 'META-INF/robovm/ios/robovm.xml'
+    exclude 'META-INF/MANIFEST.MF'
     exclude 'META-INF/macos/**'
     exclude 'META-INF/windows/**'
     exclude 'META-INF/linux/**'
   }
+
+  namespace "ludo.android"
 }
 
+// Define configurations for native libraries
 configurations {
   natives
 }
@@ -108,68 +57,80 @@ dependencies {
   implementation 'androidx.multidex:multidex:2.0.1'
 
   // LibGDX dependencies
-  implementation "com.badlogicgames.gdx:gdx-backend-android:$gdxVersion"
-  implementation "com.badlogicgames.gdx:gdx-platform:$gdxVersion:natives-armeabi-v7a"
-  implementation "com.badlogicgames.gdx:gdx-platform:$gdxVersion:natives-arm64-v8a"
-  implementation "com.badlogicgames.gdx:gdx-platform:$gdxVersion:natives-x86"
-  implementation "com.badlogicgames.gdx:gdx-platform:$gdxVersion:natives-x86_64"
-  implementation "com.badlogicgames.gdx:gdx-box2d:$gdxVersion"
-  implementation "com.badlogicgames.gdx:gdx-box2d-platform:$gdxVersion:natives-armeabi-v7a"
-  implementation "com.badlogicgames.gdx:gdx-box2d-platform:$gdxVersion:natives-arm64-v8a"
-  implementation "com.badlogicgames.gdx:gdx-box2d-platform:$gdxVersion:natives-x86"
-  implementation "com.badlogicgames.gdx:gdx-box2d-platform:$gdxVersion:natives-x86_64"
+  api "com.badlogicgames.gdx:gdx-backend-android:$gdxVersion"
+  api "com.badlogicgames.gdx:gdx:$gdxVersion"
+  api "com.badlogicgames.gdx:gdx-box2d:$gdxVersion"
 
-  // Natives configuration for the copyAndroidNatives task
-//  natives "com.badlogicgames.gdx:gdx-platform:$gdxVersion:natives-armeabi-v7a"
-//  natives "com.badlogicgames.gdx:gdx-platform:$gdxVersion:natives-arm64-v8a"
-//  natives "com.badlogicgames.gdx:gdx-platform:$gdxVersion:natives-x86"
-//  natives "com.badlogicgames.gdx:gdx-platform:$gdxVersion:natives-x86_64"
-//  natives "com.badlogicgames.gdx:gdx-box2d-platform:$gdxVersion:natives-armeabi-v7a"
-//  natives "com.badlogicgames.gdx:gdx-box2d-platform:$gdxVersion:natives-arm64-v8a"
-//  natives "com.badlogicgames.gdx:gdx-box2d-platform:$gdxVersion:natives-x86"
-//  natives "com.badlogicgames.gdx:gdx-box2d-platform:$gdxVersion:natives-x86_64"
+  // Native libraries for direct extraction
+  natives "com.badlogicgames.gdx:gdx-platform:$gdxVersion:natives-armeabi-v7a"
+  natives "com.badlogicgames.gdx:gdx-platform:$gdxVersion:natives-arm64-v8a"
+  natives "com.badlogicgames.gdx:gdx-platform:$gdxVersion:natives-x86"
+  natives "com.badlogicgames.gdx:gdx-platform:$gdxVersion:natives-x86_64"
+  natives "com.badlogicgames.gdx:gdx-box2d-platform:$gdxVersion:natives-armeabi-v7a"
+  natives "com.badlogicgames.gdx:gdx-box2d-platform:$gdxVersion:natives-arm64-v8a"
+  natives "com.badlogicgames.gdx:gdx-box2d-platform:$gdxVersion:natives-x86"
+  natives "com.badlogicgames.gdx:gdx-box2d-platform:$gdxVersion:natives-x86_64"
 }
 
-//// Task to extract native libraries
-//task copyAndroidNatives() {
-//  doLast {
-//    // Make sure the directory exists
-//    file("src/main/jniLibs").mkdirs()
-//
-//    configurations.natives.files.each { jar ->
-//      copy {
-//        from zipTree(jar)
-//        into file("src/main/jniLibs/")
-//        include "**/*.so"
-//        // Preserve directory structure to maintain ABI folders
-//        includeEmptyDirs = false
-//        eachFile { fileCopyDetails ->
-//          // Make sure we only keep the ABI part of the path (e.g., arm64-v8a, etc.)
-//          fileCopyDetails.path = fileCopyDetails.path.replaceAll(/.+\/([^\/]+)\/[^\/]+\.so/, '$1/$2')
-//        }
-//      }
-//    }
-//  }
-//}
+// Improved task to extract native libraries with ABI directory structure preserved
+task extractNatives() {
+  description = "Extracts native libraries with ABI structure preserved"
 
-//// Make sure preBuild depends on copyAndroidNatives
-//tasks.matching { it.name == 'preBuild' }.all { preBuildTask ->
-//  preBuildTask.dependsOn 'copyAndroidNatives'
-//}
-//
-//// Force the task to run every time
-//tasks.whenTaskAdded { task ->
-//  if (task.name == 'copyAndroidNatives') {
-//    task.outputs.upToDateWhen { false }
-//  }
-//}
+  doFirst {
+    // Clean old libraries completely
+    delete fileTree(dir: 'src/main/jniLibs')
 
-task copyAndroidNatives(){
-  configurations.natives.files.each{ jar ->
-    copy{
-      from zipTree(jar)
-      into file("libs/")
-      include "**"
+    // Make sure base directory exists
+    file("src/main/jniLibs").mkdirs()
+  }
+
+  doLast {
+    // Process each native library JAR with proper categorization
+    configurations.natives.files.each { jar ->
+      // Extract JAR name to determine ABI
+      def jarName = jar.name
+      println "Processing JAR: $jarName"
+
+      // Figure out which ABI this JAR is for
+      def abiDir = ""
+      if (jarName.contains("natives-armeabi-v7a")) {
+        abiDir = "armeabi-v7a"
+      } else if (jarName.contains("natives-arm64-v8a")) {
+        abiDir = "arm64-v8a"
+      } else if (jarName.contains("natives-x86_64")) {
+        abiDir = "x86_64"
+      } else if (jarName.contains("natives-x86")) {
+        abiDir = "x86"
+      } else {
+        println "Unknown ABI in JAR: $jarName, skipping"
+        return
+      }
+
+      // Make sure the ABI directory exists
+      file("src/main/jniLibs/$abiDir").mkdirs()
+
+      // Extract SO files specifically to the correct ABI directory
+      copy {
+        from zipTree(jar)
+        into "src/main/jniLibs/$abiDir"
+        include "**/*.so"
+        // Ignore directory structure within JAR
+        eachFile { file ->
+          // Extract just the filename, not the path
+          file.setPath(file.getName())
+          println "Extracting to $abiDir: ${file.path}"
+        }
+        includeEmptyDirs = false
+      }
+    }
+
+    // Verify extraction structure - debug output
+    println "EXTRACTED LIBRARY STRUCTURE:"
+    fileTree(dir: 'src/main/jniLibs').each { file ->
+      println "File: $file"
     }
   }
 }
+
+// Make the build process depend on our native extraction
+preBuild.dependsOn(extractNatives)
