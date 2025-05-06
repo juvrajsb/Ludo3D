@@ -8,7 +8,7 @@ import com.badlogic.gdx.math.Vector3;
 import ludo.client.assets.GameAssets;
 
 public class DiceRenderer {
-    private static final float ROLL_DURATION = 1.0f;
+    private static final float ROLL_DURATION = 0.6f;
     private static final float DICE_SCALE = 40f;
     private final ModelInstance diceInstance;
     private final Vector3 position;
