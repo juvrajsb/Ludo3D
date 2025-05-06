@@ -19,7 +19,7 @@ android {
   defaultConfig {
     compileSdk 34
     applicationId "ludo.android"
-    minSdkVersion 21
+    minSdkVersion 24
     targetSdkVersion 34
     versionCode 1
     versionName "1.0"
