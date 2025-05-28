@@ -123,9 +123,9 @@ public class GameRenderer {
         }
 
         for (Player player : players) {
-            Gdx.app.log(TAG, "Processing player: " + player.getName() +
-                " Color: " + player.getColor() +
-                " Pawns: " + player.getPawns().size());
+//            Gdx.app.log(TAG, "Processing player: " + player.getName() +
+//                " Color: " + player.getColor() +
+//                " Pawns: " + player.getPawns().size());
 
             Color playerColor = getPlayerColor(player.getColor());
 
@@ -154,8 +154,8 @@ public class GameRenderer {
 
                 pawnInstances.set(globalPawnIndex, pawnInstance);
                 pawnInstance.userData = player.getColor();
-                Gdx.app.log(TAG, "Created pawn " + globalPawnIndex + " at position " + position +
-                    " for player " + player.getColor());
+//                Gdx.app.log(TAG, "Created pawn " + globalPawnIndex + " at position " + position +
+//                    " for player " + player.getColor());
             }
         }
 
@@ -366,11 +366,11 @@ public class GameRenderer {
     private void positionPawn(ModelInstance pawnInstance, int boardPosition, int pawnIndex, String playerColor) {
         Vector3 position;
 
-        Gdx.app.log("PawnPositioning", String.format(
-            "Processing pawn - Color: %s, Global Index: %d, Base Coords: (%d,%d)",
-            playerColor, pawnIndex,
-            getHomeBaseStartX(playerColor), getHomeBaseStartY(playerColor)
-        ));
+//        Gdx.app.log("PawnPositioning", String.format(
+//            "Processing pawn - Color: %s, Global Index: %d, Base Coords: (%d,%d)",
+//            playerColor, pawnIndex,
+//            getHomeBaseStartX(playerColor), getHomeBaseStartY(playerColor)
+//        ));
 
         if (boardPosition == -1) {
             position = boardCoordinates.getHomeBasePosition(playerColor, pawnIndex % 4);
@@ -669,10 +669,10 @@ public class GameRenderer {
         }
         int globalIndex = colorOffset + localPawnIndex;
 
-        Gdx.app.log("PawnIndexing", String.format(
-            "Color: %s, Local Index: %d, Color Offset: %d, Global Index: %d",
-            playerColor, localPawnIndex, colorOffset, globalIndex
-        ));
+//        Gdx.app.log("PawnIndexing", String.format(
+//            "Color: %s, Local Index: %d, Color Offset: %d, Global Index: %d",
+//            playerColor, localPawnIndex, colorOffset, globalIndex
+//        ));
 
         return globalIndex;
     }
