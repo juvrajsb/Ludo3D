@@ -176,3 +176,5 @@ Thumbs.db
 *.idx
 /extra
 
+*.so
+/android/
