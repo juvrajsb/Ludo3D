@@ -38,6 +38,13 @@ public class UsernameScreen extends BaseScreen {
         }
 
         createUI();
+        disconnectButton.setPosition(Gdx.graphics.getWidth() - 130, Gdx.graphics.getHeight() - 50);
+    }
+
+    @Override
+    public void resize(int width, int height) {
+        super.resize(width, height);
+        disconnectButton.setPosition(width - 130, height - 50);
     }
 
     private void createUI() {
