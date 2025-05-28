@@ -19,7 +19,7 @@ allprojects {
   version = '1.0'
   ext {
     appName = "ludo"
-    gdxVersion = '1.13.1'
+    gdxVersion = '1.13.5'
     box2DLightsVersion = '1.5'
   }
 
@@ -97,14 +97,14 @@ project(":lwjgl3") {
   }
 }
 
-// Android module
-project(":android") {
-  apply plugin: "com.android.application"
-
-  // Ensure Android module waits for core and client to be evaluated
-  evaluationDependsOn(":core")
-  evaluationDependsOn(":client")
-}
+//// Android module
+//project(":android") {
+//  apply plugin: "com.android.application"
+//
+//  // Ensure Android module waits for core and client to be evaluated
+//  evaluationDependsOn(":core")
+//  evaluationDependsOn(":client")
+//}
 
 // Server module
 project(":server") {
