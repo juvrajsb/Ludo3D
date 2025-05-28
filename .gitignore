@@ -178,3 +178,4 @@ Thumbs.db
 
 *.so
 /android/
+*.dylib
