@@ -4,9 +4,15 @@ import ludo.core.events.Event;
 
 public class ClientDisconnectedEvent extends Event {
     private static final long serialVersionUID = 1L;
+    private final String clientId;
 
-    public ClientDisconnectedEvent() {
+    public ClientDisconnectedEvent(String clientId) {
         super("CLIENT_DISCONNECTED");
+        this.clientId = clientId;
+    }
+
+    public String getClientId() {
+        return clientId;
     }
 
     @Override
