@@ -1,4 +1,5 @@
 {
+  "saveVersion": 1,
   "players": [
     {
       "name": "Player1",
@@ -7,38 +8,22 @@
         {
           "position": 57,
           "isHome": false,
-          "isFinished": true,
-          "gridPosition": {
-            "x": 13,
-            "y": 13
-          }
+          "isFinished": true
         },
         {
           "position": 56,
           "isHome": false,
-          "isFinished": false,
-          "gridPosition": {
-            "x": 13,
-            "y": 12
-          }
+          "isFinished": false
         },
         {
           "position": 55,
           "isHome": false,
-          "isFinished": false,
-          "gridPosition": {
-            "x": 13,
-            "y": 11
-          }
+          "isFinished": false
         },
         {
           "position": 47,
           "isHome": false,
-          "isFinished": false,
-          "gridPosition": {
-            "x": 14,
-            "y": 3
-          }
+          "isFinished": false
         }
       ]
     },
@@ -49,38 +34,22 @@
         {
           "position": 69,
           "isHome": false,
-          "isFinished": true,
-          "gridPosition": {
-            "x": 1,
-            "y": 3
-          }
+          "isFinished": true
         },
         {
           "position": 68,
           "isHome": false,
-          "isFinished": false,
-          "gridPosition": {
-            "x": 1,
-            "y": 4
-          }
+          "isFinished": false
         },
         {
           "position": 67,
           "isHome": false,
-          "isFinished": false,
-          "gridPosition": {
-            "x": 1,
-            "y": 5
-          }
+          "isFinished": false
         },
         {
           "position": 34,
           "isHome": false,
-          "isFinished": false,
-          "gridPosition": {
-            "x": 3,
-            "y": 0
-          }
+          "isFinished": false
         }
       ]
     },
@@ -91,38 +60,22 @@
         {
           "position": 63,
           "isHome": false,
-          "isFinished": true,
-          "gridPosition": {
-            "x": 13,
-            "y": 13
-          }
+          "isFinished": true
         },
         {
           "position": 62,
           "isHome": false,
-          "isFinished": false,
-          "gridPosition": {
-            "x": 12,
-            "y": 13
-          }
+          "isFinished": false
         },
         {
           "position": 61,
           "isHome": false,
-          "isFinished": false,
-          "gridPosition": {
-            "x": 11,
-            "y": 13
-          }
+          "isFinished": false
         },
         {
           "position": 21,
           "isHome": false,
-          "isFinished": false,
-          "gridPosition": {
-            "x": 0,
-            "y": 11
-          }
+          "isFinished": false
         }
       ]
     },
@@ -133,43 +86,27 @@
         {
           "position": 75,
           "isHome": false,
-          "isFinished": true,
-          "gridPosition": {
-            "x": 3,
-            "y": 1
-          }
+          "isFinished": true
         },
         {
           "position": 74,
           "isHome": false,
-          "isFinished": false,
-          "gridPosition": {
-            "x": 4,
-            "y": 1
-          }
+          "isFinished": false
         },
         {
           "position": 73,
           "isHome": false,
-          "isFinished": false,
-          "gridPosition": {
-            "x": 5,
-            "y": 1
-          }
+          "isFinished": false
         },
         {
           "position": 47,
           "isHome": false,
-          "isFinished": false,
-          "gridPosition": {
-            "x": 14,
-            "y": 3
-          }
+          "isFinished": false
         }
       ]
     }
   ],
-  "currentPlayerColor": "Yellow",
-  "gameState": "WAITING_FOR_PLAYERS",
+  "currentPlayerColor": "YELLOW",
+  "gameState": "IN_PROGRESS",
   "timestamp": 1738853797973
 }

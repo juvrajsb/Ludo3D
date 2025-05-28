@@ -1,7 +1,112 @@
 {
   "saveVersion": 1,
-  "players": [],
-  "currentPlayerColor": "Red",
+  "players": [
+    {
+      "name": "Player1",
+      "color": "RED",
+      "pawns": [
+        {
+          "position": 0,
+          "isHome": true,
+          "isFinished": false
+        },
+        {
+          "position": 0,
+          "isHome": true,
+          "isFinished": false
+        },
+        {
+          "position": 0,
+          "isHome": true,
+          "isFinished": false
+        },
+        {
+          "position": 0,
+          "isHome": true,
+          "isFinished": false
+        }
+      ]
+    },
+    {
+      "name": "Player2",
+      "color": "BLUE",
+      "pawns": [
+        {
+          "position": 0,
+          "isHome": true,
+          "isFinished": false
+        },
+        {
+          "position": 0,
+          "isHome": true,
+          "isFinished": false
+        },
+        {
+          "position": 0,
+          "isHome": true,
+          "isFinished": false
+        },
+        {
+          "position": 0,
+          "isHome": true,
+          "isFinished": false
+        }
+      ]
+    },
+    {
+      "name": "Player3",
+      "color": "GREEN",
+      "pawns": [
+        {
+          "position": 0,
+          "isHome": true,
+          "isFinished": false
+        },
+        {
+          "position": 0,
+          "isHome": true,
+          "isFinished": false
+        },
+        {
+          "position": 0,
+          "isHome": true,
+          "isFinished": false
+        },
+        {
+          "position": 0,
+          "isHome": true,
+          "isFinished": false
+        }
+      ]
+    },
+    {
+      "name": "Player4",
+      "color": "YELLOW",
+      "pawns": [
+        {
+          "position": 0,
+          "isHome": true,
+          "isFinished": false
+        },
+        {
+          "position": 0,
+          "isHome": true,
+          "isFinished": false
+        },
+        {
+          "position": 0,
+          "isHome": true,
+          "isFinished": false
+        },
+        {
+          "position": 0,
+          "isHome": true,
+          "isFinished": false
+        }
+      ]
+    }
+  ],
+  "currentPlayerColor": "RED",
   "gameState": "IN_PROGRESS",
-  "timestamp": 1741277874618
+  "timestamp": 1747639797176
 }
