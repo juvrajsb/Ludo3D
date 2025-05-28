@@ -20,6 +20,8 @@ public class ConnectionScreen extends BaseScreen {
     public ConnectionScreen(final LudoGame game) {
         super(game);
 
+        disconnectButton.remove();
+
         Table mainTable = new Table(skin);
         mainTable.setFillParent(true);
 
