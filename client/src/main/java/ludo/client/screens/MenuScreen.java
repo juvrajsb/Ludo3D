@@ -41,6 +41,7 @@ public class MenuScreen extends BaseScreen {
 
         TextButton playButton = new TextButton("Play", skin);
         TextButton exitButton = new TextButton("Exit", skin);
+        disconnectButton.remove();
 
         mainTable.add(playButton).row();
         mainTable.add(exitButton).row();
