@@ -448,12 +448,12 @@ public class GameRenderer {
 
         float selectionRadius = 1.5f;
 
-        List<Integer> heightSortedPawns = new ArrayList<>(validPawnIndices);
-        heightSortedPawns.sort((a, b) -> {
-            float heightA = pawnHeights.getOrDefault(a, 0f);
-            float heightB = pawnHeights.getOrDefault(b, 0f);
-            return Float.compare(heightB, heightA); // Descending order (highest first)
-        });
+        // List<Integer> heightSortedPawns = new ArrayList<>(validPawnIndices);
+        // heightSortedPawns.sort((a, b) -> {
+        //     float heightA = pawnHeights.getOrDefault(a, 0f);
+        //     float heightB = pawnHeights.getOrDefault(b, 0f);
+        //     return Float.compare(heightB, heightA); // Descending order (highest first)
+        // });
 
 
         for (Integer globalIndex : validPawnIndices) {
@@ -468,14 +468,16 @@ public class GameRenderer {
                     if (dist < minDist) {
                         minDist = dist;
                         selectedPawn = globalIndex % 4;
+                        Gdx.app.log(TAG, "Selected local pawn index: " + selectedPawn + 
+                            " (from global index: " + globalIndex + ")");
                     }
                 }
             }
         }
 
         if (selectedPawn != -1) {
-//            highlightPawn(selectedPawn);
-            Gdx.app.log(TAG, String.format("Selected pawn %d at distance %f", selectedPawn, minDist));
+            Gdx.app.log(TAG, String.format("Final selection - Local pawn index: %d at distance %f", 
+                selectedPawn, minDist));
         }
 
         return selectedPawn;
