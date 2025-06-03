@@ -6,45 +6,58 @@ import ludo.core.events.serverToClient.PingEvent;
 import java.util.Timer;
 import java.util.TimerTask;
 import java.util.logging.Logger;
-
+import java.util.concurrent.atomic.AtomicBoolean;
+//maybe revert this to commit before
 public class ServerPingSender implements PingSender {
     private static final Logger LOGGER = Logger.getLogger(ServerPingSender.class.getName());
     private final Connection connection;
-    private volatile boolean running = false;
+    private final AtomicBoolean running = new AtomicBoolean(false);
     private Timer timer;
-    private final TimerTask pingTask;
+    private static final long PING_PERIOD = 5000; // 5 seconds
+    private static final int MAX_PING_FAILURES = 3; // Allow 3 failed pings before disconnecting
 
     public ServerPingSender(Connection connection) {
         this.connection = connection;
         this.timer = null;
-        this.pingTask = null;
     }
 
     @Override
     public boolean sendPing() {
+        if (!running.get() || connection.isClosed()) {
+            return false;
+        }
+
         try {
             connection.send(new PingEvent());
             connection.decrementPingFailure();
             return true;
         } catch (Exception e) {
-            LOGGER.warning("Failed to send ping to " + connection.getConnectionID() + ": " + e.getMessage());
+            if (running.get()) {
+                LOGGER.warning("Failed to send ping to " + connection.getConnectionID() + ": " + e.getMessage());
+                connection.incrementPingFailure();
+                if (connection.isFailed()) {
+                    LOGGER.warning("Too many ping failures for " + connection.getConnectionID() + ", disconnecting");
+                    stop();
+                    return false;
+                }
+            }
             return false;
         }
     }
 
     @Override
     public void start() {
-        if (running) {
+        if (running.get()) {
             return;
         }
 
-        running = true;
+        running.set(true);
         timer = new Timer("Server-Ping-" + connection.getConnectionID());
 
         timer.scheduleAtFixedRate(new TimerTask() {
             @Override
             public void run() {
-                if (!running || connection.isFailed()) {
+                if (!running.get() || connection.isClosed() || connection.isFailed()) {
                     stop();
                     return;
                 }
@@ -52,12 +65,17 @@ public class ServerPingSender implements PingSender {
                 try {
                     if (!sendPing()) {
                         connection.incrementPingFailure();
+                        if (connection.isFailed()) {
+                            stop();
+                        }
                     }
                 } catch (Exception e) {
-                    LOGGER.warning("Ping failed for " + connection.getConnectionID());
-                    connection.incrementPingFailure();
-                    if (connection.isFailed()) {
-                        stop();
+                    if (running.get()) {
+                        LOGGER.warning("Ping failed for " + connection.getConnectionID());
+                        connection.incrementPingFailure();
+                        if (connection.isFailed()) {
+                            stop();
+                        }
                     }
                 }
             }
@@ -66,11 +84,18 @@ public class ServerPingSender implements PingSender {
 
     @Override
     public void stop() {
-        running = false;
+        if (!running.getAndSet(false)) {
+            return;
+        }
+
         if (timer != null) {
             timer.cancel();
             timer.purge();
             timer = null;
         }
+    }
+
+    public boolean isRunning() {
+        return running.get();
     }
 }
