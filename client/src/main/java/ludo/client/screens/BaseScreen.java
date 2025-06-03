@@ -52,60 +52,33 @@ public abstract class BaseScreen implements Screen {
 
             // Send disconnection event to server
             try {
-//                LOGGER.info("Preparing disconnection event...");
                 ludo.core.events.clientToServer.ClientDisconnectedEvent disconnectEvent =
                     new ludo.core.events.clientToServer.ClientDisconnectedEvent(
                         game.getGameStateManager().getCurrentUsername()
                     );
 
-//                LOGGER.info("Sending disconnection event to server...");
                 game.getGameStateManager().getNetworkHandler().sendMessage(disconnectEvent);
                 LOGGER.info("Disconnection event sent successfully");
 
-                // Wait for acknowledgment with timeout
-                long startTime = System.currentTimeMillis();
-                long timeout = 2000; // 2 seconds timeout
-                boolean acknowledged = false;
-
-//                LOGGER.info("Waiting for disconnection acknowledgment...");
-                while (System.currentTimeMillis() - startTime < timeout) {
-                    if (game.getGameStateManager().isDisconnectionAcknowledged()) {
-                        acknowledged = true;
-                        LOGGER.info("Received disconnection acknowledgment from server");
-                        break;
-                    }
-                    try {
-                        Thread.sleep(50);
-                    } catch (InterruptedException e) {
-                        LOGGER.warning("Disconnection wait interrupted: " + e.getMessage());
-                        break;
-                    }
-                }
-
-                if (!acknowledged) {
-                    LOGGER.warning("Disconnection acknowledgment timeout after " +
-                        (System.currentTimeMillis() - startTime) + "ms - proceeding with disconnect");
-                }
-            } catch (Exception e) {
-                LOGGER.severe("Error during disconnection process: " + e.getMessage());
-            } finally {
-//                LOGGER.info("Stopping outgoing queue processor...");
-                game.getGameStateManager().getNetworkHandler().stopOutgoingQueueProcessor();
-
-//                LOGGER.info("Performing final disconnect cleanup...");
+                // Give a small delay for the message to be sent
                 try {
-                    // Ensure we're not in the middle of sending/receiving messages
                     Thread.sleep(100);
-
-                    game.getGameStateManager().getNetworkHandler().disconnect();
-                    LOGGER.info("Disconnected from server, returning to connection screen");
-                } catch (Exception e) {
-                    LOGGER.severe("Error during final disconnect: " + e.getMessage());
+                } catch (InterruptedException e) {
+                    LOGGER.warning("Disconnection delay interrupted: " + e.getMessage());
                 }
+
+                // Disconnect without waiting for acknowledgment
+                game.getGameStateManager().getNetworkHandler().disconnect();
+                LOGGER.info("Disconnected from server");
+
+                // Return to connection screen
+                game.setScreen(new ConnectionScreen(game));
+            } catch (Exception e) {
+                LOGGER.severe("Error during disconnection: " + e.getMessage());
+                // Force disconnect and return to connection screen
+                game.getGameStateManager().getNetworkHandler().disconnect();
                 game.setScreen(new ConnectionScreen(game));
             }
-        } else {
-            LOGGER.warning("Cannot disconnect - GameStateManager is null");
         }
     }
 
