@@ -15,15 +15,15 @@ public class ConnectionManager{
     private final NetworkErrorHandler errorHandler;
     private final EventTransmitter eventTransmitter;
 
-    private ConnectionManager() {
+    private ConnectionManager(Server server) {
         this.connections = new ConcurrentHashMap<>();
-        this.errorHandler = new NetworkErrorHandler();
+        this.errorHandler = new NetworkErrorHandler(server);
         this.eventTransmitter = new EventTransmitter(new ArrayList<>(connections.values()));
     }
 
-    public static synchronized ConnectionManager getInstance() {
+    public static synchronized ConnectionManager getInstance(Server server) {
         if (instance == null) {
-            instance = new ConnectionManager();
+            instance = new ConnectionManager(server);
         }
         return instance;
     }
