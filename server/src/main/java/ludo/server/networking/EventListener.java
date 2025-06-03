@@ -3,6 +3,7 @@ package ludo.server.networking;
 import ludo.core.network.Connection;
 import ludo.core.network.NetworkMessage;
 import ludo.core.events.Event;
+import ludo.server.Server;
 import java.io.IOException;
 import java.util.Queue;
 import java.util.logging.Logger;
@@ -12,12 +13,14 @@ public class EventListener implements Runnable {
     private final Connection listeningConnection;
     private final Queue<Event> eventsQueue;
     private final boolean usedByServer;
+    private final Server server;
     private volatile boolean running;
 
-    public EventListener(Connection connection, Queue<Event> eventsQueue, boolean usedByServer) {
+    public EventListener(Connection connection, Queue<Event> eventsQueue, boolean usedByServer, Server server) {
         this.listeningConnection = connection;
         this.eventsQueue = eventsQueue;
         this.usedByServer = usedByServer;
+        this.server = server;
         this.running = true;
     }
 
@@ -43,13 +46,10 @@ public class EventListener implements Runnable {
             } catch (IOException e) {
                 if (usedByServer) {
                     // Handle server-side disconnection
-                    ConnectionManager.getInstance().handleDisconnection(
+                    ConnectionManager.getInstance(server).handleDisconnection(
                         listeningConnection.getConnectionID()
                     );
                 }
-                break;
-            } catch (ClassNotFoundException e) {
-                LOGGER.severe("Error deserializing message: " + e.getMessage());
                 break;
             }
         }
