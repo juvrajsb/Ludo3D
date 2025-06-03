@@ -5,8 +5,8 @@ import com.badlogic.gdx.backends.lwjgl3.Lwjgl3ApplicationConfiguration;
 import ludo.client.LudoGame;
 
 public class Lwjgl3Launcher {
-    private static final int DEFAULT_WIDTH = 800;
-    private static final int DEFAULT_HEIGHT = 600;
+    private static final int DEFAULT_WIDTH = 1280;
+    private static final int DEFAULT_HEIGHT = 720;
     private static final String GAME_TITLE = "Ludo Game";
 
     public static void main(String[] args) {
