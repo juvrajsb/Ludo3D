@@ -43,7 +43,7 @@ public class GameHUD extends Table {
         playerInfoTable.pad(5);
 
         Label.LabelStyle labelStyle = new Label.LabelStyle(skin.get("default", Label.LabelStyle.class));
-        labelStyle.font.getData().setScale(1.5f);
+        labelStyle.font.getData().setScale(1.0f);
 
         currentPlayerLabel = new Label("Current Player: ", labelStyle);
         currentPlayerLabel.setColor(Color.WHITE);
