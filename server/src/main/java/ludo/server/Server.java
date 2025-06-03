@@ -3,6 +3,7 @@ package ludo.server;
 import ludo.core.network.Connection;
 import ludo.server.networking.*;
 import ludo.server.state.ServerGameStateManager;
+import ludo.server.handlers.ClientConnectionHandler;
 
 import java.io.IOException;
 import java.net.ServerSocket;
@@ -22,6 +23,7 @@ public class Server {
     private final ServerGameStateManager gameStateManager;
     private final EventReceiver eventReceiver;
     private final Map<Connection, Thread> connectedClients;
+    private final ClientConnectionHandler clientConnectionHandler;
     private volatile boolean running;
 
     private Server(int port) {
@@ -30,10 +32,11 @@ public class Server {
             this.networkHandler = new ServerNetworkHandler(this, welcomeSocket);
             this.gameStateManager = new ServerGameStateManager(networkHandler);
             this.networkListener = new NetworkListener(this);
-            LOGGER.info("Server started on port " + welcomeSocket.getLocalPort());
             this.eventReceiver = new EventReceiver();
             this.connectedClients = new ConcurrentHashMap<>();
             this.running = false;
+            // Initialize clientConnectionHandler after server is fully constructed
+            this.clientConnectionHandler = new ClientConnectionHandler(this);
         } catch (IOException e) {
             LOGGER.severe("Could not create server socket on port " + port);
             throw new RuntimeException(e);
@@ -137,5 +140,9 @@ public class Server {
 
     public ServerNetworkHandler getNetworkHandler() {
         return networkHandler;
+    }
+
+    public ClientConnectionHandler getClientConnectionHandler() {
+        return clientConnectionHandler;
     }
 }
