@@ -17,9 +17,9 @@ public class PlayerJoinHandler {
     private final EventTransmitter eventTransmitter;
     private final List<String> availableColors;
 
-    public PlayerJoinHandler() {
+    public PlayerJoinHandler(Server server) {
         this.gameManager = GameManager.getInstance();
-        this.eventTransmitter = new EventTransmitter(Server.getInstance().getAllConnections());
+        this.eventTransmitter = new EventTransmitter(server.getAllConnections());
         this.availableColors = new ArrayList<>();
         initializeAvailableColors();
     }
