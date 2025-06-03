@@ -1,6 +1,11 @@
 package ludo.core.game;
 
+/**
+ * Represents the different states of the game.
+ */
 public enum GameState {
+    CONNECTING("Initial state when connecting to server"),
+    IN_GAME("Game is in progress"),
     WAITING_FOR_PLAYERS("Waiting for players to join..."),
     IN_PROGRESS("Game in progress"),
     DICE_ROLLED("Dice has been rolled"),
