@@ -23,13 +23,13 @@ public class NetworkErrorHandler {
     private final ClientConnectionHandler connectionHandler;
     private final EventTransmitter eventTransmitter;
 
-    public NetworkErrorHandler() {
+    public NetworkErrorHandler(Server server) {
         this.reconnectAttempts = new ConcurrentHashMap<>();
         this.playerStates = new ConcurrentHashMap<>();
         this.scheduler = Executors.newScheduledThreadPool(1);
         this.gameManager = GameManager.getInstance();
-        this.connectionHandler = new ClientConnectionHandler();
-        this.eventTransmitter = new EventTransmitter(Server.getInstance().getAllConnections());
+        this.connectionHandler = new ClientConnectionHandler(server);
+        this.eventTransmitter = new EventTransmitter(server.getAllConnections());
     }
 
     public void handleConnectionError(Connection connection, Exception error) {
@@ -71,8 +71,13 @@ public class NetworkErrorHandler {
         reconnectAttempts.remove(clientId);
         playerStates.remove(clientId);
 
-        // Handle player removal through connection handlers
-        connectionHandler.handleUnexpectedDisconnection(clientId);
+        // Get the connection from the server and handle disconnection
+        Connection connection = connectionHandler.getConnection(clientId);
+        if (connection != null) {
+            connectionHandler.handleUnexpectedDisconnection(connection);
+        } else {
+            Server.LOGGER.warning("No connection found for client: " + clientId);
+        }
     }
 
     public void handleReconnection(String clientId, Connection newConnection) {
