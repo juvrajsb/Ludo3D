@@ -31,11 +31,11 @@ public class UsernameScreen extends BaseScreen {
 
         game.getGameStateManager().setCurrentScreen(this);
 
-        // Check if the user is the first player and if there is a saved game
-        if (game.getGameStateManager().isFirstPlayer() && GamePersistence.hasSaveGame()) {
-            showLoadGameDialog();
-            return;
-        }
+        // Check if there is a saved game and show load dialog if available
+//        if (GamePersistence.hasSaveGame()) {
+//            showLoadGameDialog();
+//            return;
+//        }
 
         createUI();
         disconnectButton.setPosition(Gdx.graphics.getWidth() - 130, Gdx.graphics.getHeight() - 50);
@@ -79,7 +79,7 @@ public class UsernameScreen extends BaseScreen {
 
         stage.addActor(mainTable);
 
-        if (game.getGameStateManager().isFirstPlayer()) {
+        if (game.getGameStateManager().isFirstPlayer()) {// this isnt working, but its working when i reconnect
             playerCountTable = new Table();
             playerCountTable.add(new Label("Number of Players:", skin)).align(Align.right);
             playerCountSelect = new SelectBox<>(skin);
@@ -89,47 +89,47 @@ public class UsernameScreen extends BaseScreen {
         }
     }
 
-    private void showLoadGameDialog() {
-        Dialog dialog = new Dialog("Load Game", skin) {
-            @Override
-            protected void result(Object object) {
-                if ((Boolean) object) {
-                    loadSavedGame();
-                } else {
-                    createUI();
-                }
-            }
-        };
-        dialog.text("Do you want to load the previous game?");
-        dialog.button("Yes", true);
-        dialog.button("No", false);
-        dialog.show(stage);
-    }
+//    private void showLoadGameDialog() {
+//        Dialog dialog = new Dialog("Load Game", skin) {
+//            @Override
+//            protected void result(Object object) {
+//                if ((Boolean) object) {
+//                    loadSavedGame();
+//                } else {
+//                    createUI();
+//                }
+//            }
+//        };
+//        dialog.text("Do you want to load the previous game?");
+//        dialog.button("Yes", true);
+//        dialog.button("No", false);
+//        dialog.show(stage);
+//    }
 
-    private void loadSavedGame() {
-        GameSaveData saveData = GamePersistence.loadGame();
-        if (saveData != null) {
-            game.reset();
-
-            saveData.players.forEach(playerData -> {
-                Player player = new Player(playerData.name, playerData.color);
-                for (int i = 0; i < playerData.pawns.size(); i++) {
-                    GamePersistence.PawnSaveData pawnData = playerData.pawns.get(i);
-                    Pawn pawn = player.getPawns().get(i);
-                    pawn.setPosition(pawnData.position);
-                    if (pawnData.isHome) pawn.sendHome();
-                    if (pawnData.isFinished) pawn.setFinished(true);
-                }
-                game.addPlayer(player);
-            });
-
-            game.getGameStateManager().setCurrentPlayer(saveData.currentPlayerColor);
-            game.setScreen(new GameScreen(game));
-        } else {
-            Gdx.app.error("UsernameScreen", "Failed to load saved game");
-            createUI();
-        }
-    }
+//    private void loadSavedGame() {
+//        GameSaveData saveData = GamePersistence.loadGame();
+//        if (saveData != null) {
+//            game.reset();
+//
+//            saveData.players.forEach(playerData -> {
+//                Player player = new Player(playerData.name, playerData.color);
+//                for (int i = 0; i < playerData.pawns.size(); i++) {
+//                    GamePersistence.PawnSaveData pawnData = playerData.pawns.get(i);
+//                    Pawn pawn = player.getPawns().get(i);
+//                    pawn.setPosition(pawnData.position);
+//                    if (pawnData.isHome) pawn.sendHome();
+//                    if (pawnData.isFinished) pawn.setFinished(true);
+//                }
+//                game.addPlayer(player);
+//            });
+//
+//            game.getGameStateManager().setCurrentPlayer(saveData.currentPlayerColor);
+//            game.setScreen(new GameScreen(game));
+//        } else {
+//            Gdx.app.error("UsernameScreen", "Failed to load saved game");
+//            createUI();
+//        }
+//    }
 
     private void attemptJoin() {
         if (joinInProgress) {
