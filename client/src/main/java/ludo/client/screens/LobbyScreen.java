@@ -10,9 +10,15 @@ import ludo.client.LudoGame;
 import ludo.core.entities.BotPlayer;
 import ludo.core.entities.Player;
 import ludo.core.utils.Constants;
+import ludo.core.persistence.GamePersistence;
+import ludo.core.entities.Pawn;
+import com.badlogic.gdx.utils.Array;
 
+import java.awt.Frame;
+import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
+
 
 public class LobbyScreen extends BaseScreen {
     private final Table playersTable;
@@ -21,6 +27,8 @@ public class LobbyScreen extends BaseScreen {
     private final List<Player> players = new ArrayList<>();
     private boolean isAdmin = false;
     private CheckBox botPlayersCheckbox;
+    private TextButton loadGameButton;
+    private boolean lastAdminStatus = false;
 
     public LobbyScreen(final LudoGame game) {
         super(game);
@@ -58,6 +66,18 @@ public class LobbyScreen extends BaseScreen {
         mainTable.add(botPlayersCheckbox).colspan(2).pad(10);
         mainTable.row();
 
+        // Load Game button (only visible for admin)
+        loadGameButton = new TextButton("Load Game", skin);
+        loadGameButton.setVisible(false);
+        loadGameButton.addListener(new ChangeListener() {
+            @Override
+            public void changed(ChangeEvent event, Actor actor) {
+                showNativeFileChooserAndLoad();
+            }
+        });
+        mainTable.add(loadGameButton).colspan(2).pad(30);
+        mainTable.row();
+
         // Status label
         statusLabel = new Label("Waiting for players...", skin);
         mainTable.add(statusLabel).colspan(2).pad(20);
@@ -70,48 +90,80 @@ public class LobbyScreen extends BaseScreen {
             @Override
             public void changed(ChangeEvent event, Actor actor) {
                 if (isAdmin && !startButton.isDisabled()) {
-                    checkForSavedGame();
+                    game.getGameStateManager().startGame(botPlayersCheckbox.isChecked(), false);
                 }
             }
         });
         mainTable.add(startButton).colspan(2).pad(20).row();
 
-        // Back button
-        TextButton backButton = new TextButton("Leave", skin);
-        backButton.addListener(new ChangeListener() {
-            @Override
-            public void changed(ChangeEvent event, Actor actor) {
-                game.getGameStateManager().leaveGame();
-                game.setScreen(new ConnectionScreen(game));
-            }
-        });
-        mainTable.add(backButton).colspan(2).pad(20);
-
         stage.addActor(mainTable);
         game.getGameStateManager().setLobbyScreen(this);
         checkAdminStatus();
+
+        // disconnect button in top-right corner
+        disconnectButton.setPosition(Gdx.graphics.getWidth() - 130, Gdx.graphics.getHeight() - 50);
+
+        System.out.println("Working directory: " + System.getProperty("user.dir"));
     }
 
-    private void checkForSavedGame() {
-        if (game.getGameStateManager().hasSavedGameWithMatchingPlayers()) {
-            showLoadSavedGameDialog();
-        } else {
-            // No saved game or no matching players
-            game.getGameStateManager().startGame(botPlayersCheckbox.isChecked(), false);
+    @Override
+    public void resize(int width, int height) {
+        super.resize(width, height);
+        disconnectButton.setPosition(width - 130, height - 50);
+    }
+
+    private void showNativeFileChooserAndLoad() {
+        Gdx.app.log("LobbyScreen", "showNativeFileChooserAndLoad (libGDX dialog) called");
+        File savesDir = new File("LudoSaves");
+        if (!savesDir.exists()) {
+            savesDir.mkdirs();
         }
-    }
 
-    private void showLoadSavedGameDialog() {
-        Dialog dialog = new Dialog("Load Saved Game", skin) {
+        Gdx.app.log("LobbyScreen", "Using saves directory: " + savesDir.getAbsolutePath());
+
+        // List all .json files in the directory
+        File[] saveFiles = savesDir.listFiles((dir, name) -> name.toLowerCase().endsWith(".json"));
+        Array<String> fileNames = new Array<>();
+        if (saveFiles != null) {
+            for (File f : saveFiles) {
+                fileNames.add(f.getName());
+            }
+        }
+
+        final com.badlogic.gdx.scenes.scene2d.ui.List<String> saveList = new com.badlogic.gdx.scenes.scene2d.ui.List<>(skin);
+        if (fileNames.size > 0) {
+            saveList.setItems(fileNames);
+            saveList.setSelectedIndex(0);
+        }
+
+        Dialog dialog = new Dialog("Select Save File", skin) {
             @Override
             protected void result(Object object) {
-                boolean loadSavedGame = (Boolean) object;
-                game.getGameStateManager().startGame(botPlayersCheckbox.isChecked(), loadSavedGame);
+                if ("AUTO_SAVE".equals(object)) {
+                    Gdx.app.log("LobbyScreen", "Loading auto save");
+                    loadGame(true, null);
+                } else if (Boolean.TRUE.equals(object)) {
+                    String fileName = saveList.getSelected();
+                    if (fileName != null) {
+                        Gdx.app.log("LobbyScreen", "Selected file: " + fileName);
+                        loadGame(false, fileName);
+                    } else {
+                        Gdx.app.log("LobbyScreen", "No file selected");
+                    }
+                } else {
+                    Gdx.app.log("LobbyScreen", "Dialog cancelled or no file selected");
+                }
             }
         };
-        dialog.text("A saved game with matching players was found.\nWould you like to load it?");
-        dialog.button("Yes", true);
-        dialog.button("No", false);
+        dialog.getContentTable().pad(20);
+        if (fileNames.size == 0) {
+            dialog.text("No save files found in 'assets/LudoSaves'.");
+        } else {
+            dialog.getContentTable().add(saveList).width(300).height(200).expandX().fillX().row();
+            dialog.button("Load", true);
+        }
+        dialog.button("Cancel", false);
+        dialog.button("Load Auto Save", "AUTO_SAVE");
         dialog.show(stage);
     }
 
@@ -129,11 +181,17 @@ public class LobbyScreen extends BaseScreen {
     }
 
     private void checkAdminStatus() {
-        isAdmin = game.getGameStateManager().isFirstPlayer();
-        startButton.setVisible(isAdmin);
-        botPlayersCheckbox.setVisible(isAdmin);
-        if (isAdmin) {
-            startButton.setDisabled(true);
+        boolean currentAdmin = game.getGameStateManager().isFirstPlayer();
+        Gdx.app.log("LobbyScreen", "checkAdminStatus: currentAdmin=" + currentAdmin + ", lastAdminStatus=" + lastAdminStatus);
+        if (currentAdmin != lastAdminStatus) {
+            isAdmin = currentAdmin;
+            startButton.setVisible(isAdmin);
+            botPlayersCheckbox.setVisible(isAdmin);
+            loadGameButton.setVisible(isAdmin);
+            if (isAdmin) {
+                startButton.setDisabled(true);
+            }
+            lastAdminStatus = currentAdmin;
         }
     }
 
@@ -219,6 +277,7 @@ public class LobbyScreen extends BaseScreen {
     }
 
     public void setFirstPlayer() {
+        Gdx.app.log("LobbyScreen", "setFirstPlayer called");
         isAdmin = true;
         startButton.setVisible(true);
         botPlayersCheckbox.setVisible(true);
@@ -230,6 +289,47 @@ public class LobbyScreen extends BaseScreen {
             startButton.setDisabled(false);
         } else {
             statusLabel.setText("Waiting for more players... (" + playerCount + "/4)");
+        }
+        checkAdminStatus(); // Ensure UI is updated when FIRST_PLAYER event is received
+    }
+
+    /**
+     * Loads a game from a file path or auto-save.
+     * @param isAutoSave true to load auto-save, false to load from filePath
+     * @param filePath path to the save file (ignored if isAutoSave is true)
+     */
+    private void loadGame(boolean isAutoSave, String filePath) {
+        GamePersistence.GameSaveData saveData;
+        if (isAutoSave) {
+            saveData = GamePersistence.loadAutoSave();
+        } else {
+            saveData = GamePersistence.loadGame(filePath);
+        }
+
+        if (saveData != null) {
+            // Clear current game state
+            game.getGameStateManager().resetGame();
+
+            // Load players and pawns
+            for (GamePersistence.PlayerSaveData playerData : saveData.players) {
+                Player player = new Player(playerData.name, playerData.color);
+                for (int i = 0; i < playerData.pawns.size(); i++) {
+                    GamePersistence.PawnSaveData pawnData = playerData.pawns.get(i);
+                    Pawn pawn = player.getPawns().get(i);
+                    pawn.setPosition(pawnData.position);
+                    if (pawnData.isHome) pawn.sendHome();
+                    if (pawnData.isFinished) pawn.setFinished(true);
+                }
+                game.addPlayer(player);
+            }
+
+            // Set current player
+            game.getGameStateManager().setCurrentPlayer(saveData.currentPlayerColor);
+
+            // Start the game
+            game.getGameStateManager().startGame(botPlayersCheckbox.isChecked(), true);
+        } else {
+            statusLabel.setText("[RED]Failed to load save file[]");
         }
     }
 }
