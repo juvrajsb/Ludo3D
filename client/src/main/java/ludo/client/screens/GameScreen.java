@@ -35,6 +35,7 @@ public class GameScreen extends BaseScreen {
     private final Environment environment;
     final PerspectiveCamera camera;
     private final TextButton rollButton;
+    private final TextButton saveButton;
     private final List<Player> players;
     private final Vector3 cameraTarget = new Vector3(0, 0, 0);
     final float zoomSpeed = 2f;
@@ -117,12 +118,25 @@ public class GameScreen extends BaseScreen {
                 }
             }
         });
+
+        saveButton = new TextButton("Save Game", skin);
+        saveButton.setSize(100, 50);
+        saveButton.setPosition(Gdx.graphics.getWidth() - 120, 80);
+        saveButton.addListener(new ChangeListener() {
+            @Override
+            public void changed(ChangeEvent event, Actor actor) {
+                performManualSave();
+            }
+        });
+
         this.renderer = new GameRenderer(Gdx.graphics.getWidth(), Gdx.graphics.getHeight());
+
+        disconnectButton.setPosition(Gdx.graphics.getWidth() - 120, 200);
 
         stage.addActor(hud);
         stage.addActor(rollButton);
+        stage.addActor(saveButton);
 
-//        createTestPanel();
         setupInputHandling();
         game.getGameStateManager().initialize(this);
         this.currentGameState = GameState.IN_PROGRESS;
@@ -274,6 +288,42 @@ public class GameScreen extends BaseScreen {
         }
     }
 
+    private void performManualSave() {
+        try {
+            // Get the current game state
+            GameState state = game.getGameStateManager().isGameStarted() ?
+                GameState.IN_PROGRESS : GameState.WAITING_FOR_PLAYERS;
+
+            // Get the current player color
+            String currentColor = currentPlayer != null ? currentPlayer.getColor() : null;
+
+            // Get the list of players from GameStateManager instead of LudoGame
+            List<Player> gamePlayers = game.getGameStateManager().getCurrentPlayers();
+
+            LOGGER.info("=== Starting Manual Save ===");
+            LOGGER.info("Current game state: " + state);
+            LOGGER.info("Current player: " + (currentPlayer != null ?
+                currentPlayer.getName() + " (" + currentPlayer.getColor() + ")" : "null"));
+            LOGGER.info("Number of players: " + (gamePlayers != null ? gamePlayers.size() : "null"));
+
+            if (gamePlayers != null) {
+                for (Player player : gamePlayers) {
+                    LOGGER.info("Player: " + player.getName() +
+                        ", Color: " + player.getColor() +
+                        ", Pawns: " + (player.getPawns() != null ? player.getPawns().size() : "null"));
+                }
+            }
+
+            GamePersistence.saveGame(gamePlayers, currentColor, state);
+            showMessage("Game saved successfully");
+            LOGGER.info("Manual save completed successfully");
+        } catch (Exception e) {
+            showMessage("Failed to save game");
+            LOGGER.warning("Failed to save game: " + e.getMessage());
+            e.printStackTrace();
+        }
+    }
+
     public void addPlayer(Player player) { // TODO is this correct are players supposed to enter the game like this?
         if (!players.contains(player)) {
             players.add(player);
@@ -288,6 +338,10 @@ public class GameScreen extends BaseScreen {
         camera.viewportWidth = width;
         camera.viewportHeight = height;
         camera.update();
+
+        rollButton.setPosition(width - 120, 20);
+        saveButton.setPosition(width - 120, 80);
+        disconnectButton.setPosition(width - 120, 140);
     }
 
     @Override
@@ -383,9 +437,9 @@ public class GameScreen extends BaseScreen {
 
     public void updateDiceDisplay(int value) {
         lastDiceRoll = value;
+        LOGGER.info("Updating dice display - value: " + value + ", isMyTurn: " + isMyTurn());
 
         hud.updateDiceValue(value);
-
         renderer.updateDiceValue(value);
 
         Timer.schedule(new Timer.Task() {
@@ -465,39 +519,6 @@ public class GameScreen extends BaseScreen {
         LOGGER.info("Before enable - canMove: " + canMove);
         canMove = true;
         rollButton.setDisabled(true);
-        showMessage("Select a pawn to move");
-
-        if (pawnUIStates == null) {
-            pawnUIStates = new HashMap<>();
-        }
-
-        for (int i = 0; i < 4; i++) {
-            PawnUIState state = pawnUIStates.get(i);
-            if (state != null) {
-                state.selectable = false;
-            }
-        }
-
-        if (lastDiceRoll == 6 && currentPlayer != null) {
-            List<Integer> selectablePawns = new ArrayList<>();
-
-            for (int i = 0; i < currentPlayer.getPawns().size(); i++) {
-                Pawn pawn = currentPlayer.getPawns().get(i);
-                if (pawn.isHome()) {
-                    selectablePawns.add(i);
-                    PawnUIState state = pawnUIStates.computeIfAbsent(i, k -> new PawnUIState());
-                    state.selectable = true;
-                    LOGGER.info("Marked pawn " + i + " as selectable (home pawn with 6)");
-                } else if (!pawn.isFinished()) {
-                    selectablePawns.add(i);
-                    PawnUIState state = pawnUIStates.computeIfAbsent(i, k -> new PawnUIState());
-                    state.selectable = true;
-                    LOGGER.info("Marked pawn " + i + " as selectable (board pawn)");
-                }
-            }
-
-            LOGGER.info("Selectable pawns: " + selectablePawns);
-        }
         LOGGER.info("After enable - canMove: " + canMove);
     }
 
@@ -512,15 +533,26 @@ public class GameScreen extends BaseScreen {
     }
 
     public void enableControls() {
-        canMove = false;
-        isRolling = false;
+        LOGGER.info("Enabling controls - Current dice value: " + lastDiceRoll);
+        if (lastDiceRoll == 0) {
+            rollButton.setDisabled(false);
+            canMove = false;
+        } else {
+            rollButton.setDisabled(true);
+            canMove = true;
+        }
+    }
+
+    public void enableRollButton() {
+        LOGGER.info("Enabling roll button");
         rollButton.setDisabled(false);
-        showMessage("Your turn! Roll the dice");
+        canMove = false;
     }
 
     public void disableControls() {
-        canMove = false;
+        LOGGER.info("Disabling all controls");
         rollButton.setDisabled(true);
+        canMove = false;
     }
 
     public void showWinnerScreen(String winner) {
@@ -568,45 +600,47 @@ public class GameScreen extends BaseScreen {
 //     }
 
     void handlePawnSelection(int screenX, int screenY) {
+        LOGGER.info("=== Pawn Selection Attempt ===");
+        LOGGER.info("Screen coordinates: " + screenX + ", " + screenY);
+        LOGGER.info("Current state - canMove: " + canMove +
+            ", currentPlayer: " + (currentPlayer != null ? currentPlayer.getName() : "null") +
+            ", isMyTurn: " + (currentPlayer != null && currentPlayer.getName().equals(game.getGameStateManager().getCurrentUsername())) +
+            ", lastDiceRoll: " + lastDiceRoll +
+            ", gameState: " + currentGameState);
+
         if (!canMove || currentPlayer == null ||
             !currentPlayer.getName().equals(game.getGameStateManager().getCurrentUsername())) {
-            LOGGER.info("Pawn selection disabled");
+            LOGGER.info("Pawn selection disabled - canMove: " + canMove +
+                ", currentPlayer: " + (currentPlayer != null ? currentPlayer.getName() : "null"));
             return;
         }
-
-        LOGGER.info("Handling pawn selection at screen coords: " + screenX + ", " + screenY);
 
         int selectedPawn = renderer.getPawnAtScreenCoords(screenX, screenY, camera, currentPlayer.getColor());
         LOGGER.info("Selected pawn index: " + selectedPawn);
 
         if (selectedPawn != -1) {
-            PawnUIState state = pawnUIStates.get(selectedPawn);
-//            LOGGER.info("Pawn state exists: " + (state != null));
-//            LOGGER.info("Pawn state selectable: " + (state != null ? state.selectable : "N/A"));
-//            LOGGER.info("Current dice roll: " + lastDiceRoll);
-//            LOGGER.info("Pawn in home: " + (currentPlayer.getPawns().get(selectedPawn).isHome()));
-
-            boolean isHome = currentPlayer.getPawns().get(selectedPawn).isHome();
+            Pawn pawn = currentPlayer.getPawns().get(selectedPawn);
+            boolean isHome = pawn.isHome();
             boolean canLeaveHome = lastDiceRoll == 6 && isHome;
 
-            if (canLeaveHome || (state != null && state.selectable)) {
-                LOGGER.info(String.format("Selected pawn %d for player %s",
-                    selectedPawn, currentPlayer.getColor()));
+            LOGGER.info("Pawn validation - Index: " + selectedPawn +
+                ", Position: " + pawn.getPosition() +
+                ", isHome: " + isHome +
+                ", canLeaveHome: " + canLeaveHome +
+                ", lastDiceRoll: " + lastDiceRoll);
 
-                // Visual feedback before server responds
+            if (canLeaveHome || !isHome) {
+                LOGGER.info("Valid pawn selection - requesting move for pawn " + selectedPawn);
                 highlightPawnAsMoving(selectedPawn);
-
-                // Request move from server
                 game.getGameStateManager().requestMove(selectedPawn);
                 canMove = false;
             } else {
-                // Invalid selection feedback
+                LOGGER.info("Invalid pawn selection - cannot move pawn " + selectedPawn);
                 showMessage("Cannot move this pawn");
-                LOGGER.info("Cannot move pawn - not selectable");
                 renderer.flashInvalidSelection(selectedPawn);
             }
         } else {
-            LOGGER.info("No valid pawn selected");
+            LOGGER.info("No valid pawn selected at coordinates");
         }
     }
 
@@ -628,5 +662,19 @@ public class GameScreen extends BaseScreen {
         renderer.startDiceRollAnimation();
 
         game.getGameStateManager().requestDiceRoll();
+    }
+
+    public void reset() {
+        LOGGER.info("Resetting game screen");
+        players.clear();
+        currentPlayer = null;
+        canMove = false;
+        lastDiceRoll = 0;
+        isRolling = false;
+        pawnUIStates.clear();
+        animationQueue.clear();
+        processingAnimations = false;
+        currentGameState = GameState.WAITING_FOR_PLAYERS;
+        hud.reset();
     }
 }
