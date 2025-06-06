@@ -55,7 +55,7 @@ public class GameHUD extends Table {
         messageLabel.setColor(Color.WHITE);
         messageLabel.setAlignment(Align.center);
 
-        topPanel.add(playerInfoTable).expandX().left().pad(10);
+        topPanel.add(playerInfoTable).expandX().left().pad(30);
         topPanel.add(currentPlayerLabel).pad(10);
         topPanel.add(diceValueLabel).pad(10);
 

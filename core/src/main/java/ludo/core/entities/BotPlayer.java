@@ -86,29 +86,43 @@ public class BotPlayer extends Player {
         LOGGER.fine("Calculated new position: current=" + currentPosition +
             ", start=" + playerStart + ", new=" + newPosition);
 
+        // Check if pawn is in home column
+        if (board.isHomeColumn(currentPosition, getColor())) {
+            // In home column, can move any number of steps as long as we don't overshoot
+            int homeStart = board.getTotalSpaces() + 
+                (board.getStartPositionIndex(getColor()) / 13) * board.getHomeColumnSize();
+            int distanceToEnd = (homeStart + board.getHomeColumnSize() - 1) - currentPosition;
+            
+            // Log the home column calculation details
+            LOGGER.info("Home column check - Current: " + currentPosition + 
+                ", Home Start: " + homeStart + 
+                ", Distance to End: " + distanceToEnd + 
+                ", Roll: " + diceRoll);
+            
+            // Can move if the roll doesn't overshoot the end
+            return diceRoll <= distanceToEnd;
+        }
+
         if (currentPosition <= entryPoint && newPosition > entryPoint) {
             int stepsIntoHome = newPosition - entryPoint - 1;
             if (stepsIntoHome >= board.getHomeColumnSize()) {
+                LOGGER.info("Move rejected - Would overshoot home column: " + stepsIntoHome + 
+                    " steps into home (max: " + (board.getHomeColumnSize() - 1) + ")");
                 return false;  // Would overshoot home
             }
 
-            // Check if home column position is blocked by own pawn
-            int homePosition = board.getTotalSpaces() + stepsIntoHome;
-            for (Pawn otherPawn : getPawns()) {
-                if (otherPawn != pawn && otherPawn.getPosition() == homePosition) {
-                    return false;
-                }
-            }
+            // Pawns of same color can stack in home column
             return true;
         }
 
         // Normal board movement
         newPosition = newPosition % board.getTotalSpaces();
 
-        // Check if blocked by own pawn on non-safe spot
+        // Pawns of same color can stack on non-safe spots
         for (Pawn otherPawn : getPawns()) {
             if (otherPawn != pawn && otherPawn.getPosition() == newPosition
-                && !board.isSafeSpot(newPosition)) {
+                && !board.isSafeSpot(newPosition) && !otherPawn.getColor().equals(getColor())) {
+                LOGGER.info("Move rejected - Position " + newPosition + " blocked by opponent pawn");
                 return false;
             }
         }
@@ -133,6 +147,16 @@ public class BotPlayer extends Player {
 
         // Strategic blocking
         score += evaluateBlocking(move, allPlayers, board);
+
+        // Bonus for reaching home
+        if (board.isHomeColumn(move.newPosition, getColor())) {
+            int homeStart = board.getTotalSpaces() + 
+                (board.getStartPositionIndex(getColor()) / 13) * board.getHomeColumnSize();
+            int distanceToEnd = (homeStart + board.getHomeColumnSize() - 1) - move.newPosition;
+            if (distanceToEnd == 0) {
+                score += 200; // Big bonus for reaching home
+            }
+        }
 
         return score;
     }
@@ -176,9 +200,12 @@ public class BotPlayer extends Player {
     }
 
     private int evaluateHomeStretch(PawnMove move, Board board) {
-        // Bonus for moves that enter or progress in home stretch
+        // Only give bonus for moves that get closer to home or enter home column
         if (board.isHomeColumn(move.newPosition, getColor())) {
-            return HOME_STRETCH_SCORE;
+            int homeStart = board.getTotalSpaces() + 
+                (board.getStartPositionIndex(getColor()) / 13) * board.getHomeColumnSize();
+            int distanceToEnd = (homeStart + board.getHomeColumnSize() - 1) - move.newPosition;
+            return HOME_STRETCH_SCORE * (board.getHomeColumnSize() - distanceToEnd);
         }
         return 0;
     }
