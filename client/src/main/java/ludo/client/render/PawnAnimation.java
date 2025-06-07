@@ -22,9 +22,9 @@ public class PawnAnimation {
         );
         this.progress = 0;
 
-        Gdx.app.log("PawnAnimation", String.format(
-            "Creating animation for %s pawn: Start(%s) -> Target(%s)",
-            color, start.toString(), target.toString()));
+//        Gdx.app.log("PawnAnimation", String.format(
+//            "Creating animation for %s pawn: Start(%s) -> Target(%s)",
+//            color, start.toString(), target.toString()));
     }
 
     Vector3 getCurrentPosition() {
