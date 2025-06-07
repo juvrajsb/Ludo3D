@@ -107,10 +107,10 @@ public class GameScreen extends BaseScreen {
         rollButton.addListener(new ChangeListener() {
             @Override
             public void changed(ChangeEvent event, Actor actor) {
-                LOGGER.info("Roll button clicked - isRolling: " + isRolling +
-                    ", canMove: " + canMove +
-                    ", isMyTurn: " + (currentPlayer != null &&
-                    currentPlayer.getName().equals(game.getGameStateManager().getCurrentUsername())));
+//                LOGGER.info("Roll button clicked - isRolling: " + isRolling +
+//                    ", canMove: " + canMove +
+//                    ", isMyTurn: " + (currentPlayer != null &&
+//                    currentPlayer.getName().equals(game.getGameStateManager().getCurrentUsername())));
 
                 if (!isRolling) {
                     Gdx.app.log(TAG, "Roll button clicked");
@@ -300,19 +300,19 @@ public class GameScreen extends BaseScreen {
             // Get the list of players from GameStateManager instead of LudoGame
             List<Player> gamePlayers = game.getGameStateManager().getCurrentPlayers();
 
-            LOGGER.info("=== Starting Manual Save ===");
-            LOGGER.info("Current game state: " + state);
-            LOGGER.info("Current player: " + (currentPlayer != null ?
-                currentPlayer.getName() + " (" + currentPlayer.getColor() + ")" : "null"));
-            LOGGER.info("Number of players: " + (gamePlayers != null ? gamePlayers.size() : "null"));
+//            LOGGER.info("=== Starting Manual Save ===");
+//            LOGGER.info("Current game state: " + state);
+//            LOGGER.info("Current player: " + (currentPlayer != null ?
+//                currentPlayer.getName() + " (" + currentPlayer.getColor() + ")" : "null"));
+//            LOGGER.info("Number of players: " + (gamePlayers != null ? gamePlayers.size() : "null"));
 
-            if (gamePlayers != null) {
-                for (Player player : gamePlayers) {
-                    LOGGER.info("Player: " + player.getName() +
-                        ", Color: " + player.getColor() +
-                        ", Pawns: " + (player.getPawns() != null ? player.getPawns().size() : "null"));
-                }
-            }
+//            if (gamePlayers != null) {
+//                for (Player player : gamePlayers) {
+////                    LOGGER.info("Player: " + player.getName() +
+////                        ", Color: " + player.getColor() +
+////                        ", Pawns: " + (player.getPawns() != null ? player.getPawns().size() : "null"));
+//                }
+//            }
 
             GamePersistence.saveGame(gamePlayers, currentColor, state);
             showMessage("Game saved successfully");
@@ -364,8 +364,8 @@ public class GameScreen extends BaseScreen {
                             color, i, oldPosition, newPosition
                         ));
 
-                        LOGGER.info(String.format("Queued animation for %s pawn %d: %d -> %d",
-                            color, i, oldPosition, newPosition));
+//                        LOGGER.info(String.format("Queued animation for %s pawn %d: %d -> %d",
+//                            color, i, oldPosition, newPosition));
                     }
                 }
                 break;
@@ -408,7 +408,7 @@ public class GameScreen extends BaseScreen {
     }
 
     public void setCurrentPlayer(String identifier) {
-        LOGGER.info("Setting current player to: " + identifier);
+//        LOGGER.info("Setting current player to: " + identifier);
 
         for (Player player : players) {
             if (player.getColor().toUpperCase().equals(identifier.toUpperCase()) ||
@@ -418,7 +418,7 @@ public class GameScreen extends BaseScreen {
                 boolean isMyTurn = player.getName().equals(game.getGameStateManager().getCurrentUsername());
 
                 rollButton.setDisabled(!isMyTurn);
-                LOGGER.info("Roll button disabled state set to: " + rollButton.isDisabled());
+//                LOGGER.info("Roll button disabled state set to: " + rollButton.isDisabled());
 
                 if (isMyTurn) {
                     enableControls();
@@ -426,9 +426,9 @@ public class GameScreen extends BaseScreen {
                     disableControls();
                 }
 
-                LOGGER.info("Current player set - Name: " + player.getName() +
-                    ", Color: " + player.getColor() +
-                    ", isMyTurn: " + isMyTurn);
+//                LOGGER.info("Current player set - Name: " + player.getName() +
+//                    ", Color: " + player.getColor() +
+//                    ", isMyTurn: " + isMyTurn);
                 return;
             }
         }
@@ -437,7 +437,7 @@ public class GameScreen extends BaseScreen {
 
     public void updateDiceDisplay(int value) {
         lastDiceRoll = value;
-        LOGGER.info("Updating dice display - value: " + value + ", isMyTurn: " + isMyTurn());
+//        LOGGER.info("Updating dice display - value: " + value + ", isMyTurn: " + isMyTurn());
 
         hud.updateDiceValue(value);
         renderer.updateDiceValue(value);
@@ -515,11 +515,11 @@ public class GameScreen extends BaseScreen {
     }
 
     public void enablePawnSelection() {
-        LOGGER.info("=== Enable Pawn Selection ===");
-        LOGGER.info("Before enable - canMove: " + canMove);
+//        LOGGER.info("=== Enable Pawn Selection ===");
+//        LOGGER.info("Before enable - canMove: " + canMove);
         canMove = true;
         rollButton.setDisabled(true);
-        LOGGER.info("After enable - canMove: " + canMove);
+//        LOGGER.info("After enable - canMove: " + canMove);
     }
 
     public void removePlayer(String playerName) {
@@ -533,7 +533,7 @@ public class GameScreen extends BaseScreen {
     }
 
     public void enableControls() {
-        LOGGER.info("Enabling controls - Current dice value: " + lastDiceRoll);
+//        LOGGER.info("Enabling controls - Current dice value: " + lastDiceRoll);
         if (lastDiceRoll == 0) {
             rollButton.setDisabled(false);
             canMove = false;
@@ -544,13 +544,13 @@ public class GameScreen extends BaseScreen {
     }
 
     public void enableRollButton() {
-        LOGGER.info("Enabling roll button");
+//        LOGGER.info("Enabling roll button");
         rollButton.setDisabled(false);
         canMove = false;
     }
 
     public void disableControls() {
-        LOGGER.info("Disabling all controls");
+//        LOGGER.info("Disabling all controls");
         rollButton.setDisabled(true);
         canMove = false;
     }
@@ -560,7 +560,7 @@ public class GameScreen extends BaseScreen {
     }
 
     public void playMoveAnimation(int pawnIndex, int newPosition) {
-        Gdx.app.log(TAG, String.format("Inside playMoveAnimation"));
+//        Gdx.app.log(TAG, String.format("Inside playMoveAnimation"));
 
         Player currentPlayer = getCurrentPlayer();
         String color = currentPlayer.getColor();
@@ -600,18 +600,18 @@ public class GameScreen extends BaseScreen {
 //     }
 
     void handlePawnSelection(int screenX, int screenY) {
-        LOGGER.info("=== Pawn Selection Attempt ===");
-        LOGGER.info("Screen coordinates: " + screenX + ", " + screenY);
-        LOGGER.info("Current state - canMove: " + canMove +
-            ", currentPlayer: " + (currentPlayer != null ? currentPlayer.getName() : "null") +
-            ", isMyTurn: " + (currentPlayer != null && currentPlayer.getName().equals(game.getGameStateManager().getCurrentUsername())) +
-            ", lastDiceRoll: " + lastDiceRoll +
-            ", gameState: " + currentGameState);
+//        LOGGER.info("=== Pawn Selection Attempt ===");
+//        LOGGER.info("Screen coordinates: " + screenX + ", " + screenY);
+//        LOGGER.info("Current state - canMove: " + canMove +
+//            ", currentPlayer: " + (currentPlayer != null ? currentPlayer.getName() : "null") +
+//            ", isMyTurn: " + (currentPlayer != null && currentPlayer.getName().equals(game.getGameStateManager().getCurrentUsername())) +
+//            ", lastDiceRoll: " + lastDiceRoll +
+//            ", gameState: " + currentGameState);
 
         if (!canMove || currentPlayer == null ||
             !currentPlayer.getName().equals(game.getGameStateManager().getCurrentUsername())) {
-            LOGGER.info("Pawn selection disabled - canMove: " + canMove +
-                ", currentPlayer: " + (currentPlayer != null ? currentPlayer.getName() : "null"));
+//            LOGGER.info("Pawn selection disabled - canMove: " + canMove +
+//                ", currentPlayer: " + (currentPlayer != null ? currentPlayer.getName() : "null"));
             return;
         }
 
@@ -630,7 +630,7 @@ public class GameScreen extends BaseScreen {
                 ", lastDiceRoll: " + lastDiceRoll);
 
             if (canLeaveHome || !isHome) {
-                LOGGER.info("Valid pawn selection - requesting move for pawn " + selectedPawn);
+//                LOGGER.info("Valid pawn selection - requesting move for pawn " + selectedPawn);
                 highlightPawnAsMoving(selectedPawn);
                 game.getGameStateManager().requestMove(selectedPawn);
                 canMove = false;
@@ -648,8 +648,8 @@ public class GameScreen extends BaseScreen {
         boolean isPlayersTurn = currentPlayer != null &&
             currentPlayer.getName().equals(game.getGameStateManager().getCurrentUsername());
 
-        LOGGER.info("requestDiceRoll called - isPlayersTurn: " + isPlayersTurn +
-            ", rollButton disabled: " + rollButton.isDisabled());
+//        LOGGER.info("requestDiceRoll called - isPlayersTurn: " + isPlayersTurn +
+//            ", rollButton disabled: " + rollButton.isDisabled());
 
         if (!isPlayersTurn) {
             LOGGER.warning("Attempted to roll dice when it's not player's turn");
