@@ -108,7 +108,7 @@ public class GameRenderer {
     }
 
     public void createPawns(List<Player> players) {
-        Gdx.app.log(TAG, String.format("Creating pawns for %d players", players.size()));
+//        Gdx.app.log(TAG, String.format("Creating pawns for %d players", players.size()));
         pawnInstances.clear();
         pawnPositions.clear();
 
@@ -440,7 +440,7 @@ public class GameRenderer {
         int selectedPawn = -1;
 
         Gdx.app.log(TAG, "Screen click at: " + screenX + ", " + screenY);
-        Gdx.app.log(TAG, "Checking pawns for color: " + currentPlayerColor);
+//        Gdx.app.log(TAG, "Checking pawns for color: " + currentPlayerColor);
 
         // Get indices for current player's pawns
         List<Integer> validPawnIndices = getPawnIndicesForColor(currentPlayerColor);
@@ -468,15 +468,15 @@ public class GameRenderer {
                     if (dist < minDist) {
                         minDist = dist;
                         selectedPawn = globalIndex % 4;
-                        Gdx.app.log(TAG, "Selected local pawn index: " + selectedPawn + 
-                            " (from global index: " + globalIndex + ")");
+//                        Gdx.app.log(TAG, "Selected local pawn index: " + selectedPawn +
+//                            " (from global index: " + globalIndex + ")");
                     }
                 }
             }
         }
 
         if (selectedPawn != -1) {
-            Gdx.app.log(TAG, String.format("Final selection - Local pawn index: %d at distance %f", 
+            Gdx.app.log(TAG, String.format("Final selection - Local pawn index: %d at distance %f",
                 selectedPawn, minDist));
         }
 
@@ -649,6 +649,13 @@ public class GameRenderer {
                     default: throw new IllegalArgumentException("Invalid color: " + playerColor);
                 }
                 int homeStep = boardPosition - (homeColumnStart + colorOffset * Constants.HOME_COLUMN_SIZE);
+                
+                // Check if this is the target base position
+                if (homeStep == Constants.HOME_COLUMN_SIZE) {
+                    return BoardCoordinates.getTargetBasePosition(playerColor);
+                }
+                
+                // Otherwise it's a home column position
                 if (homeStep >= 0 && homeStep < Constants.HOME_COLUMN_SIZE) {
                     return BoardCoordinates.getHomeColumnPosition(playerColor, homeStep);
                 }
