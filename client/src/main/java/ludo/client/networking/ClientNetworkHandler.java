@@ -82,7 +82,7 @@ public class ClientNetworkHandler implements NetworkHandler {
             disconnecting = true;
         }
 
-        LOGGER.info("Disconnecting from server...");
+//        LOGGER.info("Disconnecting from server...");
         running = false;
         cleanupResources();
         LOGGER.info("Disconnected from server");
