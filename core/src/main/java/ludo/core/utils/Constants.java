@@ -4,7 +4,7 @@ public class Constants {
     // Board dimensions
     public static final int BOARD_SIZE = 52;
 
-    public static final int HOME_COLUMN_SIZE = 6;
+    public static final int HOME_COLUMN_SIZE = 5;
 
     // Player colors
     public static final String RED = "RED";
