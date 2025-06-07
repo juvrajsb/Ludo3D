@@ -28,7 +28,6 @@ public class MoveValidator {
                 LOGGER.info("Invalid move: Cannot leave home without a 6");
                 return false;
             }
-
             return true;
         }
 
@@ -71,13 +70,13 @@ public class MoveValidator {
             // Already in home column
             LOGGER.fine("Pawn is moving within home column");
 
-            // Verify not overshooting end of home column
+            // Verify not overshooting target base
             int homeColumnStart = board.getTotalSpaces() +
                 (playerStartPos / 13) * board.getHomeColumnSize();
-            int homeColumnEnd = homeColumnStart + board.getHomeColumnSize() - 1;
+            int targetBasePosition = homeColumnStart + board.getHomeColumnSize();
 
-            if (newPosition > homeColumnEnd) {
-                LOGGER.info("Invalid move: Would overshoot home column end");
+            if (newPosition > targetBasePosition) {
+                LOGGER.info("Invalid move: Would overshoot target base");
                 return false;
             }
 

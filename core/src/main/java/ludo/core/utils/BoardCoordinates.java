@@ -1,6 +1,5 @@
 package ludo.core.utils;
 
-import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.math.Vector3;
 
 public class BoardCoordinates {
@@ -48,13 +47,25 @@ public class BoardCoordinates {
     // Home column paths
     private static final int[][][] HOME_COLUMNS = {
         // YELLOW
-        {{7, 6}, {7, 5}, {7, 4}, {7, 3}, {7, 2}, {7, 1}},
+        {{7, 1}, {7, 2}, {7, 3}, {7, 4}, {7, 5}},
         // BLUE
-        {{1, 7}, {2, 7}, {3, 7}, {4, 7}, {5, 7}, {6, 7}},
+        {{1, 7}, {2, 7}, {3, 7}, {4, 7}, {5, 7}},
         // RED
-        {{7, 13}, {7, 12}, {7, 11}, {7, 10}, {7, 9}, {7, 8}},
+        {{7, 13}, {7, 12}, {7, 11}, {7, 10}, {7, 9}},
         // GREEN
-        {{13, 7}, {12, 7}, {11, 7}, {10, 7}, {9, 7}, {8, 7}}
+        {{13, 7}, {12, 7}, {11, 7}, {10, 7}, {9, 7}}
+    };
+
+    // Target bases for each color to win
+    private static final int[][] TARGET_BASES ={
+        // YELLOW
+        {7, 6},
+        // BLUE
+        {6, 7},
+        // RED
+        {7, 8},
+        // GREEN
+        {8, 7}
     };
 
     public static Vector3 getMainPathPosition(int position) {
@@ -78,6 +89,12 @@ public class BoardCoordinates {
     public static Vector3 getHomeColumnPosition(String color, int step) {
         int colorIndex = getColorIndex(color);
         int[] coords = HOME_COLUMNS[colorIndex][step];
+        return gridToWorld(coords[0], coords[1]);
+    }
+
+    public static Vector3 getTargetBasePosition(String color) {
+        int colorIndex = getColorIndex(color);
+        int[] coords = TARGET_BASES[colorIndex];
         return gridToWorld(coords[0], coords[1]);
     }
 

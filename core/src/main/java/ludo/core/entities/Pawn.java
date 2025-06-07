@@ -35,11 +35,11 @@ public class Pawn implements Serializable {
         int newPosition = position + spaces;
 
         int startPos = board.getStartPosition(color);
-        int entryPoint = (startPos + board.getTotalSpaces() - 1) % board.getTotalSpaces();
+        int entryPoint = (startPos + BOARD_SIZE- 1) % BOARD_SIZE;
 
         if (position <= entryPoint && newPosition > entryPoint) {
-            int stepsIntoHome = newPosition - entryPoint - 1;
-            return stepsIntoHome < board.getHomeColumnSize();
+            int stepsIntoHome = newPosition - entryPoint;
+            return stepsIntoHome <= board.getHomeColumnSize();
         }
         return true;
     }
@@ -50,25 +50,23 @@ public class Pawn implements Serializable {
         }
 
         int startPos = board.getStartPosition(color);
-        int entryPoint = (startPos + board.getTotalSpaces() - 1) % board.getTotalSpaces();
+        int entryPoint = (startPos + BOARD_SIZE - 1) % BOARD_SIZE;
         int potentialNewPos = position + spaces;
 
         if (position <= entryPoint && potentialNewPos > entryPoint) {
-            int stepsAfterEntry = potentialNewPos - entryPoint - 1;
+            int stepsAfterEntry = potentialNewPos - entryPoint;
 
-            if (stepsAfterEntry >= board.getHomeColumnSize()) {
+            if (stepsAfterEntry > board.getHomeColumnSize()) {
                 return;
             }
-            position = board.getTotalSpaces() + (startPos / 13) * board.getHomeColumnSize() + stepsAfterEntry;
+            position = BOARD_SIZE + (startPos / 13) * HOME_COLUMN_SIZE + stepsAfterEntry - 1;
         } else {
             position = potentialNewPos % board.getTotalSpaces();
         }
 
-        if (board.isHomeColumn(position, color)) {
-            int finalHomePosition = board.getTotalSpaces() + (startPos / 13) * board.getHomeColumnSize() + (board.getHomeColumnSize() - 1);
-            if (position == finalHomePosition) {
-                isFinished = true;
-            }
+        // Check if pawn has reached target base
+        if (board.isTargetBase(position, color)) {
+            isFinished = true;
         }
     }
 

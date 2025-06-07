@@ -6,7 +6,7 @@ import java.util.Map;
 
 public class Board implements Serializable {
     private static final int BOARD_SIZE = 52;
-    private static final int HOME_COLUMN_SIZE = 6;
+    private static final int HOME_COLUMN_SIZE = 5;
 
     private Map<String, Integer> playerStartPositions;
     private Map<Integer, Boolean> safeSpots;
@@ -35,7 +35,8 @@ public class Board implements Serializable {
     }
 
     public boolean isSafeSpot(int position) {
-        return safeSpots.getOrDefault(position, false);
+        boolean isSafe = safeSpots.getOrDefault(position, false);
+        return isSafe;
     }
 
     public int getTotalSpaces() {
@@ -50,18 +51,31 @@ public class Board implements Serializable {
         // For positions in home column area (≥52)
         if (position >= BOARD_SIZE) {
             int colorIndex;
-            switch (color.toUpperCase()) {
-                case "RED": colorIndex = 0; break;
-                case "GREEN": colorIndex = 1; break;
-                case "BLUE": colorIndex = 2; break;
-                case "YELLOW": colorIndex = 3; break;
+            switch (color.toUpperCase()) { //todo check if the color order is correct
+                case "YELLOW": colorIndex = 0; break;
+                case "BLUE": colorIndex = 1; break;
+                case "RED": colorIndex = 2; break;
+                case "GREEN": colorIndex = 3; break;
                 default: return false;
             }
             int homeStart = BOARD_SIZE + colorIndex * HOME_COLUMN_SIZE;
-            int homeEnd = homeStart + HOME_COLUMN_SIZE - 1;
+            int homeEnd = homeStart + HOME_COLUMN_SIZE;
             return position >= homeStart && position <= homeEnd;
         }
         return false;
+    }
+
+    public boolean isTargetBase(int position, String color) {
+        int colorIndex;
+        switch (color.toUpperCase()) {
+            case "YELLOW": colorIndex = 0; break;
+            case "BLUE": colorIndex = 1; break;
+            case "RED": colorIndex = 2; break;
+            case "GREEN": colorIndex = 3; break;
+            default: return false;
+        }
+        int targetBasePosition = BOARD_SIZE + colorIndex * HOME_COLUMN_SIZE + HOME_COLUMN_SIZE + 1;
+        return position == targetBasePosition;
     }
 
     private void initializePlayerStartPositions() {
@@ -85,6 +99,20 @@ public class Board implements Serializable {
     public int getStartPosition(String color) {
         return playerStartPositions.getOrDefault(color.toUpperCase(), -1);
     }
+
+//    public int getEntryPoint(String color) {
+//        int startPosition = getStartPosition(color);
+//        if (startPosition == -1) return -1;
+//        int colorIndex;
+//        switch (color.toUpperCase()) { //todo check if the color order is correct
+//            case "YELLOW": colorIndex = 0; break;
+//            case "BLUE": colorIndex = 1; break;
+//            case "RED": colorIndex = 2; break;
+//            case "GREEN": colorIndex = 3; break;
+//            default: return 0;
+//        }
+//        return BOARD_SIZE + colorIndex * HOME_COLUMN_SIZE;
+//    }
 
 //    public int getSafeSpot(String color) {
 //        switch (color.toUpperCase()) {
