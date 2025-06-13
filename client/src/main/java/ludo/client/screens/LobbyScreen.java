@@ -11,10 +11,10 @@ import ludo.core.entities.BotPlayer;
 import ludo.core.entities.Player;
 import ludo.core.utils.Constants;
 import ludo.core.persistence.GamePersistence;
+import ludo.core.persistence.GamePersistence.GameSaveData;
 import ludo.core.entities.Pawn;
 import com.badlogic.gdx.utils.Array;
 
-import java.awt.Frame;
 import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
@@ -141,12 +141,12 @@ public class LobbyScreen extends BaseScreen {
             protected void result(Object object) {
                 if ("AUTO_SAVE".equals(object)) {
                     Gdx.app.log("LobbyScreen", "Loading auto save");
-                    loadGame(true, null);
+                    loadSavedGame();
                 } else if (Boolean.TRUE.equals(object)) {
                     String fileName = saveList.getSelected();
                     if (fileName != null) {
                         Gdx.app.log("LobbyScreen", "Selected file: " + fileName);
-                        loadGame(false, fileName);
+                        loadSavedGame();
                     } else {
                         Gdx.app.log("LobbyScreen", "No file selected");
                     }
@@ -293,25 +293,16 @@ public class LobbyScreen extends BaseScreen {
         checkAdminStatus(); // Ensure UI is updated when FIRST_PLAYER event is received
     }
 
-    /**
-     * Loads a game from a file path or auto-save.
-     * @param isAutoSave true to load auto-save, false to load from filePath
-     * @param filePath path to the save file (ignored if isAutoSave is true)
-     */
-    private void loadGame(boolean isAutoSave, String filePath) {
-        GamePersistence.GameSaveData saveData;
-        if (isAutoSave) {
-            saveData = GamePersistence.loadAutoSave();
-        } else {
-            saveData = GamePersistence.loadGame(filePath);
-        }
-
+    private void loadSavedGame() {
+        GameSaveData saveData = GamePersistence.loadGame();
         if (saveData != null) {
-            // Clear current game state
-            game.getGameStateManager().resetGame();
+            game.reset();
 
-            // Load players and pawns
-            for (GamePersistence.PlayerSaveData playerData : saveData.players) {
+            // Create new game screen first
+            GameScreen newGameScreen = new GameScreen(game);
+            
+            // Add players to both game and game screen
+            saveData.players.forEach(playerData -> {
                 Player player = new Player(playerData.name, playerData.color);
                 for (int i = 0; i < playerData.pawns.size(); i++) {
                     GamePersistence.PawnSaveData pawnData = playerData.pawns.get(i);
@@ -321,15 +312,14 @@ public class LobbyScreen extends BaseScreen {
                     if (pawnData.isFinished) pawn.setFinished(true);
                 }
                 game.addPlayer(player);
-            }
+                newGameScreen.addPlayer(player);  // Add player to GameScreen as well
+            });
 
-            // Set current player
-            game.getGameStateManager().setCurrentPlayer(saveData.currentPlayerColor);
-
-            // Start the game
-            game.getGameStateManager().startGame(botPlayersCheckbox.isChecked(), true);
+            // Set current player and switch to game screen
+            newGameScreen.setCurrentPlayer(saveData.currentPlayerColor);
+            game.setScreen(newGameScreen);
         } else {
-            statusLabel.setText("[RED]Failed to load save file[]");
+            Gdx.app.error("LobbyScreen", "Failed to load saved game");
         }
     }
 }
