@@ -12,7 +12,10 @@ import ludo.core.utils.Constants;
 import ludo.core.validation.MoveValidator;
 import ludo.server.networking.ServerNetworkHandler;
 import ludo.core.events.serverToClient.*;
+import ludo.server.Server;
+import ludo.core.network.Connection;
 
+import java.io.IOException;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -33,14 +36,20 @@ public class ServerGameStateManager implements MessageListener {
     @Override
     public void onMessageReceived(NetworkMessage message) {
         if (message instanceof Event event) {
-            if(!Objects.equals(event.getType(), "PONG")){LOGGER.info("Received event: " + event.getType() + " from " + event.getConnection().getConnectionID());}
+            String clientId = event.getConnection() != null ? event.getConnection().getConnectionID() : null;
+            if (!Objects.equals(event.getType(), "PONG")) {
+                LOGGER.info("Received event: " + event.getType () + (clientId != null ? " from " + clientId : ""));
+            }
+            if (event instanceof ClientDisconnectedEvent) { //take this in the switch todo
+                handleClientDisconnection(event.getConnection());
+            }
 
             try {
                 switch (event.getType()) {
                     case "JOIN_GAME_REQUEST":
                         JoinGameRequestEvent joinEvent = (JoinGameRequestEvent) event;
-                        LOGGER.info("Player attempting to join: " + joinEvent.getPlayerName() +
-                            " with color: " + joinEvent.getDesiredColor());
+//                        LOGGER.info("Player attempting to join: " + joinEvent.getPlayerName() +
+//                            " with color: " + joinEvent.getDesiredColor());
                         handleJoinRequest(joinEvent);
                         break;
 
@@ -51,36 +60,82 @@ public class ServerGameStateManager implements MessageListener {
 
                     case "DICE_ROLL_REQUEST":
                         String playerId = event.getConnection().getConnectionID();
-                        LOGGER.info("Dice roll requested by: " + playerId);
+//                        LOGGER.info("Dice roll requested by: " + playerId);
                         handleDiceRollRequest((DiceRollRequestEvent) event);
                         break;
 
                     case "MOVE_REQUEST":
                         MoveRequestEvent moveEvent = (MoveRequestEvent) event;
-                        LOGGER.info("Move requested - Player: " + event.getConnection().getConnectionID() +
-                            " Pawn: " + moveEvent.getPawnIndex() +
-                            " Steps: " + moveEvent.getSteps());
+//                        LOGGER.info("Move requested - Player: " + event.getConnection().getConnectionID() +
+//                            " Pawn: " + moveEvent.getPawnIndex() +
+//                            " Steps: " + moveEvent.getSteps());
                         handleMoveRequest(moveEvent);
                         break;
 
                     case "START_GAME_REQUEST":
-                        LOGGER.info("Game start requested by: " + event.getConnection().getConnectionID());
+//                        LOGGER.info("Game start requested by: " + event.getConnection().getConnectionID());
                         handleStartGameRequest((StartGameRequestEvent) event);
                         break;
+
                     case "TURN_END":
-                        LOGGER.info("Turn end event received from: " + event.getConnection().getConnectionID());
+//                        LOGGER.info("Turn end event received from: " + event.getConnection().getConnectionID());
                         handleTurnEnd(event);
                         break;
+
                     case "PONG":
                         handlePong(event);
                         break;
+
+                    case "SAVE_GAME_REQUEST":
+                        handleSaveGameRequest((SaveGameRequestEvent) event);
+                        break;
+
+                    case "LOAD_GAME_REQUEST":
+                        handleLoadGameRequest((LoadGameRequestEvent) event);
+                        break;
                 }
             } catch (Exception e) {
-                    LOGGER.severe("Error handling event: " + e.getMessage());
-                    onConnectionError(e);
+                LOGGER.severe("Error handling event: " + e.getMessage());
+                onConnectionError(e);
             }
         }
     }
+
+//    public void handleDiceRollRequest(Event event) {
+//        String connectionId = event.getConnection().getConnectionID();
+//        String playerName = getPlayerNameForConnection(connectionId);
+//
+//        LOGGER.info("Dice roll requested by: " + playerName +
+//            " - Game State: " + gameManager.getGameState() +
+//            ", Current Player: " + gameManager.getCurrentPlayer().getColor());
+//
+//        // Validate game state
+//        if (gameManager.getGameState() != GameState.IN_PROGRESS) {
+//            LOGGER.warning("Dice roll rejected - game not in progress. Current state: " + gameManager.getGameState());
+//            networkHandler.sendToClient(connectionId, new ErrorEvent("Game not in progress"));
+//            return;
+//        }
+//
+//        // Validate player turn
+//        if (!gameManager.isPlayerTurn(playerName)) {
+//            LOGGER.warning("Dice roll rejected - not player's turn. Current player: " +
+//                gameManager.getCurrentPlayer().getColor());
+//            networkHandler.sendToClient(connectionId, new ErrorEvent("Not your turn"));
+//            return;
+//        }
+//
+//        // Roll the dice
+//        int roll = gameManager.rollDice();
+//        LOGGER.info("Dice roll result: " + roll + " for player: " + playerName);
+//
+//        // Send roll result
+//        DiceRollResultEvent rollEvent = new DiceRollResultEvent(roll, gameManager.getCurrentPlayer().getColor());
+//        networkHandler.broadcast(rollEvent);
+//
+//        // Update game state
+//        gameManager.setGameState(GameState.WAITING_FOR_MOVE);
+//        broadcastGameState();
+//    }
 
     private void handleDiceRollRequest(DiceRollRequestEvent event) {
         String connectionId = event.getConnection().getConnectionID();
@@ -111,7 +166,7 @@ public class ServerGameStateManager implements MessageListener {
         }
 
         int diceValue = gameManager.rollDice();
-        LOGGER.info(String.format("Player %s rolled %d", playerName, diceValue));
+//        LOGGER.info(String.format("Player %s rolled %d", playerName, diceValue));
 
         gameManager.setGameState(GameState.DICE_ROLLED);
 
@@ -152,7 +207,8 @@ public class ServerGameStateManager implements MessageListener {
         String connectionId = event.getConnection().getConnectionID();
         String playerName = getPlayerNameForConnection(connectionId);
 
-        LOGGER.info(String.format("Move request from %s (connection: %s)", playerName, connectionId));
+//        LOGGER.info(String.format("Move request from %s (connection: %s) - Game State: %s, Current Player: %s",
+//            playerName, connectionId, gameManager.getGameState(), gameManager.getCurrentPlayer().getColor()));
 
         // Validate game state
         if (gameManager.getGameState() != GameState.IN_PROGRESS &&
@@ -165,7 +221,8 @@ public class ServerGameStateManager implements MessageListener {
 
         // Validate player turn
         if (!gameManager.isPlayerTurn(playerName)) {
-            LOGGER.warning("Move rejected - not player's turn");
+            LOGGER.warning("Move rejected - not player's turn. Current player: " +
+                gameManager.getCurrentPlayer().getColor() + ", Requesting player: " + playerName);
             sendMoveResponse(connectionId, false, "Not your turn", event.getPawnIndex(), -1);
             return;
         }
@@ -179,6 +236,9 @@ public class ServerGameStateManager implements MessageListener {
 
         int pawnIndex = event.getPawnIndex();
         int steps = event.getSteps();
+
+//        LOGGER.info(String.format("Processing move - Player: %s, Pawn: %d, Steps: %d, Last Dice Roll: %d",
+//            playerName, pawnIndex, steps, gameManager.getLastDiceRoll()));
 
         if (pawnIndex < 0 || pawnIndex >= currentPlayer.getPawns().size()) {
             LOGGER.warning("Invalid pawn index: " + pawnIndex);
@@ -194,53 +254,17 @@ public class ServerGameStateManager implements MessageListener {
         }
 
         int playerIndex = gameManager.getPlayers().indexOf(currentPlayer);
-        LOGGER.info("Positions before move: " + gameManager.getCurrentPawnPositions());
+//        LOGGER.info("Positions before move: " + gameManager.getCurrentPawnPositions());
 
         Pawn selectedPawn = currentPlayer.getPawns().get(pawnIndex);
         boolean isLeavingHome = selectedPawn.isHome() && steps == 6;
         int currentPosition = selectedPawn.isHome() ? -1 : selectedPawn.getPosition();
 
         boolean moveSuccess = gameManager.movePawn(playerIndex, pawnIndex, steps);
-        LOGGER.info("Move result: " + (moveSuccess ? "Success" : "Failed"));
+//        LOGGER.info("Move result: " + (moveSuccess ? "Success" : "Failed"));
 
         if (moveSuccess) {
-            LOGGER.info("Positions after move: " + gameManager.getCurrentPawnPositions());
-            int newPosition = currentPlayer.getPawns().get(pawnIndex).getPosition();
-
-            LOGGER.info(String.format("Pawn moved from %d to %d (isLeavingHome: %b)",
-                currentPosition, newPosition, isLeavingHome));
-
-            MoveResultEvent resultEvent = new MoveResultEvent(
-                true, "Move successful", pawnIndex, newPosition);
-            networkHandler.broadcast(resultEvent);
-
-            gameManager.setGameState(GameState.PLAYER_MOVED);
-            broadcastGameState();
-
-            if (gameManager.hasPlayerWon(playerName)) {
-                handleGameOver(playerName);
-                return;
-            }
-
-            if (steps == 6) {
-                LOGGER.info("Player rolled a 6 - gets another turn");
-                gameManager.setGameState(GameState.IN_PROGRESS);
-
-//                boolean isBot = currentPlayer instanceof BotPlayer;
-
-//                if (!isBot) {
-                    gameManager.setLastDiceRoll(0);
-//                }
-                networkHandler.sendToClient(connectionId, new ludo.core.events.serverToClient.CanRollAgainEvent());
-            } else {
-                gameManager.nextTurn();
-                String nextPlayer = gameManager.getCurrentPlayer().getName();
-                LOGGER.info("Next player: " + nextPlayer);
-                networkHandler.broadcast(new ludo.core.events.serverToClient.TurnChangeEvent(nextPlayer));
-                checkAndPlayBotTurn();
-            }
-
-            broadcastGameState();
+            handleMoveSuccess(connectionId, pawnIndex, steps, isLeavingHome, currentPosition);
         } else {
             LOGGER.warning("Move failed for pawn " + pawnIndex);
 
@@ -251,6 +275,65 @@ public class ServerGameStateManager implements MessageListener {
 
             broadcastGameState();
         }
+    }
+//todo check why extra roll not working
+    private boolean handleMoveSuccess(String connectionId, int pawnIndex, int steps, boolean isLeavingHome, int currentPosition) {
+//        LOGGER.info("Positions after move: " + gameManager.getCurrentPawnPositions());
+        int newPosition = gameManager.getCurrentPlayer().getPawns().get(pawnIndex).getPosition();
+
+//        LOGGER.info(String.format("Pawn moved from %d to %d (isLeavingHome: %b)",
+//            currentPosition, newPosition, isLeavingHome));
+
+        MoveResultEvent resultEvent = new MoveResultEvent(
+            true, "Move successful", pawnIndex, newPosition);
+        networkHandler.broadcast(resultEvent);
+
+        gameManager.setGameState(GameState.PLAYER_MOVED);
+        broadcastGameState();
+
+        if (gameManager.hasPlayerWon(gameManager.getCurrentPlayer().getName())) {
+            handleGameOver(gameManager.getCurrentPlayer().getName());
+            return true;
+        }
+
+        // Check for extra roll conditions
+        boolean shouldGetExtraRoll = false;
+        String reason = "";
+
+        // Check if pawn reached finish base
+        if (gameManager.getCurrentPlayer().getPawns().get(pawnIndex).isFinished()) {
+            shouldGetExtraRoll = true;
+            reason = "Pawn reached finish base";
+        }
+        // Check if a pawn was captured
+        else if (gameManager.wasPawnCaptured()) {
+            shouldGetExtraRoll = true;
+            reason = "Pawn captured";
+        }
+        // Check if rolled a 6
+        else if (steps == 6) {
+            shouldGetExtraRoll = true;
+            reason = "Rolled a 6";
+        }
+
+        if (shouldGetExtraRoll) {
+            LOGGER.info("Player gets another roll: " + reason);
+            gameManager.setGameState(GameState.IN_PROGRESS);
+            gameManager.setLastDiceRoll(0);
+
+            // Send turn change event to keep the same player
+            networkHandler.broadcast(new TurnChangeEvent(gameManager.getCurrentPlayer().getName()));
+            networkHandler.sendToClient(connectionId, new CanRollAgainEvent());
+        } else {
+            gameManager.nextTurn();
+            String nextPlayer = gameManager.getCurrentPlayer().getName();
+//            LOGGER.info("Next player: " + nextPlayer);
+            networkHandler.broadcast(new TurnChangeEvent(nextPlayer));
+            checkAndPlayBotTurn();
+        }
+
+        broadcastGameState();
+        return true;
     }
 
     private String getPlayerNameForConnection(String connectionId) {
@@ -266,42 +349,6 @@ public class ServerGameStateManager implements MessageListener {
             return "Invalid move";
         }
     }
-
-//    private void handleTurnLogicAfterMove(int steps, boolean isLeavingHome, Player currentPlayer) {
-//        if (steps == 6) {
-//            // If player rolled a 6, they get another turn
-//            if (isLeavingHome) {
-//                LOGGER.info("Pawn left home with a 6 - player gets another roll");
-//                // Reset last dice roll to 0 to allow another roll
-//                gameManager.setLastDiceRoll(0);
-//
-//                // Set game state to allow another roll
-//                gameManager.setGameState(GameState.IN_PROGRESS);
-//            } else {
-//                LOGGER.info("Player moved with a 6 - player gets another roll");
-//                // Reset last dice roll to 0 to allow another roll
-//                gameManager.setLastDiceRoll(0);
-//
-//                // Set game state to allow another roll
-//                gameManager.setGameState(GameState.IN_PROGRESS);
-//            }
-//
-//            // Notify client they can roll again
-//            networkHandler.sendToClient(
-//                gameManager.getCurrentPlayer().getName(),
-//                new CanRollAgainEvent()
-//            );
-//        } else {
-//            // Move to next player's turn
-//            gameManager.nextTurn();
-//            String nextPlayer = gameManager.getCurrentPlayer().getName();
-//            LOGGER.info("Next player: " + nextPlayer);
-//
-//            // Send turn change event
-//            TurnChangeEvent turnEvent = new TurnChangeEvent(nextPlayer);
-//            networkHandler.broadcast(turnEvent);
-//        }
-//    }
 
     private void handleTurnEnd(Event event) {
         String connectionId = event.getConnection().getConnectionID();
@@ -375,7 +422,7 @@ public class ServerGameStateManager implements MessageListener {
             Player player = playersByColor.get(color);
             if (player != null) {
                 gameManager.addPlayer(player);
-                LOGGER.info("Adding player to game: " + player.getName() + " with color: " + player.getColor());
+//                LOGGER.info("Adding player to game: " + player.getName() + " with color: " + player.getColor());
             }
         }
 
@@ -399,6 +446,11 @@ public class ServerGameStateManager implements MessageListener {
 
         int realPlayerCount = gameManager.getPlayers().size();
         boolean enableBots = event.isBotsEnabled();
+        boolean loadSavedGame = event.isLoadSavedGame();
+
+        LOGGER.info("Game start request details - Real players: " + realPlayerCount +
+            ", Enable bots: " + enableBots +
+            ", Load saved game: " + loadSavedGame);
 
         if (realPlayerCount < 2 && !enableBots) {
             LOGGER.info("Not enough players to start game");
@@ -418,26 +470,47 @@ public class ServerGameStateManager implements MessageListener {
         }
 
         // Check if we should load a saved game
-        boolean loadSavedGame = event.isLoadSavedGame();
-        if (loadSavedGame && GamePersistence.hasSaveGame()) {
-            GamePersistence.GameSaveData saveData = GamePersistence.loadGame();
-            if (saveData != null) {
-                LOGGER.info("Loading saved game");
-                loadSavedGameState(saveData);
+        if (loadSavedGame) {
+            LOGGER.info("Attempting to load saved game");
+            String saveFileName = event.getSaveFileName();
+            if (saveFileName != null) {
+                // Use the assets directory for save files
+                String fullPath = "assets/LudoSaves/" + saveFileName;
+                GamePersistence.GameSaveData saveData = GamePersistence.loadGame(fullPath);
+                if (saveData != null) {
+                    LOGGER.info("Successfully loaded save data - Players: " + saveData.players.size() +
+                        ", Current color: " + saveData.currentPlayerColor +
+                        ", Game state: " + saveData.gameState);
 
-                networkHandler.sendToClient(
-                    connectionId,
-                    new StartGameResponseEvent(StartGameResponseEvent.Response.OK)
-                );
+                    // Log saved pawn positions
+                    for (GamePersistence.PlayerSaveData playerData : saveData.players) {
+                        LOGGER.info("Saved player state - Name: " + playerData.name +
+                            ", Color: " + playerData.color +
+                            ", Pawns: " + playerData.pawns.stream()
+                                .map(p -> "pos=" + p.position + ",home=" + p.isHome + ",finished=" + p.isFinished)
+                                .collect(Collectors.joining(", ")));
+                    }
 
-                broadcastGameState();
-                checkAndPlayBotTurn();
-                return;
+                    // Clear existing players and load saved state
+                    gameManager.clearPlayers();
+                    loadSavedGameState(saveData);
+
+                    networkHandler.sendToClient(
+                        connectionId,
+                        new StartGameResponseEvent(StartGameResponseEvent.Response.OK)
+                    );
+
+                    broadcastGameState();
+                    checkAndPlayBotTurn();
+                    return;
+                }
             }
+            LOGGER.warning("Failed to load saved game data, falling back to new game");
         }
 
-        LOGGER.info("Starting new game with " + realPlayerCount + " real players" +
-            (enableBots ? " and bot players" : ""));
+        // Only initialize new game if we're not loading a saved game
+//        LOGGER.info("Starting new game with " + realPlayerCount + " real players" +
+//            (enableBots ? " and bot players" : ""));
 
         if (enableBots) {
             addBotPlayers();
@@ -467,39 +540,39 @@ public class ServerGameStateManager implements MessageListener {
     }
 
     private void loadSavedGameState(GamePersistence.GameSaveData saveData) {
+        // Clear existing players
         gameManager.clearPlayers();
 
+        // Add players from save data
         for (GamePersistence.PlayerSaveData playerData : saveData.players) {
             Player player = new Player(playerData.name, playerData.color);
             gameManager.addPlayer(player);
 
+            // Initialize pawns with saved positions
             for (int i = 0; i < playerData.pawns.size(); i++) {
                 GamePersistence.PawnSaveData pawnData = playerData.pawns.get(i);
                 Pawn pawn = player.getPawns().get(i);
                 pawn.setPosition(pawnData.position);
-                if (pawnData.isHome) pawn.sendHome();
-                if (pawnData.isFinished) pawn.setFinished(true);
+                if (pawnData.isHome) {
+                    pawn.sendHome();
+                }
+                if (pawnData.isFinished) {
+                    pawn.setFinished(true);
+                }
             }
         }
 
+        // Set game state and start game
         gameManager.setGameState(saveData.gameState);
         gameManager.startGame();
 
-        String currentPlayerColor = saveData.currentPlayerColor;
+        // Find and set current player
         for (Player player : gameManager.getPlayers()) {
-            if (player.getColor().equalsIgnoreCase(currentPlayerColor)) {
+            if (player.getColor().equals(saveData.currentPlayerColor)) {
+                // The current player will be set automatically when the game starts
                 break;
             }
         }
-
-        GameStartedEvent gameStartedEvent = new GameStartedEvent(
-            gameManager.getPlayers(),
-            saveData.currentPlayerColor,
-            gameManager.getPlayers().size()
-        );
-        networkHandler.broadcast(gameStartedEvent);
-
-        LOGGER.info("Saved game loaded successfully");
     }
 
     private void addBotPlayers() {
@@ -519,25 +592,25 @@ public class ServerGameStateManager implements MessageListener {
             BotPlayer bot = new BotPlayer(botName, botColor);
             gameManager.addPlayer(bot);
 
-            LOGGER.info("Added bot player: " + botName + " (" + botColor + ")");
+//            LOGGER.info("Added bot player: " + botName + " (" + botColor + ")");
         }
     }
 
     private void checkAndPlayBotTurn() {
         Player currentPlayer = gameManager.getCurrentPlayer();
 
-        LOGGER.info("Checking if current player is a bot: " +
-            currentPlayer.getName() + " (" + currentPlayer.getColor() + ")");
+//        LOGGER.info("Checking if current player is a bot: " +
+//            currentPlayer.getName() + " (" + currentPlayer.getColor() + ")");
 
         if (currentPlayer instanceof BotPlayer) {
             LOGGER.info("Current player is a bot - preparing to handle bot turn");
 
             Thread botThread = new Thread(() -> {
                 try {
-                    LOGGER.info("Bot will take its turn in 1.5 seconds");
+//                    LOGGER.info("Bot will take its turn in 1.5 seconds");
                     Thread.sleep(1500);
 
-                    LOGGER.info("Starting bot turn execution for " + currentPlayer.getName());
+//                    LOGGER.info("Starting bot turn execution for " + currentPlayer.getName());
                     playBotTurn((BotPlayer) currentPlayer);
 
                 } catch (InterruptedException e) {
@@ -560,14 +633,14 @@ public class ServerGameStateManager implements MessageListener {
             botThread.setDaemon(true);
             botThread.start();
 
-            LOGGER.info("Bot turn thread started for " + currentPlayer.getName());
+//            LOGGER.info("Bot turn thread started for " + currentPlayer.getName());
         } else {
-            LOGGER.info("Current player is human: " + currentPlayer.getName());
+//            LOGGER.info("Current player is human: " + currentPlayer.getName());
         }
     }
 
     private void playBotTurn(BotPlayer bot) {
-        LOGGER.info("Bot " + bot.getName() + " taking turn");
+//        LOGGER.info("Bot " + bot.getName() + " taking turn");
 
         LOGGER.info("Bot state before rolling: " +
             "Player color=" + bot.getColor() +
@@ -584,14 +657,26 @@ public class ServerGameStateManager implements MessageListener {
             networkHandler.broadcast(diceEvent);
 
             int[] validMoves = MoveValidator.getValidMoves(bot, diceRoll, gameManager.getBoard());
-            LOGGER.info("Valid moves for bot: " + Arrays.toString(validMoves));
+//            LOGGER.info("Valid moves for bot: " + Arrays.toString(validMoves));
+
+            // If no valid moves, end turn immediately
+            if (validMoves.length == 0) {
+                LOGGER.info("Bot has no valid moves, ending turn");
+                gameManager.nextTurn();
+                TurnChangeEvent turnEvent = new TurnChangeEvent(
+                    gameManager.getCurrentPlayer().getName()
+                );
+                networkHandler.broadcast(turnEvent);
+                checkAndPlayBotTurn();
+                return;
+            }
 
             int playerIndex = gameManager.getPlayers().indexOf(bot);
             int pawnIndex = bot.chooseBestMove(gameManager.getBoard(), diceRoll, gameManager.getPlayers());
 
-            LOGGER.info("Bot choosing move - Player index: " + playerIndex +
-                ", Pawn index: " + pawnIndex +
-                ", Dice roll: " + diceRoll);
+//            LOGGER.info("Bot choosing move - Player index: " + playerIndex +
+//                ", Pawn index: " + pawnIndex +
+//                ", Dice roll: " + diceRoll);
 
             if (pawnIndex >= 0) {
                 // Execute bot's chosen move
@@ -600,7 +685,7 @@ public class ServerGameStateManager implements MessageListener {
                 boolean moveSuccess = gameManager.movePawn(playerIndex, pawnIndex, diceRoll);
                 if (moveSuccess) {
                     Pawn movedPawn = bot.getPawns().get(pawnIndex);
-                    LOGGER.info("Bot move successful - New position: " + movedPawn.getPosition());
+//                    LOGGER.info("Bot move successful - New position: " + movedPawn.getPosition());
 
                     MoveResultEvent moveEvent = new MoveResultEvent(
                         true,
@@ -621,13 +706,11 @@ public class ServerGameStateManager implements MessageListener {
                         ", Pawn=" + pawnIndex +
                         ", Roll=" + diceRoll);
                 }
-            } else {
-                LOGGER.info("Bot has no valid moves");
             }
 
             if (diceRoll == 6) {
                 try {
-                    LOGGER.info("Bot rolled 6, taking another turn");
+//                    LOGGER.info("Bot rolled 6, taking another turn");
                     Thread.sleep(1500); // Brief pause before next bot action
                     playBotTurn(bot);
                 } catch (InterruptedException e) {
@@ -635,8 +718,8 @@ public class ServerGameStateManager implements MessageListener {
                 }
             } else {
                 gameManager.nextTurn();
-                LOGGER.info("Bot turn complete, moving to next player: " +
-                    gameManager.getCurrentPlayer().getName());
+//                LOGGER.info("Bot turn complete, moving to next player: " +
+//                    gameManager.getCurrentPlayer().getName());
 
                 TurnChangeEvent turnEvent = new TurnChangeEvent(
                     gameManager.getCurrentPlayer().getName()
@@ -690,10 +773,9 @@ public class ServerGameStateManager implements MessageListener {
     }
 
     private boolean isFirstPlayer(String connectionId) {
-        return gameManager.getPlayers().size() > 0 &&
-            gameManager.getPlayers().get(0).getName().equals(
-                connectionToPlayerMap.get(connectionId)
-            );
+        String playerName = connectionToPlayerMap.get(connectionId);
+        return playerName != null && gameManager.getPlayers().size() > 0 &&
+            gameManager.getPlayers().get(0).getName().equals(playerName);
     }
 
     private void handleGameOver(String winner) {
@@ -814,5 +896,220 @@ public class ServerGameStateManager implements MessageListener {
                 .collect(Collectors.toMap(Player::getName, Player::getColor)),
             gameManager.getPlayers().size())
         );
+    }
+
+    private void handleClientDisconnection(Connection connection) {
+        if (connection == null) {
+            LOGGER.warning("Received disconnection request with null connection");
+            return;
+        }
+
+        String clientId = connection.getConnectionID();
+        LOGGER.info("Processing client disconnection for: " + clientId);
+
+        // Handle player removal from game state
+        if (gameManager.isGameStarted()) {
+            gameManager.removePlayer(clientId);
+        }
+
+        // Forward to connection handler for cleanup
+        networkHandler.getServer().getClientConnectionHandler().handleClientDisconnection(connection);
+    }
+
+    public void handleSaveGameRequest(SaveGameRequestEvent event) {
+        String connectionId = event.getConnection().getConnectionID();
+        if (!isFirstPlayer(connectionId)) {
+            LOGGER.warning("Non-admin player attempted to save game: " + connectionId);
+            networkHandler.sendToClient(
+                connectionId,
+                new SaveGameResponseEvent(SaveGameResponseEvent.Response.NOT_AUTHORIZED)
+            );
+            return;
+        }
+
+        if (!gameManager.isGameStarted()) {
+            LOGGER.warning("Attempted to save game before it started");
+            networkHandler.sendToClient(
+                connectionId,
+                new SaveGameResponseEvent(SaveGameResponseEvent.Response.INVALID_STATE)
+            );
+            return;
+        }
+
+        try {
+            String fileName = event.isAutoSave() ?
+                GamePersistence.AUTO_SAVE_FILE :
+                GamePersistence.SAVE_FILE;
+
+            GamePersistence.GameSaveData saveData = new GamePersistence.GameSaveData();
+            saveData.players = gameManager.getPlayers().stream()
+                .map(player -> {
+                    GamePersistence.PlayerSaveData playerData = new GamePersistence.PlayerSaveData();
+                    playerData.name = player.getName();
+                    playerData.color = player.getColor();
+                    playerData.pawns = player.getPawns().stream()
+                        .map(pawn -> {
+                            GamePersistence.PawnSaveData pawnData = new GamePersistence.PawnSaveData();
+                            pawnData.position = pawn.getPosition();
+                            pawnData.isHome = pawn.isHome();
+                            pawnData.isFinished = pawn.isFinished();
+                            return pawnData;
+                        })
+                        .collect(Collectors.toList());
+                    return playerData;
+                })
+                .collect(Collectors.toList());
+            saveData.currentPlayerColor = gameManager.getCurrentPlayer().getColor();
+            saveData.gameState = gameManager.getGameState();
+
+            GamePersistence.saveGame(saveData, fileName);
+            LOGGER.info("Game saved successfully to " + fileName);
+
+            networkHandler.sendToClient(
+                connectionId,
+                new SaveGameResponseEvent(SaveGameResponseEvent.Response.OK, fileName)
+            );
+        } catch (IOException e) {
+            LOGGER.severe("Failed to save game: " + e.getMessage());
+            networkHandler.sendToClient(
+                connectionId,
+                new SaveGameResponseEvent(SaveGameResponseEvent.Response.SAVE_FAILED, null, e.getMessage())
+            );
+        }
+    }
+
+    public void handleLoadGameRequest(LoadGameRequestEvent event) {
+        String connectionId = event.getConnection().getConnectionID();
+        if (!isFirstPlayer(connectionId)) {
+            LOGGER.warning("Non-admin player attempted to load game: " + connectionId);
+            networkHandler.sendToClient(
+                connectionId,
+                new LoadGameResponseEvent(LoadGameResponseEvent.Response.NOT_AUTHORIZED)
+            );
+            return;
+        }
+
+        if (gameManager.isGameStarted()) {
+            LOGGER.warning("Attempted to load game while one is in progress");
+            networkHandler.sendToClient(
+                connectionId,
+                new LoadGameResponseEvent(LoadGameResponseEvent.Response.INVALID_STATE)
+            );
+            return;
+        }
+
+        try {
+            String fileName = event.isAutoSave() ?
+                GamePersistence.AUTO_SAVE_FILE :
+                event.getSaveFileName();
+
+            GamePersistence.GameSaveData saveData = GamePersistence.loadGame(fileName);
+            if (saveData == null) {
+                LOGGER.warning("No save file found at " + fileName);
+                networkHandler.sendToClient(
+                    connectionId,
+                    new LoadGameResponseEvent(LoadGameResponseEvent.Response.FILE_NOT_FOUND)
+                );
+                return;
+            }
+
+            if (!saveData.isValid()) {
+                LOGGER.warning("Invalid save data in file " + fileName);
+                networkHandler.sendToClient(
+                    connectionId,
+                    new LoadGameResponseEvent(LoadGameResponseEvent.Response.INVALID_SAVE)
+                );
+                return;
+            }
+
+            loadSavedGameState(saveData);
+            LOGGER.info("Game loaded successfully from " + fileName);
+
+            networkHandler.sendToClient(
+                connectionId,
+                new LoadGameResponseEvent(LoadGameResponseEvent.Response.OK, saveData)
+            );
+        } catch (Exception e) {
+            LOGGER.severe("Failed to load game: " + e.getMessage());
+            networkHandler.sendToClient(
+                connectionId,
+                new LoadGameResponseEvent(LoadGameResponseEvent.Response.SERVER_ERROR, null, e.getMessage())
+            );
+        }
+    }
+
+    private boolean hasConflictsWithCurrentState(GamePersistence.GameSaveData saveData) {
+        // Check if the number of players matches
+        if (gameManager.getPlayers().size() != saveData.players.size()) {
+            LOGGER.warning("Player count mismatch - Current: " + gameManager.getPlayers().size() +
+                ", Save: " + saveData.players.size());
+            return true;
+        }
+
+        // Check if player colors match
+        Set<String> currentColors = gameManager.getPlayers().stream()
+            .map(Player::getColor)
+            .collect(Collectors.toSet());
+        Set<String> saveColors = saveData.players.stream()
+            .map(playerData -> playerData.color)
+            .collect(Collectors.toSet());
+
+        if (!currentColors.equals(saveColors)) {
+            LOGGER.warning("Player colors mismatch");
+            return true;
+        }
+
+        return false;
+    }
+
+    private void handleStateSyncError(StateSyncErrorEvent event, Connection connection) {
+        String connectionId = connection.getConnectionID();
+        Player player = getPlayerByConnection(connection);
+        if (player == null) {
+            return;
+        }
+
+        // If we've retried too many times, force a game state update
+        if (event.getRetryCount() >= 3) {
+            LOGGER.warning("Too many state sync retries, forcing full state update");
+            networkHandler.sendToClient(
+                connectionId,
+                new GameStateUpdateEvent(
+                    gameManager.getCurrentPawnPositions(),
+                    gameManager.getCurrentPlayer().getColor(),
+                    gameManager.getGameState()
+                )
+            );
+            return;
+        }
+
+        // Compare expected and actual positions
+        Map<String, List<Integer>> expectedPositions = event.getExpectedPositions();
+        Map<String, List<Integer>> actualPositions = event.getActualPositions();
+
+        // If positions don't match, send a full state update
+        if (!expectedPositions.equals(actualPositions)) {
+            LOGGER.warning("Position mismatch detected, sending full state update");
+            networkHandler.sendToClient(
+                connectionId,
+                new GameStateUpdateEvent(
+                    gameManager.getCurrentPawnPositions(),
+                    gameManager.getCurrentPlayer().getColor(),
+                    gameManager.getGameState()
+                )
+            );
+        }
+    }
+
+    private Player getPlayerByConnection(Connection connection) {
+        return getPlayerByConnection(connection.getConnectionID());
+    }
+
+    private Player getPlayerByConnection(String connectionId) {
+        String playerName = connectionToPlayerMap.get(connectionId);
+        if (playerName == null) {
+            return null;
+        }
+        return gameManager.getPlayerByName(playerName);
     }
 }
