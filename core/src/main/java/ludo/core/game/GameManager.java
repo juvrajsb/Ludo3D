@@ -26,6 +26,10 @@ public class GameManager {
     private boolean gameStarted;
     private int lastDiceRoll;
     private final Map<String, Player> playerMap;
+    private boolean pawnWasCaptured = false;
+//    private int lastMovePlayerIndex = -1;
+//    private int lastMovePawnIndex = -1;
+//    private int lastMoveStartPosition = -1;
 
     public GameManager() {
         this.players = new CopyOnWriteArrayList<>();
@@ -69,11 +73,10 @@ public class GameManager {
     }
 
     public boolean movePawn(int playerIndex, int pawnIndex, int steps) {
-        LOGGER.info(String.format("Move attempt - Player: %d, Pawn: %d, Steps: %d",
-            playerIndex, pawnIndex, steps));
+        LOGGER.info(String.format("Move attempt - Player: %d, Pawn: %d, Steps: %d", playerIndex, pawnIndex, steps));
 
         if (playerIndex < 0 || playerIndex >= players.size()) {
-            LOGGER.severe("Invalid player index: " + playerIndex);
+            LOGGER.warning("Invalid player index: " + playerIndex);
             return false;
         }
 
@@ -123,45 +126,41 @@ public class GameManager {
             return true;
         }
 
-        // Calculate and execute move
-        int newPosition = calculateNewPosition(player, pawn.getPosition(), steps);
-        if (newPosition == -1) {
-            LOGGER.info("Invalid move - would overshoot home");
+        // Calculate new position
+        int currentPosition = pawn.getPosition();
+        int newPosition = calculateNewPosition(player, currentPosition, steps);
+        LOGGER.info(String.format("Move validation - Current: %d, New: %d", currentPosition, newPosition));
+
+        // Check if move would overshoot home column
+        if (isInHomeColumn(player, currentPosition) && !isInHomeColumn(player, newPosition)) {
+            LOGGER.warning("Move invalid - would overshoot home column");
             return false;
         }
 
+        LOGGER.info("Move validation successful");
         pawn.setPosition(newPosition);
-        LOGGER.info("Pawn position updated to: " + newPosition);
-
-        // Handle captures
-        handleCaptures(player, newPosition);
-
-        // Check if pawn has reached final position in home column
-        if (board.isHomeColumn(newPosition, player.getColor())) {
-            int homeStart = board.getTotalSpaces() +
-                (board.getStartPositionIndex(player.getColor()) / 13) * Constants.HOME_COLUMN_SIZE;
-            int finalHomePosition = homeStart + Constants.HOME_COLUMN_SIZE - 1;
-
-            if (newPosition == finalHomePosition) {
-                pawn.setFinished(true);
-                LOGGER.info("Pawn has reached final position and is now finished!");
-            }
+        
+        // Add capture handling after move
+        LOGGER.info("Checking for captures at position: " + newPosition);
+        if (!board.isSafeSpot(newPosition)) {
+            LOGGER.info("Position " + newPosition + " is not a safe spot - checking for captures");
+            handleCaptures(player, newPosition);
+        } else {
+            LOGGER.info("Position " + newPosition + " is a safe spot - no captures possible");
         }
-
-        try {
-            GamePersistence.autoSave(players, getCurrentPlayer().getColor(), gameState);
-        } catch (Exception e) {
-            LOGGER.warning("Failed to auto-save game: " + e.getMessage());
-        }
-
+        
         return true;
     }
 
     private int calculateNewPosition(Player player, int currentPosition, int steps) {
+        LOGGER.info("Calculating new position for " + player.getColor() + " pawn - Current: " + currentPosition + ", Steps: " + steps);
+
         if (currentPosition >= board.getTotalSpaces()) {
             // Already in home column
             int newPos = currentPosition + steps;
+            LOGGER.info("Pawn already in home column - Current: " + currentPosition + ", New: " + newPos);
             if (isHomeColumnOvershoot(player, currentPosition, newPos)) {
+                LOGGER.info("Move would overshoot home column");
                 return -1;
             }
             return newPos;
@@ -171,10 +170,16 @@ public class GameManager {
         int entryPoint = (startPos + board.getTotalSpaces() - 1) % board.getTotalSpaces();
         int potentialNewPos = currentPosition + steps;
 
+        LOGGER.info("Movement calculation - Start: " + startPos + ", Entry: " + entryPoint +
+            ", Current: " + currentPosition + ", Potential: " + potentialNewPos);
+
         // Check if entering home column
         if (currentPosition <= entryPoint && potentialNewPos > entryPoint) {
             int stepsAfterEntry = potentialNewPos - entryPoint - 1;
+            LOGGER.info("Entering home column - Steps after entry: " + stepsAfterEntry);
+
             if (stepsAfterEntry >= board.getHomeColumnSize()) {
+                LOGGER.info("Move would overshoot home column size: " + board.getHomeColumnSize());
                 return -1;
             }
             return board.getTotalSpaces() + (startPos / 13) * board.getHomeColumnSize() + stepsAfterEntry;
@@ -184,10 +189,18 @@ public class GameManager {
     }
 
     private boolean isHomeColumnOvershoot(Player player, int currentPos, int newPos) {
+        LOGGER.info("Checking home column overshoot for " + player.getColor() +
+            " - Current: " + currentPos + ", New: " + newPos);
+
         if (currentPos >= board.getTotalSpaces()) {
             int homeStart = board.getTotalSpaces() +
                 (board.getStartPositionIndex(player.getColor()) / 13) * board.getHomeColumnSize();
-            return newPos >= homeStart + board.getHomeColumnSize();
+            int homeEnd = homeStart + board.getHomeColumnSize();
+            boolean overshoot = newPos >= homeEnd;
+
+            LOGGER.info("Home column boundaries - Start: " + homeStart +
+                ", End: " + homeEnd + ", Would overshoot: " + overshoot);
+            return overshoot;
         }
         return false;
     }
@@ -304,7 +317,7 @@ public class GameManager {
 
         for (Player player : players) {
             List<Integer> playerPositions = new ArrayList<>();
-            LOGGER.info("Processing player: " + player.getColor());
+            // LOGGER.info("Processing player: " + player.getColor());
 
             for (Pawn pawn : player.getPawns()) {
                 int position = pawn.isHome() ? -1 : pawn.getPosition();
@@ -319,17 +332,31 @@ public class GameManager {
     }
 
     private void handleCaptures(Player movingPlayer, int position) {
+        LOGGER.info("Handling captures for " + movingPlayer.getColor() + " at position " + position);
+        
         if (board.isSafeSpot(position)) {
+            LOGGER.info("Position " + position + " is a safe spot - no captures possible");
             return;
         }
 
         for (Player otherPlayer : players) {
             if (otherPlayer != movingPlayer) {
-                otherPlayer.getPawns().stream()
-                    .filter(p -> p.getPosition() == position)
-                    .forEach(Pawn::sendHome);
+                LOGGER.info("Checking " + otherPlayer.getColor() + "'s pawns for capture");
+                for (Pawn pawn : otherPlayer.getPawns()) {
+                    if (!pawn.isHome() && pawn.getPosition() == position) {
+                        LOGGER.info("Found " + otherPlayer.getColor() + " pawn at position " + position + " - sending home");
+                        pawn.sendHome();
+                        pawnWasCaptured = true;
+                    }
+                }
             }
         }
+    }
+
+    public boolean wasPawnCaptured() {
+        boolean result = pawnWasCaptured;
+        pawnWasCaptured = false;  // Reset the flag after checking
+        return result;
     }
 
     public void sendGameState(Connection connection) throws IOException {
@@ -374,5 +401,39 @@ public class GameManager {
         gameStarted = false;
         currentPlayerIndex = 0;
         lastDiceRoll = 0;
+    }
+
+//    public void undoLastMove() {
+//        if (lastMovePlayerIndex != -1 && lastMovePawnIndex != -1) {
+//            Player player = players.get(lastMovePlayerIndex);
+//            Pawn pawn = player.getPawns().get(lastMovePawnIndex);
+//            pawn.setPosition(lastMoveStartPosition);
+//
+//            // Reset move tracking
+//            lastMovePlayerIndex = -1;
+//            lastMovePawnIndex = -1;
+//            lastMoveStartPosition = -1;
+//        }
+//    }
+
+    private void checkForCaptures(Player player, int position) {
+        LOGGER.info(String.format("Checking for captures at position %d", position));
+        for (Player otherPlayer : players) {
+            if (otherPlayer != player) {
+                for (Pawn otherPawn : otherPlayer.getPawns()) {
+                    if (!otherPawn.isHome() && otherPawn.getPosition() == position) {
+                        if (!board.isSafeSpot(position)) {
+                            LOGGER.info(String.format("Capturing %s pawn at position %d",
+                                otherPlayer.getColor(), position));
+                            otherPawn.sendHome();
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    private boolean isInHomeColumn(Player player, int position) {
+        return board.isHomeColumn(position, player.getColor());
     }
 }
