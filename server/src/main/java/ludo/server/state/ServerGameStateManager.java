@@ -101,42 +101,6 @@ public class ServerGameStateManager implements MessageListener {
         }
     }
 
-//    public void handleDiceRollRequest(Event event) {
-//        String connectionId = event.getConnection().getConnectionID();
-//        String playerName = getPlayerNameForConnection(connectionId);
-//
-//        LOGGER.info("Dice roll requested by: " + playerName +
-//            " - Game State: " + gameManager.getGameState() +
-//            ", Current Player: " + gameManager.getCurrentPlayer().getColor());
-//
-//        // Validate game state
-//        if (gameManager.getGameState() != GameState.IN_PROGRESS) {
-//            LOGGER.warning("Dice roll rejected - game not in progress. Current state: " + gameManager.getGameState());
-//            networkHandler.sendToClient(connectionId, new ErrorEvent("Game not in progress"));
-//            return;
-//        }
-//
-//        // Validate player turn
-//        if (!gameManager.isPlayerTurn(playerName)) {
-//            LOGGER.warning("Dice roll rejected - not player's turn. Current player: " +
-//                gameManager.getCurrentPlayer().getColor());
-//            networkHandler.sendToClient(connectionId, new ErrorEvent("Not your turn"));
-//            return;
-//        }
-//
-//        // Roll the dice
-//        int roll = gameManager.rollDice();
-//        LOGGER.info("Dice roll result: " + roll + " for player: " + playerName);
-//
-//        // Send roll result
-//        DiceRollResultEvent rollEvent = new DiceRollResultEvent(roll, gameManager.getCurrentPlayer().getColor());
-//        networkHandler.broadcast(rollEvent);
-//
-//        // Update game state
-//        gameManager.setGameState(GameState.WAITING_FOR_MOVE);
-//        broadcastGameState();
-//    }
-
     private void handleDiceRollRequest(DiceRollRequestEvent event) {
         String connectionId = event.getConnection().getConnectionID();
         String playerName = connectionToPlayerMap.get(connectionId);
@@ -372,7 +336,7 @@ public class ServerGameStateManager implements MessageListener {
     private void broadcastGameState() {
         GameStateUpdateEvent stateEvent = new GameStateUpdateEvent(
             gameManager.getCurrentPawnPositions(),
-            gameManager.getCurrentPlayer().getColor(),
+            gameManager.getCurrentPlayer().getName(),
             gameManager.getGameState()
         );
         networkHandler.broadcast(stateEvent);
@@ -806,30 +770,30 @@ public class ServerGameStateManager implements MessageListener {
     }
 
 
-    private boolean handlePlayerJoin(String connectionId, String playerName, String desiredColor) {
-        if (gameManager.getPlayers().size() >= 4 || gameManager.isGameStarted()) {
-            return false;
-        }
+    // private boolean handlePlayerJoin(String connectionId, String playerName, String desiredColor) {
+    //     if (gameManager.getPlayers().size() >= 4 || gameManager.isGameStarted()) {
+    //         return false;
+    //     }
 
-        // Check if color is available
-        if (!isColorAvailable(desiredColor)) {
-            return false;
-        }
+    //     // Check if color is available
+    //     if (!isColorAvailable(desiredColor)) {
+    //         return false;
+    //     }
 
-        Player newPlayer = new Player(playerName, desiredColor);
-        if (gameManager.addPlayer(newPlayer)) {
-            connectionToPlayerMap.put(connectionId, playerName);
+    //     Player newPlayer = new Player(playerName, desiredColor);
+    //     if (gameManager.addPlayer(newPlayer)) {
+    //         connectionToPlayerMap.put(connectionId, playerName);
 
-            // Notify other players
-            PlayerJoinedEvent joinEvent = new PlayerJoinedEvent(newPlayer);
-            networkHandler.broadcast(joinEvent);
+    //         // Notify other players
+    //         PlayerJoinedEvent joinEvent = new PlayerJoinedEvent(newPlayer);
+    //         networkHandler.broadcast(joinEvent);
 
-            // Send updated game state
-            broadcastGameState();
-            return true;
-        }
-        return false;
-    }
+    //         // Send updated game state
+    //         broadcastGameState();
+    //         return true;
+    //     }
+    //     return false;
+    // }
 
     private boolean isColorAvailable(String desiredColor) {
         return gameManager.getPlayers().stream()
