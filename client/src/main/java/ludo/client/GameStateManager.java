@@ -7,7 +7,6 @@ import ludo.client.screens.UsernameScreen;
 import ludo.core.entities.Pawn;
 import ludo.core.events.serverToClient.*;
 import ludo.core.events.clientToServer.*;
-import ludo.core.game.GameManager;
 import ludo.core.game.GameState;
 import ludo.core.network.*;
 import ludo.client.networking.ClientNetworkHandler;
@@ -20,30 +19,24 @@ import java.util.Set;
 import java.util.logging.Logger;
 import java.util.List;
 import java.util.stream.Collectors;
-import java.util.Map;
 
 public class GameStateManager implements MessageListener {
     private static final Logger LOGGER = Logger.getLogger(GameStateManager.class.getName());
 
     private final LudoGame game;
     private final ClientNetworkHandler networkHandler;
-    private GameManager gameManager;
     private GameScreen gameScreen;
     private GameState gameState;
     private boolean isMyTurn;
     private int currentDiceValue;
     private boolean isFirstPlayer;
     private boolean gameStarted;
-    private boolean canMovePawn;
     private String currentUsername;
     private String currentColor;
     private Screen currentScreen;
     private LobbyScreen lobbyScreen;
     private UsernameScreen usernameScreen;
-    private int consecutiveSixes = 0;
-    private static final int MAX_CONSECUTIVE_SIXES = 3;
     private final List<Player> currentPlayers = new ArrayList<>();
-    private GameState currentState;
     private volatile boolean disconnectionAcknowledged = false;
 
     public GameStateManager(LudoGame game) {
@@ -52,10 +45,6 @@ public class GameStateManager implements MessageListener {
         this.networkHandler.setMessageListener(this);
         this.isFirstPlayer = false;
         this.isMyTurn = false;
-
-        this.canMovePawn = false;
-        this.gameManager = new GameManager();
-        this.isFirstPlayer = false;
         this.gameStarted = false;
     }
 
@@ -66,7 +55,7 @@ public class GameStateManager implements MessageListener {
         this.networkHandler.setMessageListener(this);
         this.isFirstPlayer = false;
         this.gameStarted = false;
-        this.canMovePawn = false;
+        this.isMyTurn = false;
     }
 
     //for testing
@@ -77,7 +66,6 @@ public class GameStateManager implements MessageListener {
         this.isFirstPlayer = false;
         this.isMyTurn = false;
         this.gameStarted = false;
-        this.canMovePawn = false;
     }
 
     public boolean connect(String ip, int port) {
@@ -315,36 +303,15 @@ public class GameStateManager implements MessageListener {
      */
     public void handleMoveResult(NetworkMessage message) {
         MoveResultEvent event = (MoveResultEvent) message;
-
-        LOGGER.info("Handling move result - Success: " + event.isSuccess() +
-            ", Message: " + event.getMessage() +
-            ", Current Game State: " + gameState +
-            ", Is My Turn: " + isMyTurn +
-            ", Current Dice Value: " + currentDiceValue);
-
+        
         if (event.isSuccess()) {
             gameScreen.playMoveAnimation(event.getPawnIndex(), event.getNewPosition());
             gameScreen.disableControls();
-
-            // Reset currentDiceValue after successful move
             currentDiceValue = 0;
-
-            // Don't change game state here - wait for server update
         } else {
             LOGGER.warning("Move failed: " + event.getMessage());
             gameScreen.showMessage(event.getMessage());
-
-            if (isMyTurn) {
-                LOGGER.info("Move failed - disabling controls");
-                gameScreen.disableControls();
-                canMovePawn = false;
-
-                // Only re-enable if we're still in a valid state for moving and haven't used our roll
-                if (gameState == GameState.WAITING_FOR_MOVE && currentDiceValue > 0) {
-                    gameScreen.enablePawnSelection();
-                    canMovePawn = true;
-                }
-            }
+            // Wait for server's GameStateUpdate to enable/disable controls
         }
     }
 
@@ -526,128 +493,14 @@ public class GameStateManager implements MessageListener {
             }
         }
     }
-//todo centralize this method with ServerGameStateManager
-    public void handleDiceRoll(NetworkMessage message) {
+
+    private void handleDiceRoll(NetworkMessage message) {
         DiceRollResultEvent event = (DiceRollResultEvent) message;
         currentDiceValue = event.getValue();
-//        LOGGER.info("Dice roll result received: " + currentDiceValue);
-
-        if (gameScreen == null) {
-            LOGGER.warning("GameScreen is null when handling dice roll result");
-            return;
-        }
-
-        gameScreen.updateDiceDisplay(currentDiceValue);
-
-        if (isMyTurn) {
-            if (currentDiceValue == 6) {
-                consecutiveSixes++;
-                LOGGER.info("Consecutive sixes: " + consecutiveSixes);
-
-                if (consecutiveSixes >= MAX_CONSECUTIVE_SIXES) {
-                    LOGGER.info("Maximum consecutive sixes reached - ending turn");
-                    gameScreen.showMessage("Three sixes in a row - turn forfeited!");
-                    networkHandler.sendMessage(new TurnEndEvent());
-                    isMyTurn = false;
-                    consecutiveSixes = 0;
-                    return;
-                }
-            } else {
-                consecutiveSixes = 0;
-            }
-
-            Player currentPlayer = gameScreen.getCurrentPlayer();
-//            LOGGER.info("Processing move options for player: " + currentPlayer.getName());
-
-            if (currentPlayer == null) {
-                LOGGER.severe("Current player is null during dice roll handling");
-                return;
-            }
-
-            // Log detailed pawn state
-//            LOGGER.info("Current player pawns state:");
-            for (Pawn pawn : currentPlayer.getPawns()) {
-                LOGGER.info("Pawn - Position: " + pawn.getPosition() +
-                    ", isHome: " + pawn.isHome() +
-                    ", isFinished: " + pawn.isFinished());
-            }
-
-            boolean hasValidMove = hasValidMovesAvailable(currentPlayer, currentDiceValue);
-//            LOGGER.info("Move validation result: " + hasValidMove);
-
-            if (hasValidMove) {
-//                LOGGER.info("=== Enabling Move Selection ===");
-//                LOGGER.info("Before enable - canMovePawn: " + canMovePawn);
-                gameScreen.enablePawnSelection();
-                canMovePawn = true;
-//                LOGGER.info("After enable - canMovePawn: " + canMovePawn);
-
-                if (currentDiceValue == 6) {
-                    gameScreen.showMessage("Roll again after moving a pawn");
-                } else {
-                    gameScreen.showMessage("Select a pawn to move");
-                }
-            } else {
-                LOGGER.info("No valid moves available - automatically ending turn");
-                gameScreen.showMessage("No valid moves - turn skipped");
-                gameScreen.disableControls();
-                networkHandler.sendMessage(new TurnEndEvent());
-                isMyTurn = false;
-            }
-        }
-    }
-
-    private boolean hasValidMovesAvailable(Player player, int roll) {
-        LOGGER.info("Validating moves for player " + player.getName() + " with roll " + roll);
-
-        boolean hasValidMove = false;
-        for (int i = 0; i < player.getPawns().size(); i++) {
-            Pawn pawn = player.getPawns().get(i);
-            LOGGER.info("Checking pawn " + i + " - Position: " + pawn.getPosition() +
-                ", isHome: " + pawn.isHome() +
-                ", isFinished: " + pawn.isFinished());
-
-            // If pawn is home, it can only move with a 6
-            if (pawn.isHome()) {
-                if (roll == 6) {
-//                    LOGGER.info("Found valid move - pawn " + i + " can leave home with roll 6");
-                    hasValidMove = true;
-                }
-                continue;
-            }
-
-            // If pawn is finished, it can't move
-            if (pawn.isFinished()) {
-                LOGGER.info("Pawn " + i + " is finished, skipping");
-                continue;
-            }
-
-            // For pawns outside home, any roll is valid
-            LOGGER.info("Found valid move for pawn " + i + " from position " +
-                pawn.getPosition() + " with roll " + roll);
-            hasValidMove = true;
-        }
-
-        LOGGER.info("Move validation complete - Has valid moves: " + hasValidMove);
-        return hasValidMove;
-    }
-
-    public void setCurrentPlayer(String color) {
+        
         if (gameScreen != null) {
-            LOGGER.info("Setting current player to: " + color +
-                ", Current Game State: " + gameState +
-                ", Is My Turn: " + isMyTurn +
-                ", Current Dice Value: " + currentDiceValue);
-
-            gameScreen.setCurrentPlayer(color);
-            isMyTurn = color.equals(currentColor);
-            if (isMyTurn) {
-                gameScreen.enableControls();
-                gameScreen.showMessage("Your turn!");
-            } else {
-                gameScreen.disableControls();
-                gameScreen.showMessage("Waiting for " + color);
-            }
+            gameScreen.updateDiceDisplay(currentDiceValue);
+            // Wait for server's GameStateUpdate to enable/disable controls
         }
     }
 
@@ -655,24 +508,23 @@ public class GameStateManager implements MessageListener {
         GameStateUpdateEvent event = (GameStateUpdateEvent) message;
 
         if (gameScreen != null) {
+            // Update pawn positions
             event.getPawnPositions().forEach((color, positions) ->
                 gameScreen.updatePlayerPawns(color, positions)
             );
 
+            // Update current player
             gameScreen.setCurrentPlayer(event.getCurrentPlayer());
+            isMyTurn = event.getCurrentPlayer().equals(currentUsername);
 
-            // Update game state based on server's state
+            // Update game state
             setGameState(event.getGameState());
 
-            // Only enable controls if it's our turn and we're in a valid state
-            if (isMyTurn && (event.getGameState() == GameState.IN_PROGRESS ||
-                           event.getGameState() == GameState.WAITING_FOR_MOVE)) {
-                gameScreen.enableControls();
-                if (currentDiceValue == 0) {
-                    gameScreen.enableRollButton();
-                } else {
-                    gameScreen.enablePawnSelection();
-                }
+            // Update UI controls based on server state
+            if (isMyTurn && event.getGameState() == GameState.WAITING_FOR_MOVE) {
+                gameScreen.enablePawnSelection();
+            } else if (isMyTurn && event.getGameState() == GameState.IN_PROGRESS) {
+                gameScreen.enableRollButton();
             } else {
                 gameScreen.disableControls();
             }
@@ -740,7 +592,6 @@ public class GameStateManager implements MessageListener {
 //        LOGGER.info("Turn changed to: " + currentPlayerName + " (Color: " + currentPlayer.getColor() +
 //            ", isMyTurn: " + isMyTurn + ")");
         currentDiceValue = 0;
-        consecutiveSixes = 0;
 
         if (gameScreen == null) {
             LOGGER.warning("GameScreen is null when handling turn change");
@@ -751,7 +602,7 @@ public class GameStateManager implements MessageListener {
         gameScreen.setCurrentPlayer(currentPlayer.getColor());
 
         if (isMyTurn) {
-            gameScreen.enableControls();
+            gameScreen.enableRollButton();
             gameScreen.showMessage("Your turn! Roll the dice");
         } else {
             gameScreen.disableControls();
@@ -781,8 +632,6 @@ public class GameStateManager implements MessageListener {
         gameStarted = false;
         isMyTurn = false;
         currentDiceValue = 0;
-        consecutiveSixes = 0;
-        canMovePawn = false;
         currentPlayers.clear();
         if (gameScreen != null) {
             gameScreen.reset();
@@ -807,14 +656,6 @@ public class GameStateManager implements MessageListener {
 
     public void sendMessage(NetworkMessage message) {
         networkHandler.sendMessage(message);
-    }
-
-    public GameState getCurrentState() {
-        return currentState;
-    }
-
-    public void setCurrentState(GameState newState) {
-        this.currentState = newState;
     }
 
     private void handleDisconnectionAcknowledged() {
@@ -883,11 +724,10 @@ public class GameStateManager implements MessageListener {
                         game.addPlayer(player);
                     });
 
-                    // Set current player
-                    game.getGameStateManager().setCurrentPlayer(event.getSaveData().currentPlayerColor);
-
-                    // Switch to game screen
-                    game.setScreen(new GameScreen(game));
+                    // Create new game screen and set current player
+                    GameScreen newGameScreen = new GameScreen(game);
+                    newGameScreen.setCurrentPlayer(event.getSaveData().currentPlayerColor);
+                    game.setScreen(newGameScreen);
                 }
                 break;
             case NOT_AUTHORIZED:
