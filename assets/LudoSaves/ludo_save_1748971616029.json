@@ -1,0 +1,112 @@
+{
+  "saveVersion": 1,
+  "players": [
+    {
+      "name": "f",
+      "color": "RED",
+      "pawns": [
+        {
+          "position": -1,
+          "isHome": true,
+          "isFinished": false
+        },
+        {
+          "position": -1,
+          "isHome": true,
+          "isFinished": false
+        },
+        {
+          "position": -1,
+          "isHome": true,
+          "isFinished": false
+        },
+        {
+          "position": -1,
+          "isHome": true,
+          "isFinished": false
+        }
+      ]
+    },
+    {
+      "name": "Bot-GREEN",
+      "color": "GREEN",
+      "pawns": [
+        {
+          "position": 48,
+          "isHome": false,
+          "isFinished": false
+        },
+        {
+          "position": -1,
+          "isHome": true,
+          "isFinished": false
+        },
+        {
+          "position": -1,
+          "isHome": true,
+          "isFinished": false
+        },
+        {
+          "position": -1,
+          "isHome": true,
+          "isFinished": false
+        }
+      ]
+    },
+    {
+      "name": "Bot-YELLOW",
+      "color": "YELLOW",
+      "pawns": [
+        {
+          "position": 11,
+          "isHome": false,
+          "isFinished": false
+        },
+        {
+          "position": 0,
+          "isHome": false,
+          "isFinished": false
+        },
+        {
+          "position": -1,
+          "isHome": true,
+          "isFinished": false
+        },
+        {
+          "position": -1,
+          "isHome": true,
+          "isFinished": false
+        }
+      ]
+    },
+    {
+      "name": "Bot-BLUE",
+      "color": "BLUE",
+      "pawns": [
+        {
+          "position": -1,
+          "isHome": true,
+          "isFinished": false
+        },
+        {
+          "position": -1,
+          "isHome": true,
+          "isFinished": false
+        },
+        {
+          "position": -1,
+          "isHome": true,
+          "isFinished": false
+        },
+        {
+          "position": -1,
+          "isHome": true,
+          "isFinished": false
+        }
+      ]
+    }
+  ],
+  "currentPlayerColor": "RED",
+  "gameState": "IN_PROGRESS",
+  "timestamp": 1748971616029
+}
