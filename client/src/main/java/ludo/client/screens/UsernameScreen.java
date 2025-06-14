@@ -8,17 +8,11 @@ import com.badlogic.gdx.scenes.scene2d.utils.ChangeListener;
 import com.badlogic.gdx.utils.Align;
 import ludo.client.LudoGame;
 import ludo.core.events.serverToClient.Response;
-import ludo.core.persistence.GamePersistence;
-import ludo.core.persistence.GamePersistence.GameSaveData;
-import ludo.core.entities.Player;
-import ludo.core.entities.Pawn;
 
 public class UsernameScreen extends BaseScreen {
     private TextField usernameField;
     private Label errorLabel;
     private SelectBox<String> colorSelect;
-    private SelectBox<Integer> playerCountSelect;
-    private Table playerCountTable;
     private boolean joinInProgress = false;
 
     public UsernameScreen(final LudoGame game) {
@@ -28,14 +22,6 @@ public class UsernameScreen extends BaseScreen {
             game.setScreen(new ConnectionScreen(game));
             return;
         }
-
-        game.getGameStateManager().setCurrentScreen(this);
-
-        // Check if there is a saved game and show load dialog if available
-//        if (GamePersistence.hasSaveGame()) {
-//            showLoadGameDialog();
-//            return;
-//        }
 
         createUI();
         disconnectButton.setPosition(Gdx.graphics.getWidth() - 130, Gdx.graphics.getHeight() - 50);
@@ -78,58 +64,7 @@ public class UsernameScreen extends BaseScreen {
         mainTable.add(joinButton).colspan(2).pad(20);
 
         stage.addActor(mainTable);
-
-        if (game.getGameStateManager().isFirstPlayer()) {// this isnt working, but its working when i reconnect
-            playerCountTable = new Table();
-            playerCountTable.add(new Label("Number of Players:", skin)).align(Align.right);
-            playerCountSelect = new SelectBox<>(skin);
-            playerCountSelect.setItems(2, 3, 4);
-            playerCountTable.add(playerCountSelect).align(Align.left);
-            mainTable.add(playerCountTable).colspan(2).row();
-        }
     }
-
-//    private void showLoadGameDialog() {
-//        Dialog dialog = new Dialog("Load Game", skin) {
-//            @Override
-//            protected void result(Object object) {
-//                if ((Boolean) object) {
-//                    loadSavedGame();
-//                } else {
-//                    createUI();
-//                }
-//            }
-//        };
-//        dialog.text("Do you want to load the previous game?");
-//        dialog.button("Yes", true);
-//        dialog.button("No", false);
-//        dialog.show(stage);
-//    }
-
-//    private void loadSavedGame() {
-//        GameSaveData saveData = GamePersistence.loadGame();
-//        if (saveData != null) {
-//            game.reset();
-//
-//            saveData.players.forEach(playerData -> {
-//                Player player = new Player(playerData.name, playerData.color);
-//                for (int i = 0; i < playerData.pawns.size(); i++) {
-//                    GamePersistence.PawnSaveData pawnData = playerData.pawns.get(i);
-//                    Pawn pawn = player.getPawns().get(i);
-//                    pawn.setPosition(pawnData.position);
-//                    if (pawnData.isHome) pawn.sendHome();
-//                    if (pawnData.isFinished) pawn.setFinished(true);
-//                }
-//                game.addPlayer(player);
-//            });
-//
-//            game.getGameStateManager().setCurrentPlayer(saveData.currentPlayerColor);
-//            game.setScreen(new GameScreen(game));
-//        } else {
-//            Gdx.app.error("UsernameScreen", "Failed to load saved game");
-//            createUI();
-//        }
-//    }
 
     private void attemptJoin() {
         if (joinInProgress) {
@@ -142,13 +77,11 @@ public class UsernameScreen extends BaseScreen {
             return;
         }
 
-        errorLabel.setText("");
+        errorLabel.setText("Joining...");
         joinInProgress = true;
 
-        if (!game.getGameStateManager().joinGame(username, colorSelect.getSelected())) {
-            joinInProgress = false;
-            errorLabel.setText("Failed to send join request");
-        }
+        // The response will be handled in the onJoinResponse method.
+        game.getGameStateManager().joinGame(username, colorSelect.getSelected());
     }
 
     public void onJoinResponse(Response response) {
@@ -157,16 +90,16 @@ public class UsernameScreen extends BaseScreen {
         switch (response) {
             case OK:
             case FIRST_PLAYER:
-                game.setScreen(new LobbyScreen(game));
+                // Let the GameStateManager handle the screen transition
                 break;
             case COLOR_TAKEN:
-                errorLabel.setText("This color is already taken. Please choose another color.");
+                errorLabel.setText("This color is already taken.");
                 break;
             case USERNAME_TAKEN:
-                errorLabel.setText("This username is already taken. Please choose another name.");
+                errorLabel.setText("This username is already taken.");
                 break;
             case GAME_FULL:
-                errorLabel.setText("The game is full. Please try again later.");
+                errorLabel.setText("The game is full.");
                 break;
             default:
                 errorLabel.setText("Join failed: " + response);
@@ -178,7 +111,6 @@ public class UsernameScreen extends BaseScreen {
     public void render(float delta) {
         Gdx.gl.glClearColor(0.2f, 0.2f, 0.2f, 1);
         Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT);
-
         super.render(delta);
     }
 }
