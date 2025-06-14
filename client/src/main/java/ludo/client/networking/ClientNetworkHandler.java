@@ -337,4 +337,21 @@ public class ClientNetworkHandler implements NetworkHandler {
         return isConnected.get() && connection != null && !connection.isFailed();
     }
 
+    public void reset() {
+        synchronized (disconnectLock) {
+            if (disconnecting) {
+                return; // Already disconnecting
+            }
+            disconnecting = true;
+        }
+
+        cleanupResources();
+        isConnected.set(false);
+        running = false;
+        LOGGER.info("Client network handler reset");
+
+        synchronized (disconnectLock) {
+            disconnecting = false;
+        }
+    }
 }
