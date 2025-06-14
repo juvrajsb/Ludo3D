@@ -11,12 +11,10 @@ import com.badlogic.gdx.scenes.scene2d.utils.ChangeListener;
 import com.badlogic.gdx.utils.viewport.ScreenViewport;
 import com.badlogic.gdx.utils.viewport.Viewport;
 import ludo.client.LudoGame;
+import ludo.core.events.clientToServer.LeaveGameRequestEvent;
+
 import java.util.logging.Logger;
 
-/**
- * This class is responsible for the base screen.
- * It is an abstract class that implements the Screen interface.
- */
 public abstract class BaseScreen implements Screen {
     protected final LudoGame game;
     protected Stage stage;
@@ -33,10 +31,9 @@ public abstract class BaseScreen implements Screen {
         this.inputMultiplexer = new InputMultiplexer(stage);
         this.skin = new Skin(Gdx.files.internal("ui/uiskin.json"));
 
-        // Create disconnect button
         disconnectButton = new TextButton("Disconnect", skin);
         disconnectButton.setSize(120, 40);
-        disconnectButton.setPosition(Gdx.graphics.getWidth() - 130, 10); // Position in top-right corner
+        disconnectButton.setPosition(Gdx.graphics.getWidth() - 130, 10);
         disconnectButton.addListener(new ChangeListener() {
             @Override
             public void changed(ChangeEvent event, Actor actor) {
@@ -46,39 +43,11 @@ public abstract class BaseScreen implements Screen {
         stage.addActor(disconnectButton);
     }
 
-    protected void handleDisconnect() {
+    protected void handleDisconnect() { //todo check if correct
         if (game.getGameStateManager() != null) {
             LOGGER.info("Starting disconnection process...");
-
-            // Send disconnection event to server
-            try {
-                ludo.core.events.clientToServer.ClientDisconnectedEvent disconnectEvent =
-                    new ludo.core.events.clientToServer.ClientDisconnectedEvent(
-                        game.getGameStateManager().getCurrentUsername()
-                    );
-
-                game.getGameStateManager().getNetworkHandler().sendMessage(disconnectEvent);
-                LOGGER.info("Disconnection event sent successfully");
-
-                // Give a small delay for the message to be sent
-                try {
-                    Thread.sleep(100);
-                } catch (InterruptedException e) {
-                    LOGGER.warning("Disconnection delay interrupted: " + e.getMessage());
-                }
-
-                // Disconnect without waiting for acknowledgment
-                game.getGameStateManager().getNetworkHandler().disconnect();
-                LOGGER.info("Disconnected from server");
-
-                // Return to connection screen
-                game.setScreen(new ConnectionScreen(game));
-            } catch (Exception e) {
-                LOGGER.severe("Error during disconnection: " + e.getMessage());
-                // Force disconnect and return to connection screen
-                game.getGameStateManager().getNetworkHandler().disconnect();
-                game.setScreen(new ConnectionScreen(game));
-            }
+            game.getGameStateManager().leaveGame();
+            game.setScreen(new ConnectionScreen(game));
         }
     }
 
@@ -86,7 +55,6 @@ public abstract class BaseScreen implements Screen {
     public void resize(int width, int height) {
         viewport.update(width, height, true);
         stage.getViewport().update(width, height, true);
-        // Update disconnect button position
         disconnectButton.setPosition(width - 130, 10);
     }
 
@@ -113,5 +81,6 @@ public abstract class BaseScreen implements Screen {
     @Override
     public void dispose() {
         stage.dispose();
+        skin.dispose();
     }
 }
