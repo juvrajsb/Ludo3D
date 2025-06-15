@@ -26,6 +26,7 @@ public class ServerGameStateManager implements MessageListener {
     private final ServerNetworkHandler networkHandler;
     private final Map<String, String> connectionToPlayerMap;
     private static final String[] COLOR_ORDER = {"YELLOW", "BLUE", "RED", "GREEN"};
+    private String adminPlayerName = null;
 
     public ServerGameStateManager(ServerNetworkHandler networkHandler) {
         this.networkHandler = networkHandler;
@@ -240,7 +241,7 @@ public class ServerGameStateManager implements MessageListener {
             broadcastGameState();
         }
     }
-//todo check why extra roll not working
+
     private boolean handleMoveSuccess(String connectionId, int pawnIndex, int steps, boolean isLeavingHome, int currentPosition) {
 //        LOGGER.info("Positions after move: " + gameManager.getCurrentPawnPositions());
         int newPosition = gameManager.getCurrentPlayer().getPawns().get(pawnIndex).getPosition();
@@ -604,7 +605,7 @@ public class ServerGameStateManager implements MessageListener {
     }
 
     private void playBotTurn(BotPlayer bot) {
-//        LOGGER.info("Bot " + bot.getName() + " taking turn");
+        LOGGER.info("Bot " + bot.getName() + " taking turn");
 
         LOGGER.info("Bot state before rolling: " +
             "Player color=" + bot.getColor() +
@@ -621,7 +622,7 @@ public class ServerGameStateManager implements MessageListener {
             networkHandler.broadcast(diceEvent);
 
             int[] validMoves = MoveValidator.getValidMoves(bot, diceRoll, gameManager.getBoard());
-//            LOGGER.info("Valid moves for bot: " + Arrays.toString(validMoves));
+            LOGGER.info("Valid moves for bot: " + Arrays.toString(validMoves));
 
             // If no valid moves, end turn immediately
             if (validMoves.length == 0) {
@@ -638,9 +639,9 @@ public class ServerGameStateManager implements MessageListener {
             int playerIndex = gameManager.getPlayers().indexOf(bot);
             int pawnIndex = bot.chooseBestMove(gameManager.getBoard(), diceRoll, gameManager.getPlayers());
 
-//            LOGGER.info("Bot choosing move - Player index: " + playerIndex +
-//                ", Pawn index: " + pawnIndex +
-//                ", Dice roll: " + diceRoll);
+            LOGGER.info("Bot choosing move - Player index: " + playerIndex +
+                ", Pawn index: " + pawnIndex +
+                ", Dice roll: " + diceRoll);
 
             if (pawnIndex >= 0) {
                 // Execute bot's chosen move
@@ -649,7 +650,7 @@ public class ServerGameStateManager implements MessageListener {
                 boolean moveSuccess = gameManager.movePawn(playerIndex, pawnIndex, diceRoll);
                 if (moveSuccess) {
                     Pawn movedPawn = bot.getPawns().get(pawnIndex);
-//                    LOGGER.info("Bot move successful - New position: " + movedPawn.getPosition());
+                    LOGGER.info("Bot move successful - New position: " + movedPawn.getPosition());
 
                     MoveResultEvent moveEvent = new MoveResultEvent(
                         true,
@@ -665,37 +666,65 @@ public class ServerGameStateManager implements MessageListener {
                         handleGameOver(bot.getName());
                         return;
                     }
+
+                    boolean shouldGetExtraRoll = false;
+                    String reason = "";
+
+                    if (movedPawn.isFinished()) {
+                        shouldGetExtraRoll = true;
+                        reason = "Pawn reached finish base";
+                    } else if (gameManager.wasPawnCaptured()) {
+                        shouldGetExtraRoll = true;
+                        reason = "Pawn captured";
+                    } else if (diceRoll == 6) {
+                        shouldGetExtraRoll = true;
+                        reason = "Rolled a 6";
+                    }
+
+                    if (shouldGetExtraRoll) {
+                        LOGGER.info("Bot gets another roll: " + reason);
+                        gameManager.setLastDiceRoll(0); // Allow another roll
+                        try {
+                            Thread.sleep(1500); // Brief pause before next bot action
+                            playBotTurn(bot); // Recursive call for the extra turn
+                        } catch (InterruptedException e) {
+                            Thread.currentThread().interrupt();
+                            LOGGER.warning("Bot turn interrupted: " + e.getMessage());
+                        }
+                    } else {
+                        gameManager.nextTurn();
+                        LOGGER.info("Bot turn complete, moving to next player: " +
+                            gameManager.getCurrentPlayer().getName());
+
+                        TurnChangeEvent turnEvent = new TurnChangeEvent(
+                            gameManager.getCurrentPlayer().getName()
+                        );
+                        networkHandler.broadcast(turnEvent);
+
+                        checkAndPlayBotTurn();
+                    }
                 } else {
                     LOGGER.warning("Bot move failed - Details: Player=" + playerIndex +
                         ", Pawn=" + pawnIndex +
                         ", Roll=" + diceRoll);
                 }
-            }
-
-            if (diceRoll == 6) {
-                try {
-//                    LOGGER.info("Bot rolled 6, taking another turn");
-                    Thread.sleep(1500); // Brief pause before next bot action
-                    playBotTurn(bot);
-                } catch (InterruptedException e) {
-                    LOGGER.warning("Bot turn interrupted: " + e.getMessage());
-                }
             } else {
+                // This case handles when a bot has valid moves but the AI fails to choose one.
+                // We'll end the turn to prevent the game from stalling.
                 gameManager.nextTurn();
-//                LOGGER.info("Bot turn complete, moving to next player: " +
-//                    gameManager.getCurrentPlayer().getName());
+                LOGGER.warning("Bot failed to choose a move, ending turn to be safe.");
 
                 TurnChangeEvent turnEvent = new TurnChangeEvent(
                     gameManager.getCurrentPlayer().getName()
                 );
                 networkHandler.broadcast(turnEvent);
-
                 checkAndPlayBotTurn();
             }
         } catch (Exception e) {
             LOGGER.severe("Error during bot turn: " + e.getMessage());
             e.printStackTrace();
 
+            // Gracefully handle error by moving to the next turn
             gameManager.nextTurn();
             TurnChangeEvent turnEvent = new TurnChangeEvent(
                 gameManager.getCurrentPlayer().getName()
@@ -738,8 +767,7 @@ public class ServerGameStateManager implements MessageListener {
 
     private boolean isFirstPlayer(String connectionId) {
         String playerName = connectionToPlayerMap.get(connectionId);
-        return playerName != null && gameManager.getPlayers().size() > 0 &&
-            gameManager.getPlayers().get(0).getName().equals(playerName);
+        return playerName != null && playerName.equals(this.adminPlayerName);
     }
 
     private void handleGameOver(String winner) {
@@ -831,13 +859,12 @@ public class ServerGameStateManager implements MessageListener {
             connectionToPlayerMap.put(connectionId, playerName);
             LOGGER.info("Player joined successfully: " + event.getPlayerName());
 
-            networkHandler.sendToClient(connectionId,
-                new JoinGameResponseEvent(Response.OK));
+            networkHandler.sendToClient(connectionId, new JoinGameResponseEvent(Response.OK));
 
             if (gameManager.getPlayers().size() == 1) {
-                networkHandler.sendToClient(connectionId,
-                    new FirstPlayerEvent());
-                LOGGER.info("First player joined: " + event.getPlayerName());
+                this.adminPlayerName = playerName; // Set the admin player
+                networkHandler.sendToClient(connectionId, new FirstPlayerEvent());
+                LOGGER.info("First player joined and set as admin: " + event.getPlayerName());
             }
 
             networkHandler.broadcast(new PlayerJoinedEvent(newPlayer));
