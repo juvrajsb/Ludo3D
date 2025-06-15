@@ -17,9 +17,10 @@ import java.util.logging.Logger;
 
 public class GamePersistence {
     private static final Logger LOGGER = Logger.getLogger(GamePersistence.class.getName());
-    private static final String SAVE_DIR = "LudoSaves";
-    public static final String SAVE_FILE = SAVE_DIR + "/ludo_save.json";
-    public static final String AUTO_SAVE_FILE = SAVE_DIR + "/ludo_autosave.json";
+    private static final String SAVE_DIR = "../assets/LudoSaves";
+    public static final String SAVE_FILE = "ludo_save.json";
+    public static final String AUTO_SAVE_FILE = "ludo_autosave.json";
+
     private static final int CURRENT_SAVE_VERSION = 1;
     public static final Gson gson = new GsonBuilder()
         .setPrettyPrinting()
@@ -205,6 +206,10 @@ public class GamePersistence {
 
     public static List<String> listSaveFiles() {
         File saveDir = new File(SAVE_DIR);
+        LOGGER.info("Listing save files from directory: " + saveDir.getAbsolutePath());
+        if (!saveDir.exists()) {
+            LOGGER.warning("Save directory does not exist at the checked path.");
+        }
         File[] saveFiles = saveDir.listFiles((dir, name) -> name.startsWith("ludo_save_") && name.endsWith(".json"));
 
         List<String> saveFileNames = new ArrayList<>();
@@ -221,7 +226,7 @@ public class GamePersistence {
 
     public static GameSaveData loadGame(String fileName) {
         // If the fileName already contains the full path, use it directly
-        File saveFile = fileName.startsWith(SAVE_DIR) ? new File(fileName) : new File(SAVE_DIR, fileName);
+        File saveFile = new File(SAVE_DIR, fileName);
         if (!saveFile.exists()) {
             LOGGER.info("No save file found at " + saveFile.getAbsolutePath());
             return null;
@@ -301,8 +306,18 @@ public class GamePersistence {
     }
 
     public static void saveGame(GameSaveData saveData, String fileName) throws IOException {
+        // Ensure the single, correct save directory exists.
+        File saveDir = new File(SAVE_DIR);
+        if (!saveDir.exists()) {
+            if (!saveDir.mkdirs()) {
+                throw new IOException("Failed to create save directory: " + saveDir.getAbsolutePath());
+            }
+        }
+
+        // Create the final File object from the correct directory and filename.
+        File saveFile = new File(saveDir, fileName);
         String json = gson.toJson(saveData);
-        try (FileWriter writer = new FileWriter(fileName)) {
+        try (FileWriter writer = new FileWriter(saveFile)) {
             writer.write(json);
         }
     }
