@@ -61,7 +61,8 @@ public class LobbyScreen extends BaseScreen {
         loadGameButton.addListener(new ChangeListener() {
             @Override
             public void changed(ChangeEvent event, Actor actor) {
-                showNativeFileChooserAndLoad();
+                // This now asks the server for the list instead of trying to read it locally
+                game.getGameStateManager().requestSaveFilesList();
             }
         });
         mainTable.add(loadGameButton).colspan(2).pad(10).row();
@@ -94,35 +95,37 @@ public class LobbyScreen extends BaseScreen {
         disconnectButton.setPosition(width - 130, height - 50);
     }
 
-    private void showNativeFileChooserAndLoad() {
-        File savesDir = new File("LudoSaves");
-        if (!savesDir.exists()) savesDir.mkdirs();
-
-        File[] saveFiles = savesDir.listFiles((dir, name) -> name.toLowerCase().endsWith(".json"));
-        Array<String> fileNames = new Array<>();
-        if (saveFiles != null) {
-            for (File f : saveFiles) fileNames.add(f.getName());
-        }
+    public void showLoadGameDialog(List<String> fileNames) {
+        Gdx.app.log("LobbyScreen", "Showing load game dialog with " + fileNames.size() + " files.");
 
         final com.badlogic.gdx.scenes.scene2d.ui.List<String> saveList = new com.badlogic.gdx.scenes.scene2d.ui.List<>(skin);
-        if (fileNames.size > 0) saveList.setItems(fileNames);
+        if (!fileNames.isEmpty()) {
+            Array<String> gdxFileNames = new Array<>(fileNames.toArray(new String[0]));
+            saveList.setItems(gdxFileNames);
+        }
 
         Dialog dialog = new Dialog("Select Save File", skin) {
             @Override
             protected void result(Object object) {
                 if (Boolean.TRUE.equals(object)) {
-                    String fileName = saveList.getSelected();
-                    if (fileName != null) {
-                        game.getGameStateManager().startGame(false, true);
+                    String selectedFile = saveList.getSelected();
+                    if (selectedFile != null) {
+                        Gdx.app.log("LobbyScreen", "Load selected for file: " + selectedFile);
+                        // Tell the server to start the game by loading this file
+                        game.getGameStateManager().startGame(botPlayersCheckbox.isChecked(), true, selectedFile);
                     }
+                } else {
+                    Gdx.app.log("LobbyScreen", "Load game dialog cancelled.");
                 }
             }
         };
+
         dialog.getContentTable().pad(20);
-        if (fileNames.size == 0) {
-            dialog.text("No save files found.");
+        if (fileNames.isEmpty()) {
+            dialog.text("No save files found on the server.");
         } else {
-            dialog.getContentTable().add(new ScrollPane(saveList, skin)).width(300).height(200).row();
+            dialog.getContentTable().add(new Label("Select a save to load:", skin)).row();
+            dialog.getContentTable().add(saveList).width(400).height(200).pad(10).row();
             dialog.button("Load Selected", true);
         }
         dialog.button("Cancel", false);
