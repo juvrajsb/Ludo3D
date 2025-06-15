@@ -68,7 +68,7 @@ public class GameManager {
             gameState = GameState.IN_PROGRESS;
             LOGGER.info("Game started, GAMEMANAGER");
             currentPlayerIndex = 0;
-            initializePlayerPositions();
+//            initializePlayerPositions();
         }
     }
 
