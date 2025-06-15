@@ -48,34 +48,43 @@ public class Board implements Serializable {
     }
 
     public boolean isHomeColumn(int position, String color) {
-        // For positions in home column area (≥52)
-        if (position >= BOARD_SIZE) {
-            int colorIndex;
-            switch (color.toUpperCase()) { //todo check if the color order is correct
-                case "YELLOW": colorIndex = 0; break;
-                case "BLUE": colorIndex = 1; break;
-                case "RED": colorIndex = 2; break;
-                case "GREEN": colorIndex = 3; break;
-                default: return false;
-            }
-            int homeStart = BOARD_SIZE + colorIndex * HOME_COLUMN_SIZE;
-            int homeEnd = homeStart + HOME_COLUMN_SIZE;
-            return position >= homeStart && position <= homeEnd;
+        if (position < BOARD_SIZE) {
+            return false;
         }
-        return false;
+        int homeStart;
+        switch (color.toUpperCase()) {
+            case "YELLOW":
+                homeStart = 52;
+                break;
+            case "BLUE":
+                homeStart = 58;
+                break;
+            case "RED":
+                homeStart = 64;
+                break;
+            case "GREEN":
+                homeStart = 70;
+                break;
+            default:
+                return false;
+        }
+        int homeEnd = homeStart + HOME_COLUMN_SIZE -1;
+        return position >= homeStart && position <= homeEnd;
     }
 
     public boolean isTargetBase(int position, String color) {
-        int colorIndex;
         switch (color.toUpperCase()) {
-            case "YELLOW": colorIndex = 0; break;
-            case "BLUE": colorIndex = 1; break;
-            case "RED": colorIndex = 2; break;
-            case "GREEN": colorIndex = 3; break;
-            default: return false;
+            case "YELLOW":
+                return position == 57;
+            case "BLUE":
+                return position == 63;
+            case "RED":
+                return position == 69;
+            case "GREEN":
+                return position == 75;
+            default:
+                return false;
         }
-        int targetBasePosition = BOARD_SIZE + colorIndex * HOME_COLUMN_SIZE + HOME_COLUMN_SIZE + 1;
-        return position == targetBasePosition;
     }
 
     private void initializePlayerStartPositions() {
