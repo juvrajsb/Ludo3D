@@ -3,91 +3,59 @@ package ludo.core.validation;
 import ludo.core.entities.Board;
 import ludo.core.entities.Pawn;
 import ludo.core.entities.Player;
+import ludo.core.utils.Constants;
 
 import java.util.logging.Logger;
 
 public class MoveValidator {
     private static final Logger LOGGER = Logger.getLogger(MoveValidator.class.getName());
 
+    private static int getHomeColumnStartForColor(String color) {
+        switch (color.toUpperCase()) {
+            case "YELLOW": return 52;
+            case "BLUE":   return 58;
+            case "RED":    return 64;
+            case "GREEN":  return 70;
+            default:       return -1;
+        }
+    }
     /**
      * Validates if a move is legal according to Ludo rules
      */
     public static boolean isValidMove(Player player, Pawn pawn, int steps, Board board) {
-        LOGGER.fine(String.format("Validating move - Player: %s, Pawn pos: %d, Steps: %d",
-            player.getColor(), pawn.getPosition(), steps));
-
-        // Basic validation
-        if (player == null || pawn == null || steps < 1 || steps > 6) {
-            LOGGER.info("Invalid move: Basic validation failed");
-            return false;
-        }
-
-        // Home validation - can only leave home with a 6
-        if (pawn.isHome()) {
-            if (steps != 6) {
-                LOGGER.info("Invalid move: Cannot leave home without a 6");
-                return false;
-            }
-            return true;
-        }
-
-        // Finished pawns cannot move
         if (pawn.isFinished()) {
-            LOGGER.info("Invalid move: Pawn is already finished");
             return false;
         }
+        if (pawn.isHome()) {
+            return steps == 6;
+        }
 
-        // Calculate new position
         int currentPosition = pawn.getPosition();
-        int playerStartPos = board.getStartPosition(player.getColor());
-        int entryPoint = (playerStartPos + board.getTotalSpaces() - 1) % board.getTotalSpaces();
-        int newPosition = currentPosition + steps;
 
-        // Handle home column entry
-        if (currentPosition < board.getTotalSpaces() && // Not already in home column
-            currentPosition <= entryPoint && newPosition > entryPoint) {
-            // Entering home column
-            LOGGER.fine("Pawn is entering home column");
-            int stepsAfterEntry = newPosition - entryPoint - 1;
-
-            // Verify not overshooting home column
-            if (stepsAfterEntry >= board.getHomeColumnSize()) {
-                LOGGER.info("Invalid move: Would overshoot home column");
-                return false;
+        // --- This block is for pawns already in the home column ---
+        if (currentPosition >= 52) {
+            int homeColumnStart;
+            switch (player.getColor().toUpperCase()) {
+                case "YELLOW": homeColumnStart = 52; break;
+                case "BLUE":   homeColumnStart = 58; break;
+                case "RED":    homeColumnStart = 64; break;
+                case "GREEN":  homeColumnStart = 70; break;
+                default:       return false;
             }
-
-            // Calculate home column position
-            int homeColumnStart = board.getTotalSpaces() +
-                (playerStartPos / 13) * board.getHomeColumnSize();
-            int homePosition = homeColumnStart + stepsAfterEntry;
-
-            LOGGER.fine("Move into home column valid");
-            return true;
+            int targetBasePosition = homeColumnStart + Constants.HOME_COLUMN_SIZE;
+            return (currentPosition + steps) <= targetBasePosition;
         }
 
-        // Handle movement within home column
-        if (currentPosition >= board.getTotalSpaces()) {
-            // Already in home column
-            LOGGER.fine("Pawn is moving within home column");
+        // --- This block is for pawns on the main track ---
+        int startPos = board.getStartPositionIndex(player.getColor());
+        int homeEntryPos = (startPos - 1 + 52) % 52;
+        int distToEntry = (homeEntryPos - currentPosition + 52) % 52;
 
-            // Verify not overshooting target base
-            int homeColumnStart = board.getTotalSpaces() +
-                (playerStartPos / 13) * board.getHomeColumnSize();
-            int targetBasePosition = homeColumnStart + board.getHomeColumnSize();
-
-            if (newPosition > targetBasePosition) {
-                LOGGER.info("Invalid move: Would overshoot target base");
-                return false;
-            }
-
-            LOGGER.fine("Move within home column valid");
-            return true;
+        if (steps >= distToEntry) {
+            int stepsIntoHome = steps - distToEntry;
+            return stepsIntoHome <= (Constants.HOME_COLUMN_SIZE + 1);
         }
 
-        // Regular board movement
-        int boardPosition = newPosition % board.getTotalSpaces();
-
-        LOGGER.fine("Regular board move valid");
         return true;
     }
 
