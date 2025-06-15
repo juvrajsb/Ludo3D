@@ -139,7 +139,17 @@ public class GameManager {
 
         LOGGER.info("Move validation successful");
         pawn.setPosition(newPosition);
-        
+
+        // This calculates the integer position of the final target base
+        int homeColumnStartForColor = board.getTotalSpaces() + (board.getStartPositionIndex(player.getColor()) / 13) * (Constants.HOME_COLUMN_SIZE + 1);
+        int finalHomePosition = homeColumnStartForColor + Constants.HOME_COLUMN_SIZE;
+
+        // If the pawn has landed on the target base, set its isFinished flag
+        if (newPosition == finalHomePosition) {
+            pawn.setFinished(true);
+            LOGGER.info("Pawn " + pawnIndex + " for player " + player.getColor() + " has finished!");
+        }
+
         // Add capture handling after move
         LOGGER.info("Checking for captures at position: " + newPosition);
         if (!board.isSafeSpot(newPosition)) {
@@ -148,44 +158,44 @@ public class GameManager {
         } else {
             LOGGER.info("Position " + newPosition + " is a safe spot - no captures possible");
         }
-        
+
         return true;
     }
 
     private int calculateNewPosition(Player player, int currentPosition, int steps) {
-        LOGGER.info("Calculating new position for " + player.getColor() + " pawn - Current: " + currentPosition + ", Steps: " + steps);
-
         if (currentPosition >= board.getTotalSpaces()) {
-            // Already in home column
-            int newPos = currentPosition + steps;
-            LOGGER.info("Pawn already in home column - Current: " + currentPosition + ", New: " + newPos);
-            if (isHomeColumnOvershoot(player, currentPosition, newPos)) {
-                LOGGER.info("Move would overshoot home column");
-                return -1;
+            int homeColumnStartForColor = getHomeColumnStartForColor(player.getColor());
+            int finalHomePosition = homeColumnStartForColor + Constants.HOME_COLUMN_SIZE;
+            if (currentPosition + steps > finalHomePosition) {
+                return -1; // Overshot
             }
-            return newPos;
+            return currentPosition + steps;
         }
 
         int startPos = board.getStartPositionIndex(player.getColor());
-        int entryPoint = (startPos + board.getTotalSpaces() - 1) % board.getTotalSpaces();
-        int potentialNewPos = currentPosition + steps;
+        int homeEntryPos = (startPos - 1 + board.getTotalSpaces()) % board.getTotalSpaces();
+        int distToEntry = (homeEntryPos - currentPosition + board.getTotalSpaces()) % board.getTotalSpaces();
 
-        LOGGER.info("Movement calculation - Start: " + startPos + ", Entry: " + entryPoint +
-            ", Current: " + currentPosition + ", Potential: " + potentialNewPos);
-
-        // Check if entering home column
-        if (currentPosition <= entryPoint && potentialNewPos > entryPoint) {
-            int stepsAfterEntry = potentialNewPos - entryPoint - 1;
-            LOGGER.info("Entering home column - Steps after entry: " + stepsAfterEntry);
-
-            if (stepsAfterEntry >= board.getHomeColumnSize()) {
-                LOGGER.info("Move would overshoot home column size: " + board.getHomeColumnSize());
-                return -1;
+        if (steps >= distToEntry) {
+            int stepsIntoHome = steps - distToEntry;
+            if (stepsIntoHome > Constants.HOME_COLUMN_SIZE + 1) {
+                return -1; // Overshot.
             }
-            return board.getTotalSpaces() + (startPos / 13) * board.getHomeColumnSize() + stepsAfterEntry;
+            int homeColumnStart = getHomeColumnStartForColor(player.getColor());
+            return homeColumnStart + stepsIntoHome;
+        } else {
+            return (currentPosition + steps) % board.getTotalSpaces();
         }
+    }
 
-        return potentialNewPos % board.getTotalSpaces();
+    private int getHomeColumnStartForColor(String color) {
+        switch (color.toUpperCase()) {
+            case "YELLOW": return 52;
+            case "BLUE":   return 58;
+            case "RED":    return 64;
+            case "GREEN":  return 70;
+            default:       return -1;
+        }
     }
 
     private boolean isHomeColumnOvershoot(Player player, int currentPos, int newPos) {
@@ -333,7 +343,7 @@ public class GameManager {
 
     private void handleCaptures(Player movingPlayer, int position) {
         LOGGER.info("Handling captures for " + movingPlayer.getColor() + " at position " + position);
-        
+
         if (board.isSafeSpot(position)) {
             LOGGER.info("Position " + position + " is a safe spot - no captures possible");
             return;
