@@ -50,8 +50,6 @@ public class GameStateManager implements MessageListener {
         this.networkHandler.setMessageListener(this);
     }
 
-    // --- Public Methods for Sending Requests to Server ---
-
     public boolean connect(String ip, int port) {
         try {
             networkHandler.connect(ip, port);
@@ -72,26 +70,42 @@ public class GameStateManager implements MessageListener {
         networkHandler.sendMessage(new JoinGameRequestEvent(username, color));
     }
 
+//    public void startGame(boolean enableBots, boolean loadSavedGame) {
+//        if (!isFirstPlayer || gameStarted) {
+//            LOGGER.warning("Invalid game start request - isFirstPlayer: " + isFirstPlayer + ", gameStarted: " + gameStarted);
+//            return;
+//        }
+//        String saveFileName = null;
+//        if (loadSavedGame) {
+//            // This logic is fine, as the client can know about local save files.
+//            List<String> saveFiles = GamePersistence.listSaveFiles();
+//            if (!saveFiles.isEmpty()) {
+//                saveFileName = saveFiles.get(0); // Get most recent
+//            } else {
+//                LOGGER.warning("Load game requested, but no save files found.");
+//                if (lobbyScreen != null) {
+//                    lobbyScreen.showError("No save files found.");
+//                }
+//                return;
+//            }
+//        }
+//        networkHandler.sendMessage(new StartGameRequestEvent(enableBots, loadSavedGame, saveFileName));
+//    }
+
+    public void startGame(boolean enableBots, boolean loadSavedGame, String saveFileName) {
+        if (isFirstPlayer && !gameStarted) {
+            LOGGER.info("First player requesting game start with bots: " + enableBots +
+                ", load saved game: " + loadSavedGame + ", file: " + saveFileName);
+            networkHandler.sendMessage(new StartGameRequestEvent(enableBots, loadSavedGame, saveFileName));
+        } else {
+            LOGGER.warning("Invalid game start request - isFirstPlayer: " +
+                isFirstPlayer + ", gameStarted: " + gameStarted);
+        }
+    }
+
     public void startGame(boolean enableBots, boolean loadSavedGame) {
-        if (!isFirstPlayer || gameStarted) {
-            LOGGER.warning("Invalid game start request - isFirstPlayer: " + isFirstPlayer + ", gameStarted: " + gameStarted);
-            return;
-        }
-        String saveFileName = null;
-        if (loadSavedGame) {
-            // This logic is fine, as the client can know about local save files.
-            List<String> saveFiles = GamePersistence.listSaveFiles();
-            if (!saveFiles.isEmpty()) {
-                saveFileName = saveFiles.get(0); // Get most recent
-            } else {
-                LOGGER.warning("Load game requested, but no save files found.");
-                if (lobbyScreen != null) {
-                    lobbyScreen.showError("No save files found.");
-                }
-                return;
-            }
-        }
-        networkHandler.sendMessage(new StartGameRequestEvent(enableBots, loadSavedGame, saveFileName));
+        // This path is for starting a NEW game, so the filename is null.
+        startGame(enableBots, loadSavedGame, null);
     }
 
     public void requestDiceRoll() {
@@ -185,6 +199,9 @@ public class GameStateManager implements MessageListener {
                         break;
                     case "LOAD_GAME_RESPONSE":
                         handleLoadGameResponse((LoadGameResponseEvent) message);
+                        break;
+                    case "SAVE_FILES_LIST":
+                        handleSaveFilesList((SaveFilesListEvent) message);
                         break;
                     default:
                         LOGGER.warning("Unhandled message type: " + message.getType());
@@ -375,6 +392,22 @@ public class GameStateManager implements MessageListener {
             if (lobbyScreen != null) lobbyScreen.showError("Load failed: " + event.getErrorMessage());
         }
         // On success, we do nothing here. The server will follow up with GameStartedEvent.
+    }
+
+    private void handleSaveFilesList(SaveFilesListEvent event) {
+        List<String> saveFiles = event.getSaveFiles();
+        LOGGER.info("Received " + saveFiles.size() + " save files from server.");
+        if (lobbyScreen != null) {
+            // Use Gdx.app.postRunnable to ensure UI updates happen on the main render thread
+            Gdx.app.postRunnable(() -> lobbyScreen.showLoadGameDialog(saveFiles));
+        } else {
+            LOGGER.warning("LobbyScreen is null, cannot display save files list.");
+        }
+    }
+
+    public void requestSaveFilesList() {
+        LOGGER.info("Client is requesting the list of save files from the server.");
+        networkHandler.sendMessage(new RequestSaveFilesEvent());
     }
 
 //    private void handleWaitingRoomUpdate(WaitingRoomUpdateEvent event) {
