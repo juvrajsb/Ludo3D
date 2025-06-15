@@ -18,7 +18,6 @@ import com.badlogic.gdx.utils.Array;
 import com.badlogic.gdx.utils.Timer;
 
 import ludo.client.assets.GameAssets;
-import ludo.core.entities.Board;
 import ludo.core.entities.Pawn;
 import ludo.core.entities.Player;
 import ludo.core.utils.BoardCoordinates;
@@ -389,32 +388,6 @@ public class GameRenderer {
         pawnPositions.put(pawnIndex, position);
     }
 
-    private int getHomeBaseStartX(String color) {
-        switch(color.toUpperCase()) {
-            case "RED":
-            case "GREEN":
-                return 9;  // Right side starts at 9
-            case "BLUE":
-            case "YELLOW":
-                return 0;  // Left side starts at 0
-            default:
-                return 0;
-        }
-    }
-
-    private int getHomeBaseStartY(String color) {
-        switch(color.toUpperCase()) {
-            case "RED":
-            case "BLUE":
-                return 9;  // Top of board starts at 9
-            case "YELLOW":
-            case "GREEN":
-                return 0;  // Bottom of board starts at 0
-            default:
-                return 0;
-        }
-    }
-
     public void dispose() {
         if (boardModel != null) boardModel.dispose();
         if (boardTexture != null) boardTexture.dispose();
@@ -447,14 +420,6 @@ public class GameRenderer {
         Gdx.app.log(TAG, "Found " + validPawnIndices.size() + " pawns for color " + currentPlayerColor);
 
         float selectionRadius = 1.5f;
-
-        // List<Integer> heightSortedPawns = new ArrayList<>(validPawnIndices);
-        // heightSortedPawns.sort((a, b) -> {
-        //     float heightA = pawnHeights.getOrDefault(a, 0f);
-        //     float heightB = pawnHeights.getOrDefault(b, 0f);
-        //     return Float.compare(heightB, heightA); // Descending order (highest first)
-        // });
-
 
         for (Integer globalIndex : validPawnIndices) {
             Vector3 pawnPos = pawnPositions.get(globalIndex);
@@ -496,81 +461,6 @@ public class GameRenderer {
         }
         return indices;
     }
-
-//    private void highlightPawn(int pawnIndex) { //todo not used also should add return pawn color so that we can see if its being render correctly
-//        if (pawnIndex < 0 || pawnIndex >= pawnInstances.size) {
-//            Gdx.app.error(TAG, "Invalid pawn index: " + pawnIndex);
-//            return;
-//        }
-//
-//        ModelInstance pawn = pawnInstances.get(pawnIndex);
-//        if (pawn == null || pawn.userData == null) {
-//            Gdx.app.error(TAG, "Pawn or pawn color data is null");
-//            return;
-//        }
-//
-//        String colorName = (String) pawn.userData;
-//        final Color baseColor = playerColors.get(colorName.toUpperCase());
-//        if (baseColor == null) {
-//            Gdx.app.error(TAG, "Could not find color for: " + colorName);
-//            return;
-//        }
-//
-//        // Store final values for use in Timer task
-//        final float ambientR = baseColor.r * 0.5f;
-//        final float ambientG = baseColor.g * 0.5f;
-//        final float ambientB = baseColor.b * 0.5f;
-//
-//        // Create a brighter version of the base color for highlighting
-//        Color highlightColor = new Color(
-//            Math.min(baseColor.r * 1.5f, 1f),
-//            Math.min(baseColor.g * 1.5f, 1f),
-//            Math.min(baseColor.b * 1.5f, 1f),
-//            1f
-//        );
-//
-//        try {
-//            Material highlightMaterial = new Material(
-//                ColorAttribute.createDiffuse(highlightColor),
-//                ColorAttribute.createSpecular(1, 1, 1, 1),
-//                ColorAttribute.createAmbient(highlightColor.r * 0.5f,
-//                    highlightColor.g * 0.5f,
-//                    highlightColor.b * 0.5f,
-//                    1f)
-//            );
-//
-//            // Apply highlight material
-//            for (Material mat : pawn.materials) {
-//                mat.clear();
-//                mat.set(highlightMaterial);
-//            }
-//
-//            // Schedule reset of material
-//            Timer.schedule(new Timer.Task() {
-//                @Override
-//                public void run() {
-//                    try {
-//                        Material originalMaterial = new Material(
-//                            ColorAttribute.createDiffuse(new Color(baseColor)),
-//                            ColorAttribute.createSpecular(1, 1, 1, 1),
-//                            ColorAttribute.createAmbient(ambientR, ambientG, ambientB, 1f)
-//                        );
-//
-//                        if (pawn.materials != null) {
-//                            for (Material mat : pawn.materials) {
-//                                mat.clear();
-//                                mat.set(originalMaterial);
-//                            }
-//                        }
-//                    } catch (Exception e) {
-//                        Gdx.app.error(TAG, "Error resetting pawn material: " + e.getMessage());
-//                    }
-//                }
-//            }, 0.2f);
-//        } catch (Exception e) {
-//            Gdx.app.error(TAG, "Error applying highlight material: " + e.getMessage());
-//        }
-//    }
 
     public void updatePawnPosition(int pawnIndex, int newPosition, String playerColor) {
         int globalPawnIndex = getGlobalPawnIndex(playerColor, pawnIndex);
@@ -638,24 +528,34 @@ public class GameRenderer {
             }
 
             if (boardPosition >= Constants.BOARD_SIZE) {
-                int homeColumnStart = Constants.BOARD_SIZE;
-                int colorOffset;
-
-                switch(playerColor.toUpperCase()) {
-                    case "YELLOW": colorOffset = 0; break;
-                    case "BLUE": colorOffset = 1; break;
-                    case "RED": colorOffset = 2; break;
-                    case "GREEN": colorOffset = 3; break;
-                    default: throw new IllegalArgumentException("Invalid color: " + playerColor);
+                int homeColumnBase;
+                int targetBasePosition;
+                switch (playerColor.toUpperCase()) {
+                    case "YELLOW":
+                        homeColumnBase = 52;
+                        targetBasePosition = 57;
+                        break;
+                    case "BLUE":
+                        homeColumnBase = 58;
+                        targetBasePosition = 63;
+                        break;
+                    case "RED":
+                        homeColumnBase = 64;
+                        targetBasePosition = 69;
+                        break;
+                    case "GREEN":
+                        homeColumnBase = 70;
+                        targetBasePosition = 75;
+                        break;
+                    default:
+                        throw new IllegalArgumentException("Invalid color: " + playerColor);
                 }
-                int homeStep = boardPosition - (homeColumnStart + colorOffset * Constants.HOME_COLUMN_SIZE);
-                
-                // Check if this is the target base position
-                if (homeStep == Constants.HOME_COLUMN_SIZE) {
+
+                if (boardPosition == targetBasePosition) {
                     return BoardCoordinates.getTargetBasePosition(playerColor);
                 }
-                
-                // Otherwise it's a home column position
+
+                int homeStep = boardPosition - homeColumnBase;
                 if (homeStep >= 0 && homeStep < Constants.HOME_COLUMN_SIZE) {
                     return BoardCoordinates.getHomeColumnPosition(playerColor, homeStep);
                 }
