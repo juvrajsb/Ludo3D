@@ -52,82 +52,29 @@ public class BotPlayer extends Player {
 
     private List<PawnMove> generatePossibleMoves(Board board, int diceRoll) {
         List<PawnMove> moves = new ArrayList<>();
-
         for (int i = 0; i < getPawns().size(); i++) {
             Pawn pawn = getPawns().get(i);
+            if (pawn.isFinished()) {
+                continue;
+            }
 
-            // Check if move is valid
-            if (canMovePawn(pawn, board, diceRoll)) {
-                int newPosition = calculateNewPosition(pawn.getPosition(), diceRoll);
+            // A pawn can only leave home with a 6
+            if (pawn.isHome()) {
+                if (diceRoll == 6) {
+                    moves.add(new PawnMove(i, -1, board.getStartPositionIndex(getColor())));
+                }
+                continue;
+            }
+
+            // Calculate the potential new position using the corrected logic
+            int newPosition = calculateNewPosition(pawn.getPosition(), diceRoll, board);
+
+            // A return value of -1 indicates an invalid move (e.g., overshooting home)
+            if (newPosition != -1) {
                 moves.add(new PawnMove(i, pawn.getPosition(), newPosition));
             }
         }
-
         return moves;
-    }
-
-    private boolean canMovePawn(Pawn pawn, Board board, int diceRoll) {
-        if (pawn.isHome()) {
-            boolean result = diceRoll == 6;
-            LOGGER.fine("Checking if pawn can leave home with roll " + diceRoll + ": " + result);
-            return result;
-        }
-
-        if (pawn.isFinished()) {
-            LOGGER.fine("Pawn is already finished, cannot move");
-            return false;
-        }
-
-        int currentPosition = pawn.getPosition();
-        int playerStart = board.getStartPosition(getColor());
-        int newPosition = currentPosition + diceRoll;
-        int entryPoint = (playerStart - 1 + board.getTotalSpaces()) % board.getTotalSpaces();
-
-        LOGGER.fine("Calculated new position: current=" + currentPosition +
-            ", start=" + playerStart + ", new=" + newPosition);
-
-        // Check if pawn is in home column
-        if (board.isHomeColumn(currentPosition, getColor())) {
-            // In home column, can move any number of steps as long as we don't overshoot
-            int homeStart = board.getTotalSpaces() + 
-                (board.getStartPositionIndex(getColor()) / 13) * board.getHomeColumnSize();
-            int distanceToEnd = (homeStart + board.getHomeColumnSize() - 1) - currentPosition;
-            
-            // Log the home column calculation details
-            LOGGER.info("Home column check - Current: " + currentPosition + 
-                ", Home Start: " + homeStart + 
-                ", Distance to End: " + distanceToEnd + 
-                ", Roll: " + diceRoll);
-            
-            // Can move if the roll doesn't overshoot the end
-            return diceRoll <= distanceToEnd;
-        }
-
-        if (currentPosition <= entryPoint && newPosition > entryPoint) {
-            int stepsIntoHome = newPosition - entryPoint - 1;
-            if (stepsIntoHome >= board.getHomeColumnSize()) {
-                LOGGER.info("Move rejected - Would overshoot home column: " + stepsIntoHome + 
-                    " steps into home (max: " + (board.getHomeColumnSize() - 1) + ")");
-                return false;  // Would overshoot home
-            }
-
-            // Pawns of same color can stack in home column
-            return true;
-        }
-
-        // Normal board movement
-        newPosition = newPosition % board.getTotalSpaces();
-
-        // Pawns of same color can stack on non-safe spots
-        for (Pawn otherPawn : getPawns()) {
-            if (otherPawn != pawn && otherPawn.getPosition() == newPosition
-                && !board.isSafeSpot(newPosition) && !otherPawn.getColor().equals(getColor())) {
-                LOGGER.info("Move rejected - Position " + newPosition + " blocked by opponent pawn");
-                return false;
-            }
-        }
-
-        return true;
     }
 
     private int evaluateMove(PawnMove move, Board board, List<Player> allPlayers) {
@@ -150,7 +97,7 @@ public class BotPlayer extends Player {
 
         // Bonus for reaching home
         if (board.isHomeColumn(move.newPosition, getColor())) {
-            int homeStart = board.getTotalSpaces() + 
+            int homeStart = board.getTotalSpaces() +
                 (board.getStartPositionIndex(getColor()) / 13) * board.getHomeColumnSize();
             int distanceToEnd = (homeStart + board.getHomeColumnSize() - 1) - move.newPosition;
             if (distanceToEnd == 0) {
@@ -202,7 +149,7 @@ public class BotPlayer extends Player {
     private int evaluateHomeStretch(PawnMove move, Board board) {
         // Only give bonus for moves that get closer to home or enter home column
         if (board.isHomeColumn(move.newPosition, getColor())) {
-            int homeStart = board.getTotalSpaces() + 
+            int homeStart = board.getTotalSpaces() +
                 (board.getStartPositionIndex(getColor()) / 13) * board.getHomeColumnSize();
             int distanceToEnd = (homeStart + board.getHomeColumnSize() - 1) - move.newPosition;
             return HOME_STRETCH_SCORE * (board.getHomeColumnSize() - distanceToEnd);
@@ -260,10 +207,39 @@ public class BotPlayer extends Player {
         }
     }
 
-    private int calculateNewPosition(int currentPosition, int steps) {
-        if (currentPosition >= Constants.BOARD_SIZE) {
+    private int calculateNewPosition(int currentPosition, int steps, Board board) {
+        if (currentPosition >= board.getTotalSpaces()) {
+            int homeColumnStartForColor = getHomeColumnStartForColor(getColor());
+            int finalHomePosition = homeColumnStartForColor + Constants.HOME_COLUMN_SIZE;
+            if (currentPosition + steps > finalHomePosition) {
+                return -1;
+            }
             return currentPosition + steps;
         }
-        return (currentPosition + steps) % Constants.BOARD_SIZE;
+
+        int startPos = board.getStartPositionIndex(getColor());
+        int homeEntryPos = (startPos - 1 + board.getTotalSpaces()) % board.getTotalSpaces();
+        int distToEntry = (homeEntryPos - currentPosition + board.getTotalSpaces()) % board.getTotalSpaces();
+
+        if (steps >= distToEntry) {
+            int stepsIntoHome = steps - distToEntry;
+            if (stepsIntoHome > Constants.HOME_COLUMN_SIZE + 1) {
+                return -1;
+            }
+            int homeColumnStart = getHomeColumnStartForColor(getColor());
+            return homeColumnStart + stepsIntoHome;
+        } else {
+            return (currentPosition + steps) % board.getTotalSpaces();
+        }
+    }
+
+    private int getHomeColumnStartForColor(String color) {
+        switch (color.toUpperCase()) {
+            case "YELLOW": return 52;
+            case "BLUE":   return 58;
+            case "RED":    return 64;
+            case "GREEN":  return 70;
+            default:       return -1;
+        }
     }
 }
