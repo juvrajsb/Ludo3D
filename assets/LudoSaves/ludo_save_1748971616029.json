@@ -6,23 +6,23 @@
       "color": "RED",
       "pawns": [
         {
-          "position": -1,
-          "isHome": true,
+          "position": 21,
+          "isHome": false,
           "isFinished": false
         },
         {
-          "position": -1,
-          "isHome": true,
+          "position": 22,
+          "isHome": false,
           "isFinished": false
         },
         {
-          "position": -1,
-          "isHome": true,
+          "position": 23,
+          "isHome": false,
           "isFinished": false
         },
         {
-          "position": -1,
-          "isHome": true,
+          "position": 24,
+          "isHome": false,
           "isFinished": false
         }
       ]
@@ -32,23 +32,23 @@
       "color": "GREEN",
       "pawns": [
         {
-          "position": 48,
+          "position":33,
           "isHome": false,
           "isFinished": false
         },
         {
-          "position": -1,
-          "isHome": true,
+          "position": 34,
+          "isHome": false,
           "isFinished": false
         },
         {
-          "position": -1,
-          "isHome": true,
+          "position": 35,
+          "isHome": false,
           "isFinished": false
         },
         {
-          "position": -1,
-          "isHome": true,
+          "position": 36,
+          "isHome": false,
           "isFinished": false
         }
       ]
@@ -58,23 +58,23 @@
       "color": "YELLOW",
       "pawns": [
         {
-          "position": 11,
+          "position": 47,
           "isHome": false,
           "isFinished": false
         },
         {
-          "position": 0,
+          "position": 48,
           "isHome": false,
           "isFinished": false
         },
         {
-          "position": -1,
-          "isHome": true,
+          "position": 49,
+          "isHome": false,
           "isFinished": false
         },
         {
-          "position": -1,
-          "isHome": true,
+          "position": 50,
+          "isHome": false,
           "isFinished": false
         }
       ]
@@ -84,23 +84,23 @@
       "color": "BLUE",
       "pawns": [
         {
-          "position": -1,
-          "isHome": true,
+          "position": 8,
+          "isHome": false,
           "isFinished": false
         },
         {
-          "position": -1,
-          "isHome": true,
+          "position": 9,
+          "isHome": false,
           "isFinished": false
         },
         {
-          "position": -1,
-          "isHome": true,
+          "position": 10,
+          "isHome": false,
           "isFinished": false
         },
         {
-          "position": -1,
-          "isHome": true,
+          "position": 11,
+          "isHome": false,
           "isFinished": false
         }
       ]
