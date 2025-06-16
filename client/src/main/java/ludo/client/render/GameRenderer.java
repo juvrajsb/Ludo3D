@@ -409,13 +409,11 @@ public class GameRenderer {
 
     public int getPawnAtScreenCoords(int screenX, int screenY, Camera camera, String currentPlayerColor) {
         Ray ray = camera.getPickRay(screenX, screenY);
-        float minDist = Float.MAX_VALUE;
+        float minDistanceToRay = Float.MAX_VALUE;
         int selectedPawn = -1;
 
         Gdx.app.log(TAG, "Screen click at: " + screenX + ", " + screenY);
-//        Gdx.app.log(TAG, "Checking pawns for color: " + currentPlayerColor);
 
-        // Get indices for current player's pawns
         List<Integer> validPawnIndices = getPawnIndicesForColor(currentPlayerColor);
         Gdx.app.log(TAG, "Found " + validPawnIndices.size() + " pawns for color " + currentPlayerColor);
 
@@ -424,25 +422,28 @@ public class GameRenderer {
         for (Integer globalIndex : validPawnIndices) {
             Vector3 pawnPos = pawnPositions.get(globalIndex);
             if (pawnPos != null) {
-                Vector3 collisionPos = pawnPos.cpy().sub(POSITION_OFFSET);
+                Vector3 collisionPos = pawnPos.cpy();
 
-                if (Intersector.intersectRaySphere(ray, collisionPos, selectionRadius, intersection)) {
-                    float dist = intersection.dst2(camera.position);
-                    Gdx.app.log(TAG, "Hit pawn " + globalIndex + " at distance: " + dist);
+                if (Intersector.intersectRaySphere(ray, collisionPos, selectionRadius, null)) {
+                    // Calculate the perpendicular distance from the pawn's center to the ray
+                    Vector3 pawnToRayOrigin = new Vector3(pawnPos).sub(ray.origin);
+                    float projectedDistance = pawnToRayOrigin.dot(ray.direction);
+                    Vector3 pointOnRay = new Vector3(ray.origin).mulAdd(ray.direction, projectedDistance);
+                    float perpendicularDistance = pawnPos.dst(pointOnRay);
 
-                    if (dist < minDist) {
-                        minDist = dist;
+                    Gdx.app.log(TAG, "Hit pawn " + globalIndex + " with distance to ray: " + perpendicularDistance);
+
+                    if (perpendicularDistance < minDistanceToRay) {
+                        minDistanceToRay = perpendicularDistance;
                         selectedPawn = globalIndex % 4;
-//                        Gdx.app.log(TAG, "Selected local pawn index: " + selectedPawn +
-//                            " (from global index: " + globalIndex + ")");
                     }
                 }
             }
         }
 
         if (selectedPawn != -1) {
-            Gdx.app.log(TAG, String.format("Final selection - Local pawn index: %d at distance %f",
-                selectedPawn, minDist));
+            Gdx.app.log(TAG, String.format("Final selection - Local pawn index: %d at distance to ray %f",
+                selectedPawn, minDistanceToRay));
         }
 
         return selectedPawn;
