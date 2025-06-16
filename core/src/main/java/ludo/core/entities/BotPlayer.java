@@ -211,7 +211,7 @@ public class BotPlayer extends Player {
         if (currentPosition >= board.getTotalSpaces()) {
             int homeColumnStartForColor = getHomeColumnStartForColor(getColor());
             int finalHomePosition = homeColumnStartForColor + Constants.HOME_COLUMN_SIZE;
-            if (currentPosition + steps > finalHomePosition) {
+            if (currentPosition + steps >= finalHomePosition) {
                 return -1;
             }
             return currentPosition + steps;
@@ -221,13 +221,13 @@ public class BotPlayer extends Player {
         int homeEntryPos = (startPos - 1 + board.getTotalSpaces()) % board.getTotalSpaces();
         int distToEntry = (homeEntryPos - currentPosition + board.getTotalSpaces()) % board.getTotalSpaces();
 
-        if (steps >= distToEntry) {
+        if (steps > distToEntry) {
             int stepsIntoHome = steps - distToEntry;
-            if (stepsIntoHome > Constants.HOME_COLUMN_SIZE + 1) {
+            if (stepsIntoHome > Constants.HOME_COLUMN_SIZE) {
                 return -1;
             }
             int homeColumnStart = getHomeColumnStartForColor(getColor());
-            return homeColumnStart + stepsIntoHome;
+            return homeColumnStart + stepsIntoHome -1;
         } else {
             return (currentPosition + steps) % board.getTotalSpaces();
         }
