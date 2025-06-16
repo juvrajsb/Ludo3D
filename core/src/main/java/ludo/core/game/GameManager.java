@@ -27,9 +27,6 @@ public class GameManager {
     private int lastDiceRoll;
     private final Map<String, Player> playerMap;
     private boolean pawnWasCaptured = false;
-//    private int lastMovePlayerIndex = -1;
-//    private int lastMovePawnIndex = -1;
-//    private int lastMoveStartPosition = -1;
 
     public GameManager() {
         this.players = new CopyOnWriteArrayList<>();
@@ -159,10 +156,17 @@ public class GameManager {
             LOGGER.info("Position " + newPosition + " is a safe spot - no captures possible");
         }
 
+        // Check if the pawn has reached its target base
+        if (board.isTargetBase(newPosition, player.getColor())) {
+            pawn.setFinished(true);
+        }
+
         return true;
     }
 
     private int calculateNewPosition(Player player, int currentPosition, int steps) {
+        LOGGER.info("Calculating new position for " + player.getColor() + " pawn - Current: " + currentPosition + ", Steps: " + steps);
+
         if (currentPosition >= board.getTotalSpaces()) {
             int homeColumnStartForColor = getHomeColumnStartForColor(player.getColor());
             int finalHomePosition = homeColumnStartForColor + Constants.HOME_COLUMN_SIZE;
@@ -295,14 +299,10 @@ public class GameManager {
     }
 
     public void nextTurn() {
-        if (lastDiceRoll != 6) {
-            currentPlayerIndex = (currentPlayerIndex + 1) % players.size();
-            lastDiceRoll = 0;
-            gameState = GameState.IN_PROGRESS;
-            LOGGER.info("Turn changed to player: " + getCurrentPlayer().getColor());
-        } else {
-            LOGGER.info("Player rolled a 6 - keeping turn for: " + getCurrentPlayer().getColor());
-        }
+        currentPlayerIndex = (currentPlayerIndex + 1) % players.size();
+        lastDiceRoll = 0; // Reset the dice roll for the next player
+        gameState = GameState.IN_PROGRESS;
+        LOGGER.info("Turn changed to player: " + getCurrentPlayer().getName() + " (" + getCurrentPlayer().getColor() + ")");
     }
 
     public Player getCurrentPlayer() {
@@ -412,19 +412,6 @@ public class GameManager {
         currentPlayerIndex = 0;
         lastDiceRoll = 0;
     }
-
-//    public void undoLastMove() {
-//        if (lastMovePlayerIndex != -1 && lastMovePawnIndex != -1) {
-//            Player player = players.get(lastMovePlayerIndex);
-//            Pawn pawn = player.getPawns().get(lastMovePawnIndex);
-//            pawn.setPosition(lastMoveStartPosition);
-//
-//            // Reset move tracking
-//            lastMovePlayerIndex = -1;
-//            lastMovePawnIndex = -1;
-//            lastMoveStartPosition = -1;
-//        }
-//    }
 
     private void checkForCaptures(Player player, int position) {
         LOGGER.info(String.format("Checking for captures at position %d", position));
