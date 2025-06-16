@@ -2,11 +2,13 @@ package ludo.core.entities;
 
 
 import java.io.Serializable;
+import java.util.logging.Logger;
 
 import static ludo.core.utils.Constants.BOARD_SIZE;
 import static ludo.core.utils.Constants.HOME_COLUMN_SIZE;
 
 public class Pawn implements Serializable {
+    private static final Logger LOGGER = Logger.getLogger(Pawn.class.getName());
     private final String color;
     private int position;
     private boolean isHome;
@@ -104,6 +106,9 @@ public class Pawn implements Serializable {
     }
 
     public void setFinished(boolean finished) {
+        if (this.isFinished != finished) {
+            LOGGER.info("Pawn for " + color + " at position " + position + " isFinished flag set to: " + finished);
+        }
         isFinished = finished;
     }
 }
