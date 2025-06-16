@@ -10,8 +10,10 @@ import com.badlogic.gdx.graphics.g3d.attributes.ColorAttribute;
 import com.badlogic.gdx.graphics.g3d.environment.DirectionalLight;
 import com.badlogic.gdx.math.Vector3;
 import com.badlogic.gdx.scenes.scene2d.Actor;
+import com.badlogic.gdx.scenes.scene2d.ui.Table;
 import com.badlogic.gdx.scenes.scene2d.ui.TextButton;
 import com.badlogic.gdx.scenes.scene2d.utils.ChangeListener;
+import com.badlogic.gdx.utils.Align;
 import com.badlogic.gdx.utils.Timer;
 import ludo.client.LudoGame;
 import ludo.client.render.GameRenderer;
@@ -49,6 +51,7 @@ public class GameScreen extends BaseScreen {
     private boolean canMove;
     private int lastDiceRoll;
     private boolean isRolling = false;
+    private boolean isTopDownView = false;
 
     private Map<Integer, PawnUIState> pawnUIStates = new HashMap<>();
     private Queue<PendingAnimation> animationQueue = new LinkedList<>();
@@ -90,7 +93,6 @@ public class GameScreen extends BaseScreen {
 
     public GameScreen(final LudoGame game) {
         super(game);
-        hud = new GameHUD();
 
         this.players = new ArrayList<>();
 
@@ -99,11 +101,22 @@ public class GameScreen extends BaseScreen {
         setupLighting();
 
         camera = new PerspectiveCamera(67, Gdx.graphics.getWidth(), Gdx.graphics.getHeight());
-        setupCamera();
+
+        hud = new GameHUD(this);
+        hud.updateTopDownButtonText(isTopDownView);
+
+        Table actionButtonTable = new Table();
+        actionButtonTable.setFillParent(true);
+        actionButtonTable.align(Align.bottomRight); // Align the whole table to the bottom right
+        actionButtonTable.pad(20);
 
         rollButton = new TextButton("Roll Dice", skin);
-        rollButton.setSize(100, 50);
-        rollButton.setPosition(Gdx.graphics.getWidth() - 120, 20);
+        saveButton = new TextButton("Save Game", skin);
+
+        actionButtonTable.add(rollButton).width(150).height(40).padBottom(10).row();
+        actionButtonTable.add(saveButton).width(150).height(40).padBottom(10).row();
+        actionButtonTable.add(disconnectButton).width(150).height(40).row();
+
         rollButton.addListener(new ChangeListener() {
             @Override
             public void changed(ChangeEvent event, Actor actor) {
@@ -113,10 +126,6 @@ public class GameScreen extends BaseScreen {
                 }
             }
         });
-
-        saveButton = new TextButton("Save Game", skin);
-        saveButton.setSize(100, 50);
-        saveButton.setPosition(Gdx.graphics.getWidth() - 120, 80);
         saveButton.addListener(new ChangeListener() {
             @Override
             public void changed(ChangeEvent event, Actor actor) {
@@ -126,14 +135,13 @@ public class GameScreen extends BaseScreen {
 
         this.renderer = new GameRenderer(Gdx.graphics.getWidth(), Gdx.graphics.getHeight());
 
-        disconnectButton.setPosition(Gdx.graphics.getWidth() - 120, 200);
-
         stage.addActor(hud);
-        stage.addActor(rollButton);
-        stage.addActor(saveButton);
+        stage.addActor(hud.getGameOverWindow()); // Get the window from the HUD and add it here.
+        stage.addActor(actionButtonTable);
+
+        setupCamera();
 
         setupInputHandling();
-        // The GameStateManager now sets the screen reference itself when the game starts.
         this.currentGameState = GameState.IN_PROGRESS;
     }
 
@@ -148,7 +156,28 @@ public class GameScreen extends BaseScreen {
     }
 
     private void setupCamera() {
-        cameraRotation = 0;
+        // Get the player's color from the GameStateManager
+        String playerColor = game.getGameStateManager().getCurrentColor();
+
+        // Set the initial rotation based on the player's color
+        switch (playerColor.toUpperCase()) {
+            case "YELLOW":
+                cameraRotation = 0;
+                break;
+            case "BLUE":
+                cameraRotation = 90;
+                break;
+            case "RED":
+                cameraRotation = 180;
+                break;
+            case "GREEN":
+                cameraRotation = 270;
+                break;
+            default:
+                cameraRotation = 0; // Default fallback
+                break;
+        }
+
         cameraDistance = 14f;
         cameraHeight = 10f;
 
@@ -162,36 +191,52 @@ public class GameScreen extends BaseScreen {
         inputMultiplexer.addProcessor(new GameInputProcessor(this));
     }
 
+    public void toggleTopDownView() {
+        isTopDownView = !isTopDownView;
+        hud.updateTopDownButtonText(isTopDownView);
+        updateCameraPosition();
+    }
+
     private void handleContinuousInput(float delta) {
+        if (isTopDownView) {
+            return;
+        }
+
         float rotationAmount = 100f * delta;
         float heightAmount = 5f * delta;
 
-        if (Gdx.input.isKeyPressed(Input.Keys.LEFT) || Gdx.input.isKeyPressed(Input.Keys.A)) {
+        if (Gdx.input.isKeyPressed(Input.Keys.A) || Gdx.input.isKeyPressed(Input.Keys.LEFT)) {
             cameraRotation += rotationAmount;
             updateCameraPosition();
         }
-        if (Gdx.input.isKeyPressed(Input.Keys.RIGHT) || Gdx.input.isKeyPressed(Input.Keys.D)) {
+        if (Gdx.input.isKeyPressed(Input.Keys.D) || Gdx.input.isKeyPressed(Input.Keys.RIGHT)) {
             cameraRotation -= rotationAmount;
             updateCameraPosition();
         }
-        if (Gdx.input.isKeyPressed(Input.Keys.UP) || Gdx.input.isKeyPressed(Input.Keys.W)) {
+        if (Gdx.input.isKeyPressed(Input.Keys.W) || Gdx.input.isKeyPressed(Input.Keys.UP)) {
             cameraHeight = Math.min(maxHeight, cameraHeight + heightAmount);
             updateCameraPosition();
         }
-        if (Gdx.input.isKeyPressed(Input.Keys.DOWN) || Gdx.input.isKeyPressed(Input.Keys.S)) {
+        if (Gdx.input.isKeyPressed(Input.Keys.S) || Gdx.input.isKeyPressed(Input.Keys.DOWN)) {
             cameraHeight = Math.max(minHeight, cameraHeight - heightAmount);
             updateCameraPosition();
         }
     }
 
+
     void updateCameraPosition() {
-        double angleInRadians = Math.toRadians(cameraRotation + 225);
+        if (isTopDownView) {
+            camera.position.set(0, 18, 0.01f); // Position high above
+            camera.lookAt(0, 0, 0); // Look at the center of the board
+        } else {
+            double angleInRadians = Math.toRadians(cameraRotation + 225);
 
-        float x = (float)(cameraDistance * Math.cos(angleInRadians));
-        float z = (float)(cameraDistance * Math.sin(angleInRadians));
+            float x = (float)(cameraDistance * Math.cos(angleInRadians));
+            float z = (float)(cameraDistance * Math.sin(angleInRadians));
 
-        camera.position.set(x, cameraHeight, z);
-        camera.lookAt(cameraTarget);
+            camera.position.set(x, cameraHeight, z);
+            camera.lookAt(cameraTarget);
+        }
         camera.up.set(Vector3.Y);
         camera.update();
     }
