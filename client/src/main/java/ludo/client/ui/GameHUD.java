@@ -60,7 +60,6 @@ public class GameHUD extends Table {
         gameOverWindow.setMovable(false);
     }
 
-    // Getter for the GameScreen to use
     public Window getGameOverWindow() {
         return gameOverWindow;
     }
@@ -103,7 +102,7 @@ public class GameHUD extends Table {
             messageLabel.remove();
         }
 
-        messageLabel = new Label(text, skin, "subtitle");
+        messageLabel = new Label(text, skin, "default");
         messageLabel.setAlignment(Align.center);
 
         if (text.contains("Error") || text.contains("Invalid") || text.contains("Cannot")) {
@@ -154,7 +153,7 @@ public class GameHUD extends Table {
         if (colorName == null) return Color.WHITE;
         switch(colorName.toUpperCase()) {
             case "RED": return Color.RED;
-            case "BLUE": return Color.SKY;
+            case "BLUE": return Color.ROYAL;
             case "GREEN": return Color.LIME;
             case "YELLOW": return Color.YELLOW;
             default: return Color.WHITE;
