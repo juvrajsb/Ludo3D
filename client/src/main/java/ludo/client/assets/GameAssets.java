@@ -1,7 +1,6 @@
 package ludo.client.assets;
 
 import com.badlogic.gdx.Gdx;
-import com.badlogic.gdx.assets.AssetManager;
 import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.g3d.Model;
 import com.badlogic.gdx.graphics.g3d.loader.G3dModelLoader;
@@ -10,7 +9,6 @@ import com.badlogic.gdx.utils.UBJsonReader;
 public class GameAssets {
     private static final String TAG = "GameAssets";
     private static GameAssets instance;
-    private final AssetManager assetManager;
     private Model pawnModel;
     private Model diceModel;
     private Texture pawnBaseColorTexture;
@@ -19,7 +17,6 @@ public class GameAssets {
 
     private GameAssets() {
         Gdx.app.log(TAG, "Initializing GameAssets");
-        assetManager = new AssetManager();
         loadAssets();
     }
 
@@ -82,28 +79,5 @@ public class GameAssets {
 
     public Model getDiceModel() {
         return diceModel;
-    }
-
-//    public Texture getPawnBaseColorTexture() { //TODO check usage not used currently
-//        return pawnBaseColorTexture;
-//    }
-//
-//    public Texture getPawnNormalTexture() {//TODO check usage not used currently
-//        return pawnNormalTexture;
-//    }
-//
-//    public Texture getPawnRoughnessTexture() {//TODO check usage not used currently
-//        return pawnRoughnessTexture;
-//    }
-
-    public void dispose() {
-        Gdx.app.log(TAG, "Disposing GameAssets");
-        if (assetManager != null) assetManager.dispose();
-        if (pawnModel != null) pawnModel.dispose();
-        if (diceModel != null) diceModel.dispose();
-        if (pawnBaseColorTexture != null) pawnBaseColorTexture.dispose();
-        if (pawnNormalTexture != null) pawnNormalTexture.dispose();
-        if (pawnRoughnessTexture != null) pawnRoughnessTexture.dispose();
-        instance = null;
     }
 }

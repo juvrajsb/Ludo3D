@@ -30,11 +30,6 @@ allprojects {
     google()
   }
 
-//  tasks.withType(JavaCompile) {
-//    sourceCompatibility = JavaVersion.VERSION_1_8
-//    targetCompatibility = JavaVersion.VERSION_1_8
-//  }
-
   configurations.all {
     resolutionStrategy {
       force "org.jetbrains.kotlin:kotlin-stdlib:$kotlinVersion"
@@ -44,7 +39,6 @@ allprojects {
   }
 }
 
-// Core module for shared code
 project(":core") {
   apply plugin: "java-library"
 

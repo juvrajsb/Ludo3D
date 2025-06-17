@@ -19,10 +19,6 @@ public class EventReceiver implements Runnable {
         this.eventsQueue = new LinkedList<>();
     }
 
-    public Queue<Event> getEventsQueue() {
-        return eventsQueue;
-    }
-
     /**
      * Method that allows the reception of events. The thread sleeps until an Event arrives: when an Event arrives, the
      * EventReceiver is woken up and can receive the event by reading it from the {@code eventsQueue}.
@@ -50,15 +46,4 @@ public class EventReceiver implements Runnable {
             receivedEvent.process();
         }
     }
-
-//    /**
-//     * Method used to stop the EventReceiver
-//     */
-//    public synchronized void stop() { //TODO check usage not used currently
-//        notifyAll();
-//        this.stop = true;
-//        synchronized (EventReceiver.class) {
-//            EventReceiver.class.notifyAll();
-//        }
-//    }
 }

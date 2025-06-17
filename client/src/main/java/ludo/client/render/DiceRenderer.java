@@ -125,14 +125,6 @@ public class DiceRenderer {
         setFaceRotation(currentValue);
     }
 
-//    public boolean isRolling() {
-//        return isRolling;
-//    }//TODO check usage not used currently
-//
-//    public int getCurrentValue() {
-//        return currentValue;
-//    }//TODO check usage not used currently
-
     public void dispose() {
         // Model disposal is handled by GameAssets
     }

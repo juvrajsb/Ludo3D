@@ -13,8 +13,4 @@ public class DiceRollRequestEvent extends Event {
     public void process() {
         // Will be processed by server handler
     }
-
-    public int getValue() {
-        return 0;
-    }
 }

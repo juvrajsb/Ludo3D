@@ -20,7 +20,6 @@ import ludo.client.render.GameRenderer;
 import ludo.client.ui.GameHUD;
 import ludo.core.entities.Pawn;
 import ludo.core.entities.Player;
-import ludo.core.persistence.GamePersistence;
 import ludo.core.game.GameState;
 
 import java.util.*;
@@ -133,7 +132,7 @@ public class GameScreen extends BaseScreen {
             }
         });
 
-        this.renderer = new GameRenderer(Gdx.graphics.getWidth(), Gdx.graphics.getHeight());
+        this.renderer = new GameRenderer();
 
         stage.addActor(hud);
         stage.addActor(hud.getGameOverWindow()); // Get the window from the HUD and add it here.
@@ -156,10 +155,8 @@ public class GameScreen extends BaseScreen {
     }
 
     private void setupCamera() {
-        // Get the player's color from the GameStateManager
         String playerColor = game.getGameStateManager().getCurrentColor();
 
-        // Set the initial rotation based on the player's color
         switch (playerColor.toUpperCase()) {
             case "YELLOW":
                 cameraRotation = 0;
@@ -226,7 +223,7 @@ public class GameScreen extends BaseScreen {
 
     void updateCameraPosition() {
         if (isTopDownView) {
-            camera.position.set(0, 18, 0.01f); // Position high above
+            camera.position.set(0, 14, 0.01f); // Position high above
             camera.lookAt(0, 0, 0); // Look at the center of the board
         } else {
             double angleInRadians = Math.toRadians(cameraRotation + 225);
@@ -354,10 +351,6 @@ public class GameScreen extends BaseScreen {
         renderer.setPawnMovingState(pawnIndex, true);
     }
 
-    public Player getCurrentPlayer() {
-        return currentPlayer;
-    }
-
     public void setCurrentPlayer(String identifier) {
         for (Player player : players) {
             String playerColor = player.getColor().toUpperCase();
@@ -444,20 +437,5 @@ public class GameScreen extends BaseScreen {
         rollButton.setDisabled(true);
         renderer.startDiceRollAnimation();
         game.getGameStateManager().requestDiceRoll();
-    }
-
-    public void reset() {
-        LOGGER.info("Resetting game screen");
-        players.clear();
-        currentPlayer = null;
-        canMove = false;
-        lastDiceRoll = 0;
-        isRolling = false;
-        pawnUIStates.clear();
-        animationQueue.clear();
-        processingAnimations = false;
-        if(hud != null) {
-            // hud.reset(); // Assuming HUD has a reset method
-        }
     }
 }

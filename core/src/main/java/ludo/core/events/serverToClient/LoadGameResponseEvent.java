@@ -36,19 +36,8 @@ public class LoadGameResponseEvent extends Event {
         this.errorMessage = null;
     }
 
-    public LoadGameResponseEvent(Response response, String errorMessage) {
-        super("LOAD_GAME_RESPONSE");
-        this.response = response;
-        this.saveData = null;
-        this.errorMessage = errorMessage;
-    }
-
     public Response getResponse() {
         return response;
-    }
-
-    public GameSaveData getSaveData() {
-        return saveData;
     }
 
     public String getErrorMessage() {
@@ -59,4 +48,4 @@ public class LoadGameResponseEvent extends Event {
     public void process() {
         // Will be processed by client handler
     }
-} 
+}

@@ -54,8 +54,4 @@ public class EventListener implements Runnable {
             }
         }
     }
-
-//    public void stop() {//TODO check usage not used currently
-//        running = false;
-//    }
 }

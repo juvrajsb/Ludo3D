@@ -15,10 +15,6 @@ public class StartGameRequestEvent extends Event {
         this.saveFileName = saveFileName;
     }
 
-    public StartGameRequestEvent(boolean enableBots) {
-        this(enableBots, false, null);
-    }
-
     public boolean isBotsEnabled() {
         return enableBots;
     }

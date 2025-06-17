@@ -25,10 +25,6 @@ public class GameStartedEvent extends Event {
         return startingPlayer;
     }
 
-//    public int getTotalPlayers() {//TODO check usage not used currently
-//        return totalPlayers;
-//    }
-
     @Override
     public void process() {
         // Will be processed by client handler

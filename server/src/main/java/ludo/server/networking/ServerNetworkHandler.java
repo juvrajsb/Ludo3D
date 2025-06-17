@@ -19,7 +19,6 @@ import java.util.stream.Collectors;
 public class ServerNetworkHandler {
     private static final Logger LOGGER = Logger.getLogger(ServerNetworkHandler.class.getName());
     private static final int MAX_CLIENTS = 4;
-    private static final int MAX_RETRY_ATTEMPTS = 3;
     private static final long RETRY_DELAY_MS = 500; // 0.5 seconds
     private static final int BATCH_SIZE = 10;
     private static final long BATCH_TIMEOUT_MS = 20;
@@ -154,7 +153,7 @@ public class ServerNetworkHandler {
             while (!Thread.interrupted() && !connection.isClosed()) {
                 try {
                     NetworkMessage message = connection.receive();
-                    
+
                     // Process message only if it's not a duplicate
                     if (message instanceof Event event) {
                         String clientId = connection.getConnectionID();
@@ -183,25 +182,25 @@ public class ServerNetworkHandler {
                         // Special handling for disconnection events
                         if (event instanceof ludo.core.events.clientToServer.ClientDisconnectedEvent) {
                             LOGGER.info("Received disconnection event from client: " + clientId);
-                            
+
                             try {
                                 // Stop ping sender first
                                 if (connection.getPingSender() != null) {
                                     connection.getPingSender().stop();
                                 }
-                                
+
                                 // Process the disconnection event
                                 if (messageListener != null) {
                                     messageListener.onMessageReceived(event);
                                 }
-                                
+
                                 // Clean up after processing
                                 handleClientError(connection);
                             } catch (Exception e) {
                                 LOGGER.severe("Error handling disconnection for client " + clientId + ": " + e.getMessage());
                                 handleClientError(connection);
                             }
-                            
+
                             // Skip normal message processing for disconnection events
                             continue;
                         }
@@ -301,14 +300,6 @@ public class ServerNetworkHandler {
         this.messageListener = listener;
     }
 
-    public boolean hasClient(String clientId) {
-        return clients.containsKey(clientId);
-    }
-
-    public List<Connection> getActiveConnections() {
-        return new ArrayList<>(clients.values());
-    }
-
     public Server getServer() {
         return server;
     }
@@ -319,9 +310,9 @@ public class ServerNetworkHandler {
             for (Map.Entry<String, List<NetworkMessage>> entry : clientMessageBatches.entrySet()) {
                 String clientId = entry.getKey();
                 List<NetworkMessage> batch = entry.getValue();
-                
-                if (!batch.isEmpty() && 
-                    (batch.size() >= BATCH_SIZE || 
+
+                if (!batch.isEmpty() &&
+                    (batch.size() >= BATCH_SIZE ||
                      (currentTime - lastBatchTimes.getOrDefault(clientId, 0L)) >= BATCH_TIMEOUT_MS)) {
                     sendBatch(clientId, batch);
                 }
@@ -352,13 +343,13 @@ public class ServerNetworkHandler {
                 }
 
                 long endTime = System.nanoTime();
-                LOGGER.info("Batch send time: " + (endTime - startTime) / 1_000_000.0 + 
+                LOGGER.info("Batch send time: " + (endTime - startTime) / 1_000_000.0 +
                            "ms for " + batch.size() + " messages to client " + clientId);
                 success = true;
             } catch (Exception e) {
                 retryCount++;
                 if (retryCount < MAX_RETRIES) {
-                    LOGGER.warning("Failed to send message batch to client " + clientId + 
+                    LOGGER.warning("Failed to send message batch to client " + clientId +
                                  " (attempt " + retryCount + " of " + MAX_RETRIES + "): " + e.getMessage());
                     try {
                         Thread.sleep(RETRY_DELAY_MS);
@@ -367,7 +358,7 @@ public class ServerNetworkHandler {
                         break;
                     }
                 } else {
-                    LOGGER.severe("Failed to send message batch to client " + clientId + 
+                    LOGGER.severe("Failed to send message batch to client " + clientId +
                                 " after " + MAX_RETRIES + " attempts: " + e.getMessage());
                 }
             }
@@ -377,24 +368,8 @@ public class ServerNetworkHandler {
         lastBatchTimes.put(clientId, System.currentTimeMillis());
     }
 
-    public void queueMessage(String clientId, NetworkMessage message) {
-        if (message instanceof PingEvent) {
-            // Send ping messages immediately
-            try {
-                sendMessageToClient(clientId, message);
-            } catch (Exception e) {
-                LOGGER.warning("Failed to send ping to client " + clientId + ": " + e.getMessage());
-            }
-            return;
-        }
-
-        clientMessageBatches.computeIfAbsent(clientId, k -> new ArrayList<>(BATCH_SIZE))
-            .add(message);
-    }
-
     private void sendMessageToClient(String clientId, NetworkMessage message) {
-        // Implementation depends on how you store client connections
-        // This is a placeholder for the actual implementation
+
         Connection clientConnection = getClientConnection(clientId);
         if (clientConnection != null && !clientConnection.isClosed()) {
             try {
@@ -407,26 +382,15 @@ public class ServerNetworkHandler {
     }
 
     private Connection getClientConnection(String clientId) {
-        // Implementation depends on how you store client connections
-        // This is a placeholder for the actual implementation
-        return null;
+        return clients.get(clientId);
     }
 
     private void handleClientDisconnection(String clientId) {
         clientMessageBatches.remove(clientId);
         lastBatchTimes.remove(clientId);
-        // Additional disconnection handling logic
-    }
-
-    public void shutdown() {
-        scheduler.shutdown();
-        try {
-            if (!scheduler.awaitTermination(1, TimeUnit.SECONDS)) {
-                scheduler.shutdownNow();
-            }
-        } catch (InterruptedException e) {
-            scheduler.shutdownNow();
-            Thread.currentThread().interrupt();
+        Connection connection = clients.get(clientId);
+        if (connection != null) {
+            handleClientError(connection);
         }
     }
 }

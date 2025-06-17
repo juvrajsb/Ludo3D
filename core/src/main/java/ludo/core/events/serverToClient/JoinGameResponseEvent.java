@@ -17,20 +17,8 @@ public class JoinGameResponseEvent extends Event {
         this.existsSavedGame = false;
     }
 
-    /**
-     * Method used client side to check if the client has been accepted in the game
-     * @return {@code true} if the player has joined successfully, {@code false} otherwise
-     */
     public Response getResponse() {
         return response;
-    }
-
-    public void setExistsSavedGame(boolean existsSavedGame) {
-        this.existsSavedGame = existsSavedGame;
-    }
-
-    public boolean existsSavedGame() {
-        return existsSavedGame;
     }
 
     @Override

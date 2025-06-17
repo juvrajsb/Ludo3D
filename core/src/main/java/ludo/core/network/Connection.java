@@ -18,22 +18,6 @@ import java.util.logging.SimpleFormatter;
 
 public class Connection {
     private static final Logger LOGGER = Logger.getLogger(Connection.class.getName());
-    private static final Logger DETAILED_LOGGER = Logger.getLogger(Connection.class.getName() + ".detailed");
-
-    static {
-        // Configure detailed logger to write to file
-        try {
-            FileHandler fileHandler = new FileHandler("logs/network_detailed.log", true);
-            fileHandler.setFormatter(new SimpleFormatter());
-            DETAILED_LOGGER.addHandler(fileHandler);
-            DETAILED_LOGGER.setLevel(Level.ALL);
-
-            // Configure main logger to only show important messages
-            LOGGER.setLevel(Level.WARNING);
-        } catch (IOException e) {
-            LOGGER.severe("Failed to configure logging: " + e.getMessage());
-        }
-    }
 
     private final Socket socket;
     private final ObjectOutputStream out;
@@ -90,7 +74,7 @@ public class Connection {
 
                     long endTime = System.nanoTime();
                     if (!(message instanceof PingEvent)) {
-//                        DETAILED_LOGGER.info("Message send time: " + (endTime - startTime) / 1_000_000.0 + "ms for " + message.getType());
+//                        LOGGER.info("Message send time: " + (endTime - startTime) / 1_000_000.0 + "ms for " + message.getType());
                     }
                 } catch (IOException e) {
                     LOGGER.severe("Error sending message on connection " + connectionId + ": " + e.getMessage());
@@ -113,11 +97,10 @@ public class Connection {
                 long endTime = System.nanoTime();
 
                 if (!(message instanceof PingEvent)) {
-//                    DETAILED_LOGGER.info("Message receive time: " + (endTime - startTime) / 1_000_000.0 + "ms for " + message.getType());
                 }
                 return message;
             } catch (SocketTimeoutException e) {
-                DETAILED_LOGGER.fine("Socket read timeout on connection " + connectionId + " - normal behavior");
+                LOGGER.fine("Socket read timeout on connection " + connectionId + " - normal behavior");
                 throw e;
             } catch (IOException | ClassNotFoundException e) {
                 LOGGER.severe("Error receiving message on connection " + connectionId + ": " + e.getMessage());
@@ -256,14 +239,14 @@ public class Connection {
                 gracefullyClosed = true;
 
                 if (pingSender != null) {
-                    DETAILED_LOGGER.info("Stopping ping sender for " + connectionId);
+                    LOGGER.info("Stopping ping sender for " + connectionId);
                     pingSender.stop();
                     try {
                         Thread.sleep(100);
                     } catch (InterruptedException e) {
                         LOGGER.warning("Interrupted while waiting for ping sender to stop: " + e.getMessage());
                     }
-                    DETAILED_LOGGER.info("Ping sender stopped for " + connectionId);
+                    LOGGER.info("Ping sender stopped for " + connectionId);
                 }
 
                 try {
@@ -280,13 +263,13 @@ public class Connection {
 
                 try {
                     socket.close();
-                    DETAILED_LOGGER.info("Successfully closed connection for " + connectionId);
+                    LOGGER.info("Successfully closed connection for " + connectionId);
                 } catch (IOException e) {
                     LOGGER.severe("Error closing socket for " + connectionId + ": " + e.getMessage());
                     throw e;
                 }
             } else {
-                DETAILED_LOGGER.info("Connection " + connectionId + " already closed");
+                LOGGER.info("Connection " + connectionId + " already closed");
             }
         }
     }

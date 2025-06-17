@@ -43,11 +43,6 @@ public class ClientNetworkHandler implements NetworkHandler {
         this.lastBatchTime = System.currentTimeMillis();
     }
 
-    //for testing
-    public String getPlayerId() {
-        return null;
-    }
-
     @Override
     public synchronized void connect(String host, int port) {
         if (isConnected.get()) {
@@ -201,7 +196,6 @@ public class ClientNetworkHandler implements NetworkHandler {
     private void sendBatch() {
         if (messageBatch.isEmpty()) return;
 
-        long startTime = System.nanoTime();
         int retryCount = 0;
         boolean success = false;
 
@@ -219,10 +213,6 @@ public class ClientNetworkHandler implements NetworkHandler {
                         }
                     }
                 }
-
-                long endTime = System.nanoTime();
-//                LOGGER.info("Batch send time: " + (endTime - startTime) / 1_000_000.0 +
-//                           "ms for " + messageBatch.size() + " messages");
                 success = true;
             } catch (Exception e) {
                 retryCount++;
@@ -305,7 +295,6 @@ public class ClientNetworkHandler implements NetworkHandler {
             return;
         }
 
-        // For other messages, add to queue
         try {
             outgoingQueue.offer(message, 100, TimeUnit.MILLISECONDS);
         } catch (InterruptedException e) {

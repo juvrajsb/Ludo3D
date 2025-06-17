@@ -1,9 +1,7 @@
 package ludo.server.networking;
 
-import ludo.core.events.Event;
 import ludo.core.network.Connection;
 import ludo.server.Server;
-import ludo.server.handlers.NetworkErrorHandler;
 
 import java.io.IOException;
 import java.util.*;
@@ -12,12 +10,10 @@ import java.util.concurrent.ConcurrentHashMap;
 public class ConnectionManager{
     private static ConnectionManager instance;
     private final Map<String, Connection> connections;
-    private final NetworkErrorHandler errorHandler;
     private final EventTransmitter eventTransmitter;
 
     private ConnectionManager(Server server) {
         this.connections = new ConcurrentHashMap<>();
-        this.errorHandler = new NetworkErrorHandler(server);
         this.eventTransmitter = new EventTransmitter(new ArrayList<>(connections.values()));
     }
 
@@ -26,18 +22,6 @@ public class ConnectionManager{
             instance = new ConnectionManager(server);
         }
         return instance;
-    }
-
-    public void addConnection(Connection connection) {
-        connections.put(connection.getConnectionID(), connection);
-        initializeConnection(connection);
-    }
-
-    private void initializeConnection(Connection connection) {
-        // Start ping monitoring
-        ServerPingSender pingSender = new ServerPingSender(connection);
-        connection.setPingSender(pingSender);
-        pingSender.start();
     }
 
     public void removeConnection(String connectionId) {
@@ -50,64 +34,6 @@ public class ConnectionManager{
             }
         }
     }
-
-//    public void broadcastEvent(Event event) {//TODO check usage not used currently
-//        List<String> failedConnections = new ArrayList<>();
-//
-//        for (Map.Entry<String, Connection> entry : connections.entrySet()) {
-//            try {
-//                entry.getValue().send(event);
-//            } catch (IOException e) {
-//                failedConnections.add(entry.getKey());
-//                errorHandler.handleConnectionError(entry.getValue(), e);
-//            }
-//        }
-//
-//        // Clean up failed connections
-//        failedConnections.forEach(this::removeConnection);
-//    }
-//
-//    public void sendToPlayer(String playerId, Event event) {//TODO check usage not used currently
-//        Connection connection = connections.get(playerId);
-//        if (connection != null) {
-//            try {
-//                connection.send(event);
-//            } catch (IOException e) {
-//                errorHandler.handleConnectionError(connection, e);
-//                removeConnection(playerId);
-//            }
-//        }
-//    }
-//
-//    public boolean isConnected(String playerId) {//TODO check usage not used currently
-//        return connections.containsKey(playerId);
-//    }
-//
-//    public List<Connection> getAllConnections() {//TODO check usage not used currently
-//        return new ArrayList<>(connections.values());
-//    }
-//
-//    public void handleReconnection(String playerId, Connection newConnection) {//TODO check usage not used currently
-//        removeConnection(playerId);
-//        addConnection(newConnection);
-//        errorHandler.handleReconnection(playerId, newConnection);
-//    }
-//
-//    public void shutdown() {//TODO check usage not used currently
-//        for (Connection connection : connections.values()) {
-//            try {
-//                connection.close();
-//            } catch (IOException e) {
-//                Server.LOGGER.warning("Error during connection shutdown: " + e.getMessage());
-//            }
-//        }
-//        connections.clear();
-//        errorHandler.shutdown();
-//    }
-//
-//    public EventTransmitter getEventTransmitter() {//TODO check usage not used currently
-//        return eventTransmitter;
-//    }
 
     public void handleDisconnection(String connectionId) {
         removeConnection(connectionId);

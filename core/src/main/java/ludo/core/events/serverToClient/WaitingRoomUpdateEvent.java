@@ -28,10 +28,6 @@ public class WaitingRoomUpdateEvent extends Event {
         return usernames;
     }
 
-    public int getNumberOfPlayers() {
-        return numberOfPlayers;
-    }
-
     public String getColorForPlayer(String username) {
         return playerColors.getOrDefault(username, "");
     }

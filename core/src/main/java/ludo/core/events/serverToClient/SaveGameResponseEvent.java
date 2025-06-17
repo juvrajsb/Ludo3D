@@ -1,7 +1,6 @@
 package ludo.core.events.serverToClient;
 
 import ludo.core.events.Event;
-import ludo.core.network.Connection;
 
 public class SaveGameResponseEvent extends Event {
     private static final long serialVersionUID = 1L;
@@ -39,10 +38,6 @@ public class SaveGameResponseEvent extends Event {
         return response;
     }
 
-    public String getSaveFileName() {
-        return saveFileName;
-    }
-
     public String getErrorMessage() {
         return errorMessage;
     }
@@ -51,4 +46,4 @@ public class SaveGameResponseEvent extends Event {
     public void process() {
         // Will be processed by client handler
     }
-} 
+}

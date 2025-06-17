@@ -40,10 +40,6 @@ public class StartGameResponseEvent extends Event {
         return message;
     }
 
-    public Response getResponse() {
-        return response;
-    }
-
     @Override
     public void process() {
         // Will be processed by client handler

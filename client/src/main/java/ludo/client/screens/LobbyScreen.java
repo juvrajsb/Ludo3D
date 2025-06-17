@@ -12,7 +12,6 @@ import ludo.core.entities.BotPlayer;
 import ludo.core.entities.Player;
 import ludo.core.utils.Constants;
 
-import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -61,7 +60,6 @@ public class LobbyScreen extends BaseScreen {
         loadGameButton.addListener(new ChangeListener() {
             @Override
             public void changed(ChangeEvent event, Actor actor) {
-                // This now asks the server for the list instead of trying to read it locally
                 game.getGameStateManager().requestSaveFilesList();
             }
         });
@@ -111,7 +109,6 @@ public class LobbyScreen extends BaseScreen {
                     String selectedFile = saveList.getSelected();
                     if (selectedFile != null) {
                         Gdx.app.log("LobbyScreen", "Load selected for file: " + selectedFile);
-                        // Tell the server to start the game by loading this file
                         game.getGameStateManager().startGame(botPlayersCheckbox.isChecked(), true, selectedFile);
                     }
                 } else {
@@ -194,7 +191,6 @@ public class LobbyScreen extends BaseScreen {
         Gdx.gl.glClearColor(0.2f, 0.2f, 0.2f, 1);
         Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT);
 
-        // This check ensures a smooth transition after the server starts the game.
         if (game.getGameStateManager().isGameStarted() && !(game.getScreen() instanceof GameScreen)) {
             // The GameStateManager will handle the actual screen transition.
         }

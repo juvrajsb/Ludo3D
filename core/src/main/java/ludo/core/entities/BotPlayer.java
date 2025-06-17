@@ -22,7 +22,7 @@ public class BotPlayer extends Player {
 
         if (possibleMoves.isEmpty()) {
             LOGGER.info("No valid moves available for " + getColor());
-            return -1; // No valid moves
+            return -1;
         }
 
         PawnMove bestMove = null;
@@ -46,7 +46,7 @@ public class BotPlayer extends Player {
             return bestMove.pawnIndex;
         } else {
             LOGGER.warning("Failed to select a best move despite having possible moves");
-            return possibleMoves.get(0).pawnIndex; // Fallback to first move
+            return possibleMoves.get(0).pawnIndex;
         }
     }
 
@@ -66,7 +66,6 @@ public class BotPlayer extends Player {
                 continue;
             }
 
-            // Calculate the potential new position using the corrected logic
             int newPosition = calculateNewPosition(pawn.getPosition(), diceRoll, board);
 
             // A return value of -1 indicates an invalid move (e.g., overshooting home)
@@ -109,7 +108,6 @@ public class BotPlayer extends Player {
     }
 
     private int evaluateProgress(PawnMove move, Board board) {
-        // Higher score for moves that make more progress toward home
         int progressScore = 0;
 
         // Starting move bonus

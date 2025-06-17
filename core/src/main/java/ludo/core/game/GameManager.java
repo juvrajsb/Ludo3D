@@ -4,13 +4,9 @@ import ludo.core.entities.Pawn;
 import ludo.core.entities.Player;
 import ludo.core.entities.Board;
 import ludo.core.entities.Dice;
-import ludo.core.persistence.GamePersistence;
 import ludo.core.utils.Constants;
-import ludo.core.network.Connection;
-import ludo.core.events.serverToClient.GameStateUpdateEvent;
 import ludo.core.validation.MoveValidator;
 
-import java.io.IOException;
 import java.util.*;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.logging.Logger;
@@ -202,23 +198,6 @@ public class GameManager {
         }
     }
 
-    private boolean isHomeColumnOvershoot(Player player, int currentPos, int newPos) {
-        LOGGER.info("Checking home column overshoot for " + player.getColor() +
-            " - Current: " + currentPos + ", New: " + newPos);
-
-        if (currentPos >= board.getTotalSpaces()) {
-            int homeStart = board.getTotalSpaces() +
-                (board.getStartPositionIndex(player.getColor()) / 13) * board.getHomeColumnSize();
-            int homeEnd = homeStart + board.getHomeColumnSize();
-            boolean overshoot = newPos >= homeEnd;
-
-            LOGGER.info("Home column boundaries - Start: " + homeStart +
-                ", End: " + homeEnd + ", Would overshoot: " + overshoot);
-            return overshoot;
-        }
-        return false;
-    }
-
     public int getLastDiceRoll() {
         return lastDiceRoll;
     }
@@ -369,21 +348,6 @@ public class GameManager {
         return result;
     }
 
-    public void sendGameState(Connection connection) throws IOException {
-        GameStateUpdateEvent stateEvent = new GameStateUpdateEvent(
-            getCurrentPawnPositions(),
-            getCurrentPlayer().getColor(),
-            gameState
-        );
-        connection.send(stateEvent);
-    }
-
-    private void initializePlayerPositions() {
-        for (Player player : players) {
-            player.initializePawns();
-        }
-    }
-
     public Player getPlayerByName(String name) {
         return playerMap.get(name);
     }
@@ -411,23 +375,6 @@ public class GameManager {
         gameStarted = false;
         currentPlayerIndex = 0;
         lastDiceRoll = 0;
-    }
-
-    private void checkForCaptures(Player player, int position) {
-        LOGGER.info(String.format("Checking for captures at position %d", position));
-        for (Player otherPlayer : players) {
-            if (otherPlayer != player) {
-                for (Pawn otherPawn : otherPlayer.getPawns()) {
-                    if (!otherPawn.isHome() && otherPawn.getPosition() == position) {
-                        if (!board.isSafeSpot(position)) {
-                            LOGGER.info(String.format("Capturing %s pawn at position %d",
-                                otherPlayer.getColor(), position));
-                            otherPawn.sendHome();
-                        }
-                    }
-                }
-            }
-        }
     }
 
     private boolean isInHomeColumn(Player player, int position) {

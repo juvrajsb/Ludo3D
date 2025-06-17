@@ -7,14 +7,13 @@ import java.util.Timer;
 import java.util.TimerTask;
 import java.util.logging.Logger;
 import java.util.concurrent.atomic.AtomicBoolean;
-//maybe revert this to commit before
+
 public class ServerPingSender implements PingSender {
     private static final Logger LOGGER = Logger.getLogger(ServerPingSender.class.getName());
     private final Connection connection;
     private final AtomicBoolean running = new AtomicBoolean(false);
     private Timer timer;
     private static final long PING_PERIOD = 5000; // 5 seconds
-    private static final int MAX_PING_FAILURES = 3; // Allow 3 failed pings before disconnecting
 
     public ServerPingSender(Connection connection) {
         this.connection = connection;
@@ -93,9 +92,5 @@ public class ServerPingSender implements PingSender {
             timer.purge();
             timer = null;
         }
-    }
-
-    public boolean isRunning() {
-        return running.get();
     }
 }

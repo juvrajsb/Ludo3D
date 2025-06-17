@@ -2,9 +2,6 @@ package ludo.core.persistence;
 
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
-import ludo.core.entities.Board;
-import ludo.core.entities.Player;
-import ludo.core.entities.Pawn;
 import ludo.core.game.GameState;
 import ludo.core.utils.Constants;
 
@@ -27,7 +24,6 @@ public class GamePersistence {
         .serializeNulls()
         .create();
 
-    // Data class to represent saveable game state
     public static class GameSaveData {
         public int saveVersion;
         public List<PlayerSaveData> players;
@@ -57,7 +53,6 @@ public class GamePersistence {
         }
     }
 
-    // Data class to represent saveable player state
     public static class PlayerSaveData {
         public String name;
         public String color;
@@ -75,7 +70,6 @@ public class GamePersistence {
         }
     }
 
-    // Data class to represent saveable pawn state
     public static class PawnSaveData {
         public int position;
         public boolean isHome;
@@ -91,117 +85,6 @@ public class GamePersistence {
             }
             return position >= 0 && position < Constants.BOARD_SIZE + Constants.HOME_COLUMN_SIZE;
         }
-    }
-
-    public static void saveGame(List<Player> players, String currentPlayerColor, GameState gameState) {
-        // Generate timestamped filename for manual saves
-        String timestamp = String.valueOf(System.currentTimeMillis());
-        String fileName = SAVE_DIR + "/ludo_save_" + timestamp + ".json";
-        saveGame(players, currentPlayerColor, gameState, fileName);
-    }
-
-    public static void autoSave(List<Player> players, String currentPlayerColor, GameState gameState) {
-        saveGame(players, currentPlayerColor, gameState, AUTO_SAVE_FILE);
-    }
-
-    private static void saveGame(List<Player> players, String currentPlayerColor, GameState gameState, String fileName) {
-        // Ensure save directory exists
-        File saveDir = new File(SAVE_DIR);
-        if (!saveDir.exists()) {
-            saveDir.mkdirs();
-        }
-        LOGGER.info("Starting save process to file: " + fileName);
-        LOGGER.info("Input parameters - Players count: " + (players != null ? players.size() : "null") +
-            ", Current color: " + currentPlayerColor +
-            ", Game state: " + gameState);
-
-        if (players == null || players.isEmpty()) {
-            LOGGER.severe("Cannot save game: players list is null or empty");
-            throw new IllegalStateException("Invalid game state: no players");
-        }
-
-        if (currentPlayerColor == null || currentPlayerColor.isEmpty()) {
-            LOGGER.severe("Cannot save game: current player color is null or empty");
-            throw new IllegalStateException("Invalid game state: no current player");
-        }
-
-        if (gameState == null) {
-            LOGGER.severe("Cannot save game: game state is null");
-            throw new IllegalStateException("Invalid game state: null game state");
-        }
-
-        GameSaveData saveData = new GameSaveData();
-        saveData.currentPlayerColor = currentPlayerColor;
-        saveData.gameState = gameState;
-
-        LOGGER.info("Processing " + players.size() + " players");
-        for (Player player : players) {
-            if (player != null) {
-                LOGGER.info("Processing player: " + player.getName() + " (Color: " + player.getColor() + ")");
-                PlayerSaveData playerData = new PlayerSaveData();
-                playerData.name = player.getName();
-                playerData.color = player.getColor();
-
-                List<Pawn> playerPawns = player.getPawns();
-                if (playerPawns != null) {
-                    LOGGER.info("Player has " + playerPawns.size() + " pawns");
-                    for (Pawn pawn : playerPawns) {
-                        if (pawn != null) {
-                            PawnSaveData pawnData = new PawnSaveData();
-                            pawnData.position = pawn.getPosition();
-                            pawnData.isHome = pawn.isHome();
-                            pawnData.isFinished = pawn.isFinished();
-                            LOGGER.info("Saving pawn - Position: " + pawnData.position +
-                                ", isHome: " + pawn.isHome() +
-                                ", isFinished: " + pawn.isFinished());
-                            playerData.pawns.add(pawnData);
-                        } else {
-                            LOGGER.warning("Null pawn found for player: " + player.getName());
-                        }
-                    }
-                } else {
-                    LOGGER.warning("Null pawns list for player: " + player.getName());
-                }
-
-                saveData.players.add(playerData);
-                LOGGER.info("Added player data to save - Name: " + playerData.name +
-                    ", Color: " + playerData.color +
-                    ", Pawns count: " + playerData.pawns.size());
-            } else {
-                LOGGER.warning("Null player found in players list");
-            }
-        }
-
-        LOGGER.info("Final save data - Players count: " + saveData.players.size() +
-            ", Current color: " + saveData.currentPlayerColor +
-            ", Game state: " + saveData.gameState);
-
-        if (!saveData.isValid()) {
-            LOGGER.severe("Save data validation failed");
-            throw new IllegalStateException("Invalid game state");
-        }
-
-        try (FileWriter writer = new FileWriter(fileName)) {
-            gson.toJson(saveData, writer); // todo check autosave is being saved in the server module
-            LOGGER.info("Game saved successfully to " + fileName);
-        } catch (IOException e) {
-            LOGGER.severe("Failed to save game: " + e.getMessage());
-            throw new RuntimeException("Failed to save game", e);
-        }
-    }
-
-    public static GameSaveData loadGame() {
-        // Find the most recent save file
-        File saveDir = new File(SAVE_DIR);
-        File[] saveFiles = saveDir.listFiles((dir, name) -> name.startsWith("ludo_save_") && name.endsWith(".json"));
-
-        if (saveFiles != null && saveFiles.length > 0) {
-            // Sort by last modified time, most recent first
-            Arrays.sort(saveFiles, (a, b) -> Long.compare(b.lastModified(), a.lastModified()));
-            return loadGame(saveFiles[0].getName());
-        }
-
-        return null;
     }
 
     public static List<String> listSaveFiles() {
@@ -257,52 +140,6 @@ public class GamePersistence {
             LOGGER.severe("Failed to load game: " + e.getMessage());
             return null;
         }
-    }
-
-    public static boolean hasSaveGame() {
-        return new File(SAVE_FILE).exists();
-    }
-
-    public static boolean hasAutoSave() {
-        return new File(AUTO_SAVE_FILE).exists();
-    }
-
-    public static void deleteSaveGame() {
-        deleteFile(SAVE_FILE);
-    }
-
-    public static void deleteAutoSave() {
-        deleteFile(AUTO_SAVE_FILE);
-    }
-
-    private static void deleteFile(String fileName) {
-        File file = fileName.startsWith(SAVE_DIR + "/") ? new File(fileName) : new File(SAVE_DIR, fileName);
-        if (file.exists()) {
-            if (file.delete()) {
-                LOGGER.info("Successfully deleted " + fileName);
-            } else {
-                LOGGER.warning("Failed to delete " + fileName);
-            }
-        }
-    }
-
-    // Save a winning scenario
-    public static void saveWinningScenario(List<Player> players, String currentPlayerColor, GameState gameState) {
-        saveGame(players, currentPlayerColor, gameState, SAVE_DIR + "/demo_winning.json");
-    }
-
-    // Save a mid-game scenario
-    public static void saveMidGameScenario(List<Player> players, String currentPlayerColor, GameState gameState) {
-        saveGame(players, currentPlayerColor, gameState, SAVE_DIR + "/demo_midgame.json");
-    }
-
-    // Save a start game scenario
-    public static void saveStartGameScenario(List<Player> players, String currentPlayerColor, GameState gameState) {
-        saveGame(players, currentPlayerColor, gameState, SAVE_DIR + "/demo_start.json");
-    }
-
-    public static GameSaveData loadAutoSave() {
-        return loadGame(AUTO_SAVE_FILE);
     }
 
     public static void saveGame(GameSaveData saveData, String fileName) throws IOException {

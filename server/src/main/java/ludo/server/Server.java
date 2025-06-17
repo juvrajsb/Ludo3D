@@ -110,20 +110,10 @@ public class Server {
         return welcomeSocket;
     }
 
-//    public EventReceiver getEventReceiver() {
-//        return eventReceiver;
-//    }
 
     public synchronized void addClient(Connection connection, Thread clientThread) {
         connectedClients.put(connection, clientThread);
         LOGGER.info("Client fully initialized: " + connection.getConnectionID());
-    }
-
-    public synchronized void removeClient(Connection connection) {
-        Thread clientThread = connectedClients.remove(connection);
-        if (clientThread != null) {
-            clientThread.interrupt();
-        }
     }
 
     public boolean isRunning() {
@@ -133,10 +123,6 @@ public class Server {
     public List<Connection> getAllConnections() {
         return connectedClients.keySet().stream().toList();
     }
-
-//    public ServerGameStateManager getGameStateManager() { //TODO check usage not used currently
-//        return gameStateManager;
-//    }
 
     public ServerNetworkHandler getNetworkHandler() {
         return networkHandler;

@@ -2,11 +2,9 @@ package ludo.server.networking;
 
 import ludo.core.network.Connection;
 import ludo.server.Server;
-import ludo.core.events.Event;
 
 import java.io.IOException;
 import java.net.Socket;
-import java.util.Queue;
 import java.util.Timer;
 
 import static ludo.server.Server.LOGGER;
@@ -56,20 +54,4 @@ public class NetworkListener implements Runnable {
             }
         }
     }
-
-//    private void startPingRoutine(Connection clientConnection) {//TODO check usage not used currently
-//        ServerPingSender pingSender = new ServerPingSender(clientConnection);
-//        clientConnection.setPingSender(pingSender);
-//        pingSender.start();
-//    }
-//
-//    private static Thread getClientDedicatedThread(Connection clientConnection, Queue<Event> eventsQueue) {//TODO check usage not used currently
-//        Thread clientDedicatedThread;
-//        clientDedicatedThread = new Thread(
-//                new EventListener(clientConnection, eventsQueue, true),
-//                "EventListener"
-//        );
-//        clientDedicatedThread.start();
-//        return clientDedicatedThread;
-//    }
 }

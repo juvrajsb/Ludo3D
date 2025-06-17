@@ -38,9 +38,5 @@ public abstract class Event implements NetworkMessage, Serializable {
         this.messageId = messageId;
     }
 
-    public long getTimestamp() {
-        return timestamp;
-    }
-
     public abstract void process();
 }

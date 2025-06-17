@@ -11,8 +11,4 @@ public class Dice {
         this.currentValue = (int)(Math.random() * 6) + 1;
         return this.currentValue;
     }
-
-//    public int getCurrentValue() {//TODO check usage not used currently
-//        return this.currentValue;
-//    }
 }

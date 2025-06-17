@@ -10,8 +10,8 @@ import com.badlogic.gdx.scenes.scene2d.utils.ChangeListener;
 import ludo.client.LudoGame;
 
 public class MenuScreen extends BaseScreen {
-    private Texture logoTexture;
-    private Image logoImage;
+//    private Texture logoTexture;
+//    private Image logoImage;
 
     public MenuScreen(final LudoGame game) {
         super(game);
@@ -75,8 +75,8 @@ public class MenuScreen extends BaseScreen {
     @Override
     public void dispose() {
         super.dispose();
-        if (logoTexture != null) {
-            logoTexture.dispose();
-        }
+//        if (logoTexture != null) {
+//            logoTexture.dispose();
+//        }
     }
 }

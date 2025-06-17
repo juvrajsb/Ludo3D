@@ -48,8 +48,6 @@ public class ServerGameStateManager implements MessageListener {
                 switch (event.getType()) {
                     case "JOIN_GAME_REQUEST":
                         JoinGameRequestEvent joinEvent = (JoinGameRequestEvent) event;
-//                        LOGGER.info("Player attempting to join: " + joinEvent.getPlayerName() +
-//                            " with color: " + joinEvent.getDesiredColor());
                         handleJoinRequest(joinEvent);
                         break;
 
@@ -59,26 +57,19 @@ public class ServerGameStateManager implements MessageListener {
                         break;
 
                     case "DICE_ROLL_REQUEST":
-                        String playerId = event.getConnection().getConnectionID();
-//                        LOGGER.info("Dice roll requested by: " + playerId);
                         handleDiceRollRequest((DiceRollRequestEvent) event);
                         break;
 
                     case "MOVE_REQUEST":
                         MoveRequestEvent moveEvent = (MoveRequestEvent) event;
-//                        LOGGER.info("Move requested - Player: " + event.getConnection().getConnectionID() +
-//                            " Pawn: " + moveEvent.getPawnIndex() +
-//                            " Steps: " + moveEvent.getSteps());
                         handleMoveRequest(moveEvent);
                         break;
 
                     case "START_GAME_REQUEST":
-//                        LOGGER.info("Game start requested by: " + event.getConnection().getConnectionID());
                         handleStartGameRequest((StartGameRequestEvent) event);
                         break;
 
                     case "TURN_END":
-//                        LOGGER.info("Turn end event received from: " + event.getConnection().getConnectionID());
                         handleTurnEnd(event);
                         break;
 
@@ -155,7 +146,7 @@ public class ServerGameStateManager implements MessageListener {
                     handleTurnEnd(event);
                     timer.cancel(); // Clean up timer
                 }
-            }, 1500); // 1.5 second delay
+            }, 1500); // 1.5 seconds delay
         } else {
             gameManager.setGameState(GameState.WAITING_FOR_MOVE);
             broadcastGameState();
@@ -174,9 +165,6 @@ public class ServerGameStateManager implements MessageListener {
     public void handleMoveRequest(MoveRequestEvent event) {
         String connectionId = event.getConnection().getConnectionID();
         String playerName = getPlayerNameForConnection(connectionId);
-
-//        LOGGER.info(String.format("Move request from %s (connection: %s) - Game State: %s, Current Player: %s",
-//            playerName, connectionId, gameManager.getGameState(), gameManager.getCurrentPlayer().getColor()));
 
         // Validate game state
         if (gameManager.getGameState() != GameState.IN_PROGRESS &&
@@ -205,9 +193,6 @@ public class ServerGameStateManager implements MessageListener {
         int pawnIndex = event.getPawnIndex();
         int steps = event.getSteps();
 
-//        LOGGER.info(String.format("Processing move - Player: %s, Pawn: %d, Steps: %d, Last Dice Roll: %d",
-//            playerName, pawnIndex, steps, gameManager.getLastDiceRoll()));
-
         if (pawnIndex < 0 || pawnIndex >= currentPlayer.getPawns().size()) {
             LOGGER.warning("Invalid pawn index: " + pawnIndex);
             sendMoveResponse(connectionId, false, "Invalid pawn index", pawnIndex, -1);
@@ -222,14 +207,12 @@ public class ServerGameStateManager implements MessageListener {
         }
 
         int playerIndex = gameManager.getPlayers().indexOf(currentPlayer);
-//        LOGGER.info("Positions before move: " + gameManager.getCurrentPawnPositions());
 
         Pawn selectedPawn = currentPlayer.getPawns().get(pawnIndex);
         boolean isLeavingHome = selectedPawn.isHome() && steps == 6;
         int currentPosition = selectedPawn.isHome() ? -1 : selectedPawn.getPosition();
 
         boolean moveSuccess = gameManager.movePawn(playerIndex, pawnIndex, steps);
-//        LOGGER.info("Move result: " + (moveSuccess ? "Success" : "Failed"));
 
         if (moveSuccess) {
             handleMoveSuccess(connectionId, pawnIndex, steps, isLeavingHome, currentPosition);
@@ -246,11 +229,7 @@ public class ServerGameStateManager implements MessageListener {
     }
 
     private boolean handleMoveSuccess(String connectionId, int pawnIndex, int steps, boolean isLeavingHome, int currentPosition) {
-//        LOGGER.info("Positions after move: " + gameManager.getCurrentPawnPositions());
         int newPosition = gameManager.getCurrentPlayer().getPawns().get(pawnIndex).getPosition();
-
-//        LOGGER.info(String.format("Pawn moved from %d to %d (isLeavingHome: %b)",
-//            currentPosition, newPosition, isLeavingHome));
 
         MoveResultEvent resultEvent = new MoveResultEvent(
             true, "Move successful", pawnIndex, newPosition);
@@ -295,7 +274,6 @@ public class ServerGameStateManager implements MessageListener {
         } else {
             gameManager.nextTurn();
             String nextPlayer = gameManager.getCurrentPlayer().getName();
-//            LOGGER.info("Next player: " + nextPlayer);
             networkHandler.broadcast(new TurnChangeEvent(nextPlayer));
             checkAndPlayBotTurn();
         }
@@ -359,8 +337,7 @@ public class ServerGameStateManager implements MessageListener {
         networkHandler.broadcast(stateEvent);
     }
 
-    private void sendMoveResponse(String connectionId, boolean success, String message,
-                                  int pawnIndex, int newPosition) {
+    private void sendMoveResponse(String connectionId, boolean success, String message, int pawnIndex, int newPosition) {
         MoveResultEvent response = new MoveResultEvent(success, message, pawnIndex, newPosition);
         networkHandler.sendToClient(connectionId, response);
     }
@@ -403,7 +380,6 @@ public class ServerGameStateManager implements MessageListener {
             Player player = playersByColor.get(color);
             if (player != null) {
                 gameManager.addPlayer(player);
-//                LOGGER.info("Adding player to game: " + player.getName() + " with color: " + player.getColor());
             }
         }
 
@@ -444,7 +420,6 @@ public class ServerGameStateManager implements MessageListener {
             LOGGER.info("Attempting to load saved game");
             String saveFileName = event.getSaveFileName();
             if (saveFileName != null) {
-//                String fullPath = "assets/LudoSaves/" + saveFileName;
                 GamePersistence.GameSaveData saveData = GamePersistence.loadGame(saveFileName);
                 if (saveData != null) {
                     LOGGER.info("Successfully loaded save data - Players: " + saveData.players.size() +
@@ -463,13 +438,12 @@ public class ServerGameStateManager implements MessageListener {
 
                     broadcastGameState();
                     checkAndPlayBotTurn();
-                    return; // Game loaded successfully, so we exit here.
+                    return;
                 }
             }
             LOGGER.warning("Failed to load saved game data, falling back to new game");
         }
 
-        // If not loading a game, or if loading failed, proceed with new game logic
         int realPlayerCount = gameManager.getPlayers().size();
         if (realPlayerCount < 2 && !enableBots) {
             LOGGER.info("Not enough players to start a new game");
@@ -581,28 +555,19 @@ public class ServerGameStateManager implements MessageListener {
 
             BotPlayer bot = new BotPlayer(botName, botColor);
             gameManager.addPlayer(bot);
-
-//            LOGGER.info("Added bot player: " + botName + " (" + botColor + ")");
         }
     }
 
     private void checkAndPlayBotTurn() {
         Player currentPlayer = gameManager.getCurrentPlayer();
 
-//        LOGGER.info("Checking if current player is a bot: " +
-//            currentPlayer.getName() + " (" + currentPlayer.getColor() + ")");
-
         if (currentPlayer instanceof BotPlayer) {
             LOGGER.info("Current player is a bot - preparing to handle bot turn");
 
             Thread botThread = new Thread(() -> {
                 try {
-//                    LOGGER.info("Bot will take its turn in 1.5 seconds");
                     Thread.sleep(1500);
-
-//                    LOGGER.info("Starting bot turn execution for " + currentPlayer.getName());
                     playBotTurn((BotPlayer) currentPlayer);
-
                 } catch (InterruptedException e) {
                     LOGGER.warning("Bot turn interrupted: " + e.getMessage());
                 } catch (Exception e) {
@@ -623,9 +588,6 @@ public class ServerGameStateManager implements MessageListener {
             botThread.setDaemon(true);
             botThread.start();
 
-//            LOGGER.info("Bot turn thread started for " + currentPlayer.getName());
-        } else {
-//            LOGGER.info("Current player is human: " + currentPlayer.getName());
         }
     }
 
@@ -734,8 +696,6 @@ public class ServerGameStateManager implements MessageListener {
                         ", Roll=" + diceRoll);
                 }
             } else {
-                // This case handles when a bot has valid moves but the AI fails to choose one.
-                // We'll end the turn to prevent the game from stalling.
                 gameManager.nextTurn();
                 LOGGER.warning("Bot failed to choose a move, ending turn to be safe.");
 
@@ -810,9 +770,7 @@ public class ServerGameStateManager implements MessageListener {
     private void handlePlayerLeave(String connectionId) {
         String playerName = connectionToPlayerMap.remove(connectionId);
         if (playerName != null) {
-            if (!gameManager.isGameStarted()) {
-                gameManager.removePlayer(playerName);
-            }
+            gameManager.removePlayer(playerName);
             broadcastGameState();
         }
     }
@@ -820,37 +778,6 @@ public class ServerGameStateManager implements MessageListener {
     @Override
     public void onConnectionError(Exception e) {
         LOGGER.severe("Connection error: " + e.getMessage());
-    }
-
-
-    // private boolean handlePlayerJoin(String connectionId, String playerName, String desiredColor) {
-    //     if (gameManager.getPlayers().size() >= 4 || gameManager.isGameStarted()) {
-    //         return false;
-    //     }
-
-    //     // Check if color is available
-    //     if (!isColorAvailable(desiredColor)) {
-    //         return false;
-    //     }
-
-    //     Player newPlayer = new Player(playerName, desiredColor);
-    //     if (gameManager.addPlayer(newPlayer)) {
-    //         connectionToPlayerMap.put(connectionId, playerName);
-
-    //         // Notify other players
-    //         PlayerJoinedEvent joinEvent = new PlayerJoinedEvent(newPlayer);
-    //         networkHandler.broadcast(joinEvent);
-
-    //         // Send updated game state
-    //         broadcastGameState();
-    //         return true;
-    //     }
-    //     return false;
-    // }
-
-    private boolean isColorAvailable(String desiredColor) {
-        return gameManager.getPlayers().stream()
-            .noneMatch(p -> p.getColor().equals(desiredColor));
     }
 
     private boolean isNameTaken(String playerName, String desiredColor) {
@@ -923,9 +850,10 @@ public class ServerGameStateManager implements MessageListener {
         String clientId = connection.getConnectionID();
         LOGGER.info("Processing client disconnection for: " + clientId);
 
-        // Handle player removal from game state
-        if (gameManager.isGameStarted()) {
-            gameManager.removePlayer(clientId);
+        String playerName = connectionToPlayerMap.get(clientId);
+
+        if (playerName != null && gameManager.isGameStarted()) {
+            gameManager.removePlayer(playerName);
         }
 
         // Forward to connection handler for cleanup
@@ -1052,80 +980,5 @@ public class ServerGameStateManager implements MessageListener {
                 new LoadGameResponseEvent(LoadGameResponseEvent.Response.SERVER_ERROR, null, e.getMessage())
             );
         }
-    }
-
-    private boolean hasConflictsWithCurrentState(GamePersistence.GameSaveData saveData) {
-        // Check if the number of players matches
-        if (gameManager.getPlayers().size() != saveData.players.size()) {
-            LOGGER.warning("Player count mismatch - Current: " + gameManager.getPlayers().size() +
-                ", Save: " + saveData.players.size());
-            return true;
-        }
-
-        // Check if player colors match
-        Set<String> currentColors = gameManager.getPlayers().stream()
-            .map(Player::getColor)
-            .collect(Collectors.toSet());
-        Set<String> saveColors = saveData.players.stream()
-            .map(playerData -> playerData.color)
-            .collect(Collectors.toSet());
-
-        if (!currentColors.equals(saveColors)) {
-            LOGGER.warning("Player colors mismatch");
-            return true;
-        }
-
-        return false;
-    }
-
-    private void handleStateSyncError(StateSyncErrorEvent event, Connection connection) {
-        String connectionId = connection.getConnectionID();
-        Player player = getPlayerByConnection(connection);
-        if (player == null) {
-            return;
-        }
-
-        // If we've retried too many times, force a game state update
-        if (event.getRetryCount() >= 3) {
-            LOGGER.warning("Too many state sync retries, forcing full state update");
-            networkHandler.sendToClient(
-                connectionId,
-                new GameStateUpdateEvent(
-                    gameManager.getCurrentPawnPositions(),
-                    gameManager.getCurrentPlayer().getColor(),
-                    gameManager.getGameState()
-                )
-            );
-            return;
-        }
-
-        // Compare expected and actual positions
-        Map<String, List<Integer>> expectedPositions = event.getExpectedPositions();
-        Map<String, List<Integer>> actualPositions = event.getActualPositions();
-
-        // If positions don't match, send a full state update
-        if (!expectedPositions.equals(actualPositions)) {
-            LOGGER.warning("Position mismatch detected, sending full state update");
-            networkHandler.sendToClient(
-                connectionId,
-                new GameStateUpdateEvent(
-                    gameManager.getCurrentPawnPositions(),
-                    gameManager.getCurrentPlayer().getColor(),
-                    gameManager.getGameState()
-                )
-            );
-        }
-    }
-
-    private Player getPlayerByConnection(Connection connection) {
-        return getPlayerByConnection(connection.getConnectionID());
-    }
-
-    private Player getPlayerByConnection(String connectionId) {
-        String playerName = connectionToPlayerMap.get(connectionId);
-        if (playerName == null) {
-            return null;
-        }
-        return gameManager.getPlayerByName(playerName);
     }
 }

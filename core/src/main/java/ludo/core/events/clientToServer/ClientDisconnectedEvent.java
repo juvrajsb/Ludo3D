@@ -11,10 +11,6 @@ public class ClientDisconnectedEvent extends Event {
         this.clientId = clientId;
     }
 
-    public String getClientId() {
-        return clientId;
-    }
-
     @Override
     public void process() {
         // Will be processed by server handler

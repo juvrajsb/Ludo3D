@@ -74,12 +74,6 @@ public class BoardCoordinates {
         return gridToWorld(coords[0], coords[1]);
     }
 
-//    public static String worldToGrid(Vector3 worldPosition) {
-//        int gridX = Math.round(worldPosition.x / 0.5f + (BOARD_SIZE / 2));
-//        int gridZ = Math.round((BOARD_SIZE / 2) - worldPosition.z / 0.5f);
-//        return String.format("(%d, %d)", gridX, gridZ);
-//    }
-
     public static Vector3 getHomeBasePosition(String color, int index) {
         int colorIndex = getColorIndex(color);
         int[] coords = HOME_BASES[colorIndex][index];

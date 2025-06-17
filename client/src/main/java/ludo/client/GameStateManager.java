@@ -12,13 +12,10 @@ import ludo.core.events.serverToClient.*;
 import ludo.core.game.GameState;
 import ludo.core.network.MessageListener;
 import ludo.core.network.NetworkMessage;
-import ludo.core.persistence.GamePersistence;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Set;
 import java.util.logging.Logger;
-import java.util.stream.Collectors;
 
 /**
  * Manages the client's state and communication with the server.
@@ -33,7 +30,6 @@ public class GameStateManager implements MessageListener {
     private GameScreen gameScreen;
     private LobbyScreen lobbyScreen;
 
-    // State required for UI and requests
     private String currentUsername;
     private String currentColor;
     private boolean isMyTurn = false;
@@ -69,28 +65,6 @@ public class GameStateManager implements MessageListener {
         this.currentColor = color;
         networkHandler.sendMessage(new JoinGameRequestEvent(username, color));
     }
-
-//    public void startGame(boolean enableBots, boolean loadSavedGame) {
-//        if (!isFirstPlayer || gameStarted) {
-//            LOGGER.warning("Invalid game start request - isFirstPlayer: " + isFirstPlayer + ", gameStarted: " + gameStarted);
-//            return;
-//        }
-//        String saveFileName = null;
-//        if (loadSavedGame) {
-//            // This logic is fine, as the client can know about local save files.
-//            List<String> saveFiles = GamePersistence.listSaveFiles();
-//            if (!saveFiles.isEmpty()) {
-//                saveFileName = saveFiles.get(0); // Get most recent
-//            } else {
-//                LOGGER.warning("Load game requested, but no save files found.");
-//                if (lobbyScreen != null) {
-//                    lobbyScreen.showError("No save files found.");
-//                }
-//                return;
-//            }
-//        }
-//        networkHandler.sendMessage(new StartGameRequestEvent(enableBots, loadSavedGame, saveFileName));
-//    }
 
     public void startGame(boolean enableBots, boolean loadSavedGame, String saveFileName) {
         if (isFirstPlayer && !gameStarted) {
@@ -141,8 +115,6 @@ public class GameStateManager implements MessageListener {
         }
         resetClientState();
     }
-
-    // --- Event Handlers from Server ---
 
     @Override
     public void onMessageReceived(NetworkMessage message) {
@@ -213,8 +185,6 @@ public class GameStateManager implements MessageListener {
         });
     }
 
-    // --- Helper Methods for Event Handling ---
-
     private void handleGameStateUpdate(GameStateUpdateEvent event) {
         if (gameScreen == null) return;
 
@@ -229,7 +199,6 @@ public class GameStateManager implements MessageListener {
             .orElse("Unknown");
         gameScreen.setCurrentPlayer(currentPlayerColor);
 
-        // This logic now works correctly because isMyTurn is reliable
         if (isMyTurn) {
             if (event.getGameState() == GameState.WAITING_FOR_MOVE) {
                 gameScreen.enablePawnSelection();
@@ -267,8 +236,6 @@ public class GameStateManager implements MessageListener {
 
         newGameScreen.setCurrentPlayer(startingPlayerColor);
 
-        // This is the first state setting. It will be immediately updated
-        // by the subsequent GameStateUpdateEvent from the server.
         if (isMyTurn) {
             newGameScreen.enableControls();
             newGameScreen.showMessage("Your turn!");
@@ -366,7 +333,6 @@ public class GameStateManager implements MessageListener {
         LOGGER.warning("Error from server: " + event.getMessage());
         if (gameScreen != null) {
             gameScreen.showMessage("Error: " + event.getMessage());
-            // The server state is king. A GameStateUpdate will follow to correct the UI.
         } else if (lobbyScreen != null) {
             lobbyScreen.showError(event.getMessage());
         }
@@ -409,19 +375,6 @@ public class GameStateManager implements MessageListener {
         LOGGER.info("Client is requesting the list of save files from the server.");
         networkHandler.sendMessage(new RequestSaveFilesEvent());
     }
-
-//    private void handleWaitingRoomUpdate(WaitingRoomUpdateEvent event) {
-//        if (lobbyScreen == null) return;
-//        currentPlayers.clear();
-//        for (int i=0; i < event.getUsernames().size(); i++) {
-//            String username = event.getUsernames().get(i);
-//            String color = event.getColorForPlayer(username);
-//            currentPlayers.add(new Player(username, color));
-//        }
-//        lobbyScreen.updatePlayersList(currentPlayers);
-//    }
-
-    // --- Getters, Setters, and Utility ---
 
     private void resetClientState() {
         isMyTurn = false;
@@ -467,17 +420,5 @@ public class GameStateManager implements MessageListener {
         }
         networkHandler.reset(); // Reset the network handler state
         disconnectionAcknowledged = false; // Reset disconnection state
-    }
-
-    public void sendMessage(NetworkMessage message) {
-        if (networkHandler != null && networkHandler.isConnected()) {
-            networkHandler.sendMessage(message);
-        }
-    }
-
-    public void disconnect() {
-        if (networkHandler != null) {
-            networkHandler.disconnect();
-        }
     }
 }

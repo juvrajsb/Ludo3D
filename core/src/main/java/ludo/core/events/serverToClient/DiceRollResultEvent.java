@@ -17,10 +17,6 @@ public class DiceRollResultEvent extends Event {
         return value;
     }
 
-    public String getPlayerColor() {
-        return playerColor;
-    }
-
     @Override
     public void process() {
         // Will be processed by client handler

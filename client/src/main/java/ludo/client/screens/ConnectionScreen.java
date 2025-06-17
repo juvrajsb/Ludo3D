@@ -80,8 +80,6 @@ public class ConnectionScreen extends BaseScreen {
         String ip = ipField.getText().trim();
         try {
             int port = Integer.parseInt(portField.getText().trim());
-
-            // Run connection attempt in separate thread to avoid blocking UI
             new Thread(() -> {
                 try {
                     final boolean success = game.getGameStateManager().connect(ip, port);
@@ -128,8 +126,4 @@ public class ConnectionScreen extends BaseScreen {
         stage.act(delta);
         stage.draw();
     }
-
-//    public boolean isConnected() {//TODO check usage not used currently
-//        return isConnected;
-//    }
 }

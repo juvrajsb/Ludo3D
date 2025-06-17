@@ -11,7 +11,6 @@ import com.badlogic.gdx.scenes.scene2d.utils.ChangeListener;
 import com.badlogic.gdx.utils.viewport.ScreenViewport;
 import com.badlogic.gdx.utils.viewport.Viewport;
 import ludo.client.LudoGame;
-import ludo.core.events.clientToServer.LeaveGameRequestEvent;
 
 import java.util.logging.Logger;
 

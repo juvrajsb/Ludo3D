@@ -20,12 +20,10 @@ public class Board implements Serializable {
 
     private void initializeSafeSpots() {
         safeSpots = new HashMap<>();
-        // Start positions are safe spots
         safeSpots.put(0, true);   // Yellow start
         safeSpots.put(13, true);  // Blue start
         safeSpots.put(26, true);  // Red start
         safeSpots.put(39, true);  // Green start
-        // Additional safe spots
         safeSpots.put(8, true);   // Safe spot near Yellow
         safeSpots.put(21, true);  // Safe spot near Blue
         safeSpots.put(34, true);  // Safe spot near Red

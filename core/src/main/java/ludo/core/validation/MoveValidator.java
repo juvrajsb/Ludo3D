@@ -3,7 +3,6 @@ package ludo.core.validation;
 import ludo.core.entities.Board;
 import ludo.core.entities.Pawn;
 import ludo.core.entities.Player;
-import ludo.core.utils.Constants;
 
 import java.util.logging.Logger;
 
