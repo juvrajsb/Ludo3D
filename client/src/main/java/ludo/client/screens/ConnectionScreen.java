@@ -57,7 +57,7 @@ public class ConnectionScreen extends BaseScreen {
                 tryConnect();
             }
         });
-        mainTable.add(connectButton).colspan(2).padTop(40).width(150).height(50).row();
+        mainTable.add(connectButton).colspan(2).padTop(40).width(200).height(30).row();
 
         // Back button
         TextButton backButton = new TextButton("Back", skin);
@@ -67,7 +67,7 @@ public class ConnectionScreen extends BaseScreen {
                 game.setScreen(new MenuScreen(game));
             }
         });
-        mainTable.add(backButton).colspan(2).padTop(20).width(150).height(50).row();
+        mainTable.add(backButton).colspan(2).padTop(20).width(200).height(30).row();
 
         stage.addActor(mainTable);
     }
