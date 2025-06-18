@@ -35,7 +35,6 @@ public class Server {
             this.eventReceiver = new EventReceiver();
             this.connectedClients = new ConcurrentHashMap<>();
             this.running = false;
-            // Initialize clientConnectionHandler after server is fully constructed
             this.clientConnectionHandler = new ClientConnectionHandler(this);
         } catch (IOException e) {
             LOGGER.severe("Could not create server socket on port " + port);
@@ -105,7 +104,6 @@ public class Server {
         LOGGER.info("Server stopped");
     }
 
-    // Methods needed by NetworkListener
     public ServerSocket getWelcomeSocket() {
         return welcomeSocket;
     }
