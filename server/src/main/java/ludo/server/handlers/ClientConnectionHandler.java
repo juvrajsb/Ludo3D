@@ -1,5 +1,6 @@
 package ludo.server.handlers;
 
+import ludo.core.events.serverToClient.PlayerLeftEvent;
 import ludo.server.Server;
 import ludo.server.networking.EventTransmitter;
 import ludo.core.network.Connection;
@@ -67,5 +68,48 @@ public class ClientConnectionHandler {
             playerJoinHandler.handlePlayerDisconnect(clientId);
         }
     }
+    public void handleUnexpectedDisconnection(Connection connection) {
+        if (connection == null) return;
 
+        String clientId = connection.getConnectionID();
+        Server.LOGGER.info("Handling unexpected disconnection for: " + clientId);
+
+        try {
+            // Stop ping sender first
+            if (connection.getPingSender() != null) {
+                connection.getPingSender().stop();
+            }
+
+            // Close the connection
+            if (!connection.isClosed()) {
+                connection.close();
+                Server.LOGGER.info("Closed connection for client: " + clientId);
+            }
+        } catch (Exception e) {
+            Server.LOGGER.severe("Error during unexpected disconnection: " + e.getMessage());
+        } finally {
+            // This part is crucial and will now always execute
+            activeConnections.remove(clientId);
+            playerJoinHandler.handlePlayerDisconnect(clientId);
+
+            // Notify other players about the disconnection
+            eventTransmitter.broadcast(new PlayerLeftEvent(clientId));
+        }
+    }
+
+    public void handleReconnection(String clientId, Connection newConnection) {
+        if (activeConnections.containsKey(clientId)) {
+            // Close old connection if it exists
+            try {
+                Connection oldConnection = activeConnections.get(clientId);
+                oldConnection.close();
+            } catch (IOException e) {
+                Server.LOGGER.warning("Error closing old connection: " + e.getMessage());
+            }
+        }
+
+        // Add new connection
+        activeConnections.put(clientId, newConnection);
+        Server.LOGGER.info("Client reconnected: " + clientId);
+    }
 }
