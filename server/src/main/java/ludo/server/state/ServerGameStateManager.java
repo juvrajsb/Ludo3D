@@ -88,6 +88,9 @@ public class ServerGameStateManager implements MessageListener {
                     case "REQUEST_SAVE_FILES":
                         handleRequestSaveFiles((RequestSaveFilesEvent) event);
                         break;
+                    case "RECONNECT_REQUEST":
+                        handleReconnectRequest((ReconnectRequestEvent) event);
+                        break;
                 }
             } catch (Exception e) {
                 LOGGER.severe("Error handling event: " + e.getMessage());
@@ -150,6 +153,39 @@ public class ServerGameStateManager implements MessageListener {
         } else {
             gameManager.setGameState(GameState.WAITING_FOR_MOVE);
             broadcastGameState();
+        }
+    }
+
+    private void handleReconnectRequest(ReconnectRequestEvent event) {
+        String playerName = event.getPlayerName();
+        Connection newConnection = event.getConnection();
+        String newConnectionId = newConnection.getConnectionID();
+
+        Player player = gameManager.getPlayerByName(playerName);
+
+        if (player != null && player.isDisconnected()) {
+            LOGGER.info("Reconnection successful for player: " + playerName);
+
+            player.setDisconnected(false);
+            connectionToPlayerMap.put(newConnectionId, playerName);
+            networkHandler.getServer().getClientConnectionHandler().handleReconnection(playerName, newConnection);
+
+            // Send GameStartedEvent to get them back into the game screen
+            networkHandler.sendToClient(newConnectionId, new GameStartedEvent(
+                gameManager.getPlayers(),
+                gameManager.getCurrentPlayer().getName(),
+                gameManager.getPlayers().size()
+            ));
+
+            // Send the latest game state to sync them up
+            networkHandler.sendToClient(newConnectionId, new GameStateUpdateEvent(
+                gameManager.getCurrentPawnPositions(),
+                gameManager.getCurrentPlayer().getName(),
+                gameManager.getGameState()
+            ));
+        } else {
+            sendErrorResponse(newConnectionId, "Could not find a disconnected player with that name.");
+            LOGGER.warning("Rejected reconnection attempt for player: " + playerName);
         }
     }
 
@@ -764,16 +800,17 @@ public class ServerGameStateManager implements MessageListener {
 
     private void handleLeaveRequest(LeaveGameRequestEvent event) {
         String connectionId = event.getConnection().getConnectionID();
-        handlePlayerLeave(connectionId);
-    }
-
-    private void handlePlayerLeave(String connectionId) {
         String playerName = connectionToPlayerMap.remove(connectionId);
         if (playerName != null) {
-            gameManager.removePlayer(playerName);
-            broadcastGameState();
+            Player player = gameManager.getPlayerByName(playerName);
+            if (player != null) {
+                player.setDisconnected(true);
+                LOGGER.info("Player " + playerName + " has been marked as disconnected.");
+                networkHandler.broadcast(new PlayerLeftEvent(playerName));
+            }
         }
     }
+
 
     @Override
     public void onConnectionError(Exception e) {
@@ -795,36 +832,40 @@ public class ServerGameStateManager implements MessageListener {
         String playerName = event.getPlayerName();
         String color = event.getDesiredColor().toUpperCase();
 
-        if (isNameTaken(playerName.toUpperCase(), color.toUpperCase())) {
-            networkHandler.sendToClient(connectionId,
-                new JoinGameResponseEvent(Response.USERNAME_TAKEN));
+        Player disconnectedPlayer = gameManager.getPlayerByName(playerName);
+        if (disconnectedPlayer != null && disconnectedPlayer.isDisconnected()) {
+            LOGGER.info("Found a disconnected player with the name: " + playerName + ". Prompting user to reconnect.");
+            networkHandler.sendToClient(connectionId, new ReconnectPromptEvent(playerName));
             return;
         }
-        if (isColorTaken(color.toUpperCase())) {
-            networkHandler.sendToClient(connectionId,
-                new JoinGameResponseEvent(Response.COLOR_TAKEN));
+
+        if (isNameTaken(playerName, color)) {
+            networkHandler.sendToClient(connectionId, new JoinGameResponseEvent(Response.USERNAME_TAKEN));
+            return;
+        }
+
+        if (isColorTaken(color)) {
+            networkHandler.sendToClient(connectionId, new JoinGameResponseEvent(Response.COLOR_TAKEN));
             return;
         }
 
         Player newPlayer = new Player(playerName, color);
         if (gameManager.addPlayer(newPlayer)) {
             connectionToPlayerMap.put(connectionId, playerName);
-            LOGGER.info("Player joined successfully: " + event.getPlayerName());
-
+            LOGGER.info("Player joined successfully: " + playerName);
             networkHandler.sendToClient(connectionId, new JoinGameResponseEvent(Response.OK));
 
             if (gameManager.getPlayers().size() == 1) {
-                this.adminPlayerName = playerName; // Set the admin player
+                this.adminPlayerName = playerName;
                 networkHandler.sendToClient(connectionId, new FirstPlayerEvent());
-                LOGGER.info("First player joined and set as admin: " + event.getPlayerName());
+                LOGGER.info("First player joined and set as admin: " + playerName);
             }
 
             networkHandler.broadcast(new PlayerJoinedEvent(newPlayer));
             broadcastPlayerList();
         } else {
-            LOGGER.warning("Join failed for player: " + event.getPlayerName() +
-                " (name/color taken or game full)");
-            JoinGameResponseEvent response = new JoinGameResponseEvent(Response.GAME_FULL);
+            LOGGER.warning("Join failed for player: " + playerName + " (game full)");
+            networkHandler.sendToClient(connectionId, new JoinGameResponseEvent(Response.GAME_FULL));
         }
     }
 
