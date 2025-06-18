@@ -11,6 +11,7 @@ public class GameAssets {
     private static GameAssets instance;
     private Model pawnModel;
     private Model diceModel;
+    private Model tableModel;
     private Texture pawnBaseColorTexture;
     private Texture pawnNormalTexture;
     private Texture pawnRoughnessTexture;
@@ -48,6 +49,15 @@ public class GameAssets {
                 e.printStackTrace();
             }
 
+            try {
+                tableModel = modelLoader.loadModel(Gdx.files.internal("models/table.g3db"));
+                Gdx.app.log(TAG, "Table model loaded successfully");
+            } catch (Exception e) {
+                Gdx.app.error(TAG, "Failed to load table model: " + e.getMessage());
+                e.printStackTrace();
+            }
+
+
             // Load textures
             try {
                 pawnBaseColorTexture = new Texture(Gdx.files.internal("models/textures/Carpet_BaseColor.jpg"));
@@ -79,5 +89,9 @@ public class GameAssets {
 
     public Model getDiceModel() {
         return diceModel;
+    }
+
+    public Model getTableModel() {
+        return tableModel;
     }
 }

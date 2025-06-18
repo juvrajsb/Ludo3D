@@ -15,7 +15,6 @@ import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
 import com.badlogic.gdx.math.*;
 import com.badlogic.gdx.math.collision.Ray;
 import com.badlogic.gdx.utils.Array;
-import com.badlogic.gdx.utils.Timer;
 
 import ludo.client.assets.GameAssets;
 import ludo.core.entities.Pawn;
@@ -38,6 +37,7 @@ public class GameRenderer {
     private final Map<String, Integer> pawnIndicesInBase = new HashMap<>();
     private Model boardModel;
     private ModelInstance boardInstance;
+    private ModelInstance tableInstance;
     private Map<String, Color> playerColors;
     private Texture boardTexture;
     private ShapeRenderer shapeRenderer;
@@ -51,7 +51,6 @@ public class GameRenderer {
     private final Map<Integer, Boolean> movingPawns = new HashMap<>();
     private final Map<Integer, Boolean> selectablePawns = new HashMap<>();
     private boolean isAnyAnimationPlaying = false;
-    private final List<Vector3> validMoveHighlights = new ArrayList<>();
 
     private static final float VERTICAL_STACK_OFFSET = 0.4f;
     private static final float SIDE_OFFSET_X = 0.4f;
@@ -70,6 +69,7 @@ public class GameRenderer {
         font.getData().setScale(0.01f);
         initializePlayerColors();
         createBoard();
+        createTable();
     }
 
     public void updateDiceValue(int value) {
@@ -82,6 +82,9 @@ public class GameRenderer {
 
         if (boardInstance != null) {
             modelBatch.render(boardInstance, environment);
+        }
+        if (tableInstance != null) {
+            modelBatch.render(tableInstance, environment);
         }
 
         for (ModelInstance pawn : pawnInstances) {
@@ -156,7 +159,6 @@ public class GameRenderer {
         return isAnyAnimationPlaying || !pawnAnimations.isEmpty();
     }
 
-
     public void updateAnimations(float delta) {
         Iterator<Map.Entry<Integer, PawnAnimation>> it = pawnAnimations.entrySet().iterator();
         boolean animationsActive = false;
@@ -207,71 +209,20 @@ public class GameRenderer {
         }
     }
 
-    public void setSelectablePawns(List<Integer> selectablePawnIndices) {
-        selectablePawns.clear();
-
-        for (Integer index : selectablePawnIndices) {
-            selectablePawns.put(index, true);
+    private void createTable() {
+        Model tableModel = GameAssets.getInstance().getTableModel();
+        if (tableModel != null) {
+            tableInstance = new ModelInstance(tableModel);
+            tableInstance.transform.translate(0, -14.5f, 0);
         }
+        Color brownTint = new Color(0.5f, 0.4f, 0.35f, 1f);
 
-        updateSelectablePawnsVisuals();
-    }
+        for (Material mat : tableInstance.materials) {
+            mat.remove(ColorAttribute.Emissive);
 
+            mat.set(ColorAttribute.createDiffuse(brownTint));
 
-    private void updateSelectablePawnsVisuals() {
-        validMoveHighlights.clear();
-
-        for (Map.Entry<Integer, Boolean> entry : selectablePawns.entrySet()) {
-            if (entry.getValue()) {
-                int pawnIndex = entry.getKey();
-                ModelInstance pawn = pawnInstances.get(pawnIndex);
-
-                if (pawn != null) {
-
-                    Vector3 position = pawnPositions.get(pawnIndex);
-                    if (position != null) {
-                        validMoveHighlights.add(position.cpy().add(0, 0.1f, 0));
-                    }
-                }
-            }
-        }
-    }
-
-    public void flashInvalidSelection(int pawnIndex) {
-        ModelInstance pawn = pawnInstances.get(pawnIndex);
-        if (pawn == null) return;
-
-        String playerColor = (String) pawn.userData;
-        final Color originalColor = playerColors.get(playerColor);
-
-        if (originalColor == null) return;
-
-        Material material = pawn.materials.get(0);
-        material.set(ColorAttribute.createDiffuse(Color.RED));
-
-        Timer.schedule(new Timer.Task() {
-            @Override
-            public void run() {
-                material.set(ColorAttribute.createDiffuse(originalColor));
-            }
-        }, 0.3f);
-    }
-
-    public void highlightValidMoves(List<Integer> validPositions) {
-        validMoveHighlights.clear();
-
-        for (Integer position : validPositions) {
-            Vector3 worldPos;
-
-            if (position < 0) {
-                continue;
-            } else if (position >= Constants.BOARD_SIZE) {
-                // Home column position
-            } else {
-                // Main board position
-                worldPos = BoardCoordinates.getMainPathPosition(position);
-                validMoveHighlights.add(worldPos.cpy().add(0, 0.1f, 0));
-            }
+            mat.remove(ColorAttribute.Specular);
         }
     }
 
@@ -298,35 +249,6 @@ public class GameRenderer {
             Gdx.app.error(TAG, "Error creating board: " + e.getMessage());
             e.printStackTrace();
         }
-    }
-
-    private ModelInstance createPawnInstance(String color) {
-        Model pawnModel = GameAssets.getInstance().getPawnModel();
-        if (pawnModel == null) {
-            Gdx.app.error(TAG, "Pawn model is null!");
-            return null;
-        }
-
-        ModelInstance pawn = new ModelInstance(pawnModel);
-
-        Color pawnColor = getPlayerColor(color);
-        Material pawnMaterial = new Material(
-            ColorAttribute.createDiffuse(pawnColor),
-            ColorAttribute.createSpecular(1, 1, 1, 1),
-            ColorAttribute.createAmbient(pawnColor.r * 0.5f,
-                pawnColor.g * 0.5f,
-                pawnColor.b * 0.5f,
-                1f)
-        );
-
-        for (Material mat : pawn.materials) {
-            mat.clear();
-            mat.set(pawnMaterial);
-        }
-
-        pawn.transform.scale(PAWN_SCALE, PAWN_SCALE, PAWN_SCALE);
-
-        return pawn;
     }
 
     private Color getPlayerColor(String colorName) {

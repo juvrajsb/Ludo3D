@@ -17,6 +17,7 @@ import com.badlogic.gdx.utils.Align;
 import com.badlogic.gdx.utils.Timer;
 import ludo.client.LudoGame;
 import ludo.client.render.GameRenderer;
+import ludo.client.render.Skybox;
 import ludo.client.ui.GameHUD;
 import ludo.core.entities.Pawn;
 import ludo.core.entities.Player;
@@ -32,6 +33,7 @@ public class GameScreen extends BaseScreen {
 
     private final GameHUD hud;
     private final GameRenderer renderer;
+    private final Skybox skybox;
     private final ModelBatch modelBatch;
     private final Environment environment;
     final PerspectiveCamera camera;
@@ -42,7 +44,7 @@ public class GameScreen extends BaseScreen {
     final float zoomSpeed = 2f;
     final float minZoom = 2f;
     final float maxZoom = 20f;
-    final float minHeight = -2f;
+    final float minHeight = 0.5f;
     final float maxHeight = 30f;
 
     /// Game state
@@ -133,6 +135,8 @@ public class GameScreen extends BaseScreen {
         });
 
         this.renderer = new GameRenderer();
+
+        this.skybox = new Skybox();
 
         stage.addActor(hud);
         stage.addActor(hud.getGameOverWindow()); // Get the window from the HUD and add it here.
@@ -250,9 +254,9 @@ public class GameScreen extends BaseScreen {
 
         processPendingAnimations();
 
-        Gdx.gl.glClearColor(0.2f, 0.2f, 0.3f, 1);
+//        Gdx.gl.glClearColor(0.2f, 0.2f, 0.3f, 1);
         Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT | GL20.GL_DEPTH_BUFFER_BIT);
-
+        skybox.render(camera);
         Gdx.gl.glEnable(GL20.GL_DEPTH_TEST);
 
         camera.update();
@@ -325,6 +329,8 @@ public class GameScreen extends BaseScreen {
         super.dispose();
         if (modelBatch != null) modelBatch.dispose();
         if (renderer != null) renderer.dispose();
+        if (skybox != null) skybox.dispose();
+
     }
 
     public void updatePlayerPawns(String color, List<Integer> positions) {
