@@ -1,11 +1,13 @@
 package ludo.client.screens;
 
 import com.badlogic.gdx.Gdx;
+import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.GL20;
 import com.badlogic.gdx.scenes.scene2d.Actor;
 import com.badlogic.gdx.scenes.scene2d.Touchable;
 import com.badlogic.gdx.scenes.scene2d.ui.*;
 import com.badlogic.gdx.scenes.scene2d.utils.ChangeListener;
+import com.badlogic.gdx.utils.Align;
 import com.badlogic.gdx.utils.Array;
 import ludo.client.LudoGame;
 import ludo.core.entities.BotPlayer;
@@ -14,7 +16,6 @@ import ludo.core.utils.Constants;
 
 import java.util.ArrayList;
 import java.util.List;
-
 
 public class LobbyScreen extends BaseScreen {
     private final Table playersTable;
@@ -31,20 +32,27 @@ public class LobbyScreen extends BaseScreen {
 
         Table mainTable = new Table();
         mainTable.setFillParent(true);
-        mainTable.defaults().pad(10);
+        mainTable.pad(20);
 
+        // Title
         Label titleLabel = new Label("Game Lobby", skin, "default");
-        mainTable.add(titleLabel).colspan(2).pad(50).row();
+        mainTable.add(titleLabel).colspan(2).expandX().padBottom(20).row();
 
+        // Players List
         playersTable = new Table(skin);
-        playersTable.defaults().pad(5);
-
-        Label playersLabel = new Label("Players:", skin);
-        mainTable.add(playersLabel).colspan(2).pad(20).row();
-
+        playersTable.defaults().pad(10).align(Align.left);
         ScrollPane scrollPane = new ScrollPane(playersTable, skin);
-        mainTable.add(scrollPane).width(300).height(200).row();
+        scrollPane.setFadeScrollBars(false);
 
+        Container<ScrollPane> playersContainer = new Container<>(scrollPane);
+        playersContainer.setBackground(skin.newDrawable("white", new Color(0, 0, 0, 0.2f)));
+        playersContainer.pad(10);
+        mainTable.add(playersContainer).width(400).height(200).colspan(2).padBottom(20).row();
+
+
+        // Admin Controls
+        Table adminControls = new Table();
+        adminControls.defaults().pad(5);
         botPlayersCheckbox = new CheckBox(" Enable Bot Players", skin);
         botPlayersCheckbox.setVisible(false);
         botPlayersCheckbox.addListener(new ChangeListener() {
@@ -53,7 +61,6 @@ public class LobbyScreen extends BaseScreen {
                 updateStartButtonState();
             }
         });
-        mainTable.add(botPlayersCheckbox).colspan(2).pad(10).row();
 
         loadGameButton = new TextButton("Load Game", skin);
         loadGameButton.setVisible(false);
@@ -63,11 +70,16 @@ public class LobbyScreen extends BaseScreen {
                 game.getGameStateManager().requestSaveFilesList();
             }
         });
-        mainTable.add(loadGameButton).colspan(2).pad(10).row();
 
+        adminControls.add(botPlayersCheckbox).left();
+        adminControls.add(loadGameButton).width(150).height(40).padLeft(20);
+        mainTable.add(adminControls).colspan(2).padBottom(10).row();
+
+        // Status Label
         statusLabel = new Label("Waiting for players...", skin);
-        mainTable.add(statusLabel).colspan(2).pad(20).row();
+        mainTable.add(statusLabel).colspan(2).padBottom(20).row();
 
+        // Start Button
         startButton = new TextButton("Start Game", skin);
         startButton.setVisible(false);
         startButton.addListener(new ChangeListener() {
@@ -78,19 +90,19 @@ public class LobbyScreen extends BaseScreen {
                 }
             }
         });
-        mainTable.add(startButton).colspan(2).pad(20).row();
+        mainTable.add(startButton).width(200).height(50).colspan(2);
 
         stage.addActor(mainTable);
         game.getGameStateManager().setLobbyScreen(this);
         checkAdminStatus();
 
-        disconnectButton.setPosition(Gdx.graphics.getWidth() - 130, Gdx.graphics.getHeight() - 50);
+        disconnectButton.setPosition(Gdx.graphics.getWidth() - 160, Gdx.graphics.getHeight() - 60);
     }
 
     @Override
     public void resize(int width, int height) {
         super.resize(width, height);
-        disconnectButton.setPosition(width - 130, height - 50);
+        disconnectButton.setPosition(width - 160, height - 60);
     }
 
     public void showLoadGameDialog(List<String> fileNames) {
@@ -102,7 +114,7 @@ public class LobbyScreen extends BaseScreen {
             saveList.setItems(gdxFileNames);
         }
 
-        Dialog dialog = new Dialog("Select Save File", skin) {
+        Dialog dialog = new Dialog("Select Save File", skin, "dialog") {
             @Override
             protected void result(Object object) {
                 if (Boolean.TRUE.equals(object)) {
@@ -122,10 +134,21 @@ public class LobbyScreen extends BaseScreen {
             dialog.text("No save files found on the server.");
         } else {
             dialog.getContentTable().add(new Label("Select a save to load:", skin)).row();
-            dialog.getContentTable().add(saveList).width(400).height(200).pad(10).row();
-            dialog.button("Load Selected", true);
+            ScrollPane scroll = new ScrollPane(saveList, skin);
+            dialog.getContentTable().add(scroll).width(400).height(200).pad(10).row();
+
+            TextButton loadButton = new TextButton("Load Selected", skin);
+            dialog.button(loadButton, true);
         }
-        dialog.button("Cancel", false);
+
+        TextButton cancelButton = new TextButton("Cancel", skin);
+        dialog.button(cancelButton, false);
+
+        dialog.getButtonTable().getCells().get(0).width(150).height(40).pad(10);
+        if (!fileNames.isEmpty()) {
+            dialog.getButtonTable().getCells().get(1).width(150).height(40).pad(10);
+        }
+
         dialog.show(stage);
     }
 
@@ -149,10 +172,22 @@ public class LobbyScreen extends BaseScreen {
         for (Player player : this.players) {
             Label nameLabel = new Label(player.getName(), skin);
             Label colorLabel = new Label(player.getColor() + (player instanceof BotPlayer ? " (Bot)" : ""), skin);
+            colorLabel.setColor(getColorForName(player.getColor()));
             playersTable.add(nameLabel).padRight(20);
             playersTable.add(colorLabel).row();
         }
         updateStartButtonState();
+    }
+
+    private Color getColorForName(String colorName) {
+        if (colorName == null) return Color.WHITE;
+        switch(colorName.toUpperCase()) {
+            case "RED": return Color.RED;
+            case "BLUE": return Color.SKY;
+            case "GREEN": return Color.LIME;
+            case "YELLOW": return Color.YELLOW;
+            default: return Color.WHITE;
+        }
     }
 
     public void updateStartButtonState() {
