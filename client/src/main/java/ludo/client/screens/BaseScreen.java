@@ -42,7 +42,7 @@ public abstract class BaseScreen implements Screen {
         stage.addActor(disconnectButton);
     }
 
-    protected void handleDisconnect() { //todo check if correct
+    protected void handleDisconnect() {
         if (game.getGameStateManager() != null) {
             LOGGER.info("Starting disconnection process...");
             game.getGameStateManager().leaveGame();
