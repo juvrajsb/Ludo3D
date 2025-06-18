@@ -250,6 +250,7 @@ public class ServerNetworkHandler {
     private void handleClientError(Connection connection) {
         String clientId = connection.getConnectionID();
         LOGGER.info("Client disconnected: " + clientId);
+        server.getClientConnectionHandler().handleUnexpectedDisconnection(connection);
 
         try {
             // Stop ping sender first
