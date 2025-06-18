@@ -175,6 +175,13 @@ public class GameStateManager implements MessageListener {
                     case "SAVE_FILES_LIST":
                         handleSaveFilesList((SaveFilesListEvent) message);
                         break;
+                    case "RECONNECT_PROMPT":
+                        ReconnectPromptEvent promptEvent = (ReconnectPromptEvent) message;
+                        Screen currentScreen = game.getScreen();
+                        if (currentScreen instanceof UsernameScreen) {
+                            ((UsernameScreen) currentScreen).showReconnectDialog(promptEvent.getPlayerName());
+                        }
+                        break;
                     default:
                         LOGGER.warning("Unhandled message type: " + message.getType());
                 }
@@ -407,6 +414,23 @@ public class GameStateManager implements MessageListener {
 
     public void setGameScreen(GameScreen screen) { this.gameScreen = screen; }
     public void setLobbyScreen(LobbyScreen screen) { this.lobbyScreen = screen; }
+
+    public void attemptReconnect(String username) {
+        if (!networkHandler.isConnected()) {
+            LOGGER.info("Not connected, cannot send reconnect request.");
+            return;
+        }
+        this.currentUsername = username;
+        networkHandler.sendMessage(new ReconnectRequestEvent(username));
+    }
+
+    public void sendReconnectRequest(String username) {
+        if (!networkHandler.isConnected()) {
+            LOGGER.warning("Cannot send reconnect request - not connected.");
+            return;
+        }
+        networkHandler.sendMessage(new ludo.core.events.clientToServer.ReconnectRequestEvent(username));
+    }
 
     public void resetGame() {
         resetClientState();
