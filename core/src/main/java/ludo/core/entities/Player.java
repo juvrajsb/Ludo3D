@@ -10,6 +10,7 @@ public class Player implements Serializable {
     private final String name;
     private final String color;
     private List<Pawn> pawns;
+    private boolean isDisconnected = false;
 
     public Player(String name, String color) {
         this.name = name;
@@ -39,5 +40,13 @@ public class Player implements Serializable {
         for (int i = 0; i < Constants.PAWNS_PER_PLAYER; i++) {
             pawns.add(new Pawn(color));
         }
+    }
+
+    public boolean isDisconnected() {
+        return isDisconnected;
+    }
+
+    public void setDisconnected(boolean disconnected) {
+        isDisconnected = disconnected;
     }
 }
