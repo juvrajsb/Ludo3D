@@ -80,8 +80,27 @@ public class UsernameScreen extends BaseScreen {
         errorLabel.setText("Joining...");
         joinInProgress = true;
 
-        // The response will be handled in the onJoinResponse method.
         game.getGameStateManager().joinGame(username, colorSelect.getSelected());
+    }
+
+    public void showReconnectDialog(final String playerName) {
+        new Dialog("Reconnect?", skin, "dialog") {
+            {
+                text("A disconnected game for player '" + playerName + "' was found.");
+                button("Yes, Reconnect", true);
+                button("No, choose another name", false);
+            }
+
+            @Override
+            protected void result(Object object) {
+                if (Boolean.TRUE.equals(object)) {
+                    game.getGameStateManager().sendReconnectRequest(playerName);
+                } else {
+                    errorLabel.setText("Please choose a different username.");
+                    joinInProgress = false;
+                }
+            }
+        }.show(stage);
     }
 
     public void onJoinResponse(Response response) {
