@@ -17,7 +17,6 @@ The project is divided into several modules:
 - **/client**: Implements the client-side application, including screen management, rendering, and user interface.
 - **/server**: Contains the standalone server application that manages game state, player connections, and game logic.
 - **/lwjgl3**: The desktop launcher for the client application (Windows, macOS, Linux).
-- **/android**: The Android launcher for the client application.
 
 ## How to Build
 This project uses Gradle to manage dependencies and builds. To build the necessary JAR files, run the following command from the root directory of the project:
