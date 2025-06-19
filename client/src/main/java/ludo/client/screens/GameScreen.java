@@ -300,10 +300,6 @@ public class GameScreen extends BaseScreen {
         game.getGameStateManager().requestSaveGame(false);
     }
 
-    /**
-     * It adds all players and then updates the renderer and HUD once.
-     * @param newPlayers The list of players to add to the game screen.
-     */
     public void addPlayers(List<Player> newPlayers) {
         this.players.clear();
         this.players.addAll(newPlayers);
@@ -343,18 +339,13 @@ public class GameScreen extends BaseScreen {
 
                     if (newPosition != oldPosition) {
                         currentPawn.setPosition(newPosition);
+//                        renderer.updatePawnPosition(i, newPosition, color);
                         animationQueue.add(new PendingAnimation(color, i, oldPosition, newPosition));
                     }
                 }
                 break;
             }
         }
-    }
-
-    public void highlightPawnAsMoving(int pawnIndex) {
-        PawnUIState state = pawnUIStates.computeIfAbsent(pawnIndex, k -> new PawnUIState());
-        state.moving = true;
-        renderer.setPawnMovingState(pawnIndex, true);
     }
 
     public void setCurrentPlayer(String identifier) {
