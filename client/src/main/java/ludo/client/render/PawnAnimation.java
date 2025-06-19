@@ -11,8 +11,8 @@ public class PawnAnimation {
     private static final float ARC_HEIGHT = 0.8f;
 
     PawnAnimation(Vector3 start, Vector3 target) {
-        this.startPos = GameRenderer.applyOffset(start.cpy());
-        this.targetPos = GameRenderer.applyOffset(target.cpy());
+        this.startPos = start.cpy();
+        this.targetPos = target.cpy();
 
         this.controlPoint = new Vector3(
             (start.x + target.x) * 0.5f,
