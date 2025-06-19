@@ -33,14 +33,19 @@ This command will compile the code for all modules and create executable JAR fil
 First, you need to run the server application. It will listen for client connections and manage the game. The server uses port `12000` by default.
 
 ```bash
-java -jar server/build/libs/server-1.0.0.jar
+java -jar release/ludo-server-1.0.jar
 ```
 
 ### 2. Run the Client
 Once the server is running, you can launch one or more client applications. Each client will connect to the server to join the game.
 
 ```bash
-java -jar lwjgl3/build/libs/lwjgl3-1.0.0.jar
+java -jar release/ludo-1.0.jar
+```
+
+for macOS
+```bash
+java -XstartOnFirstThread -jar release/ludo-1.0.jar
 ```
 
 After launching, the client will present a menu where you can connect to the server by providing its IP address (use `localhost` if running on the same machine) and port (`12000` by default).

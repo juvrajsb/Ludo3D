@@ -65,6 +65,8 @@ project(":client") {
 project(":lwjgl3") {
   apply plugin: 'application'
 
+  ext.mainClassName = "ludo.lwjgl3.Lwjgl3Launcher"
+
   dependencies {
     implementation project(":core")
     implementation project(":client")
@@ -72,14 +74,19 @@ project(":lwjgl3") {
     implementation "com.badlogicgames.gdx:gdx-platform:$gdxVersion:natives-desktop"
   }
 
-  application {
-    mainClass = 'ludo.lwjgl3.Lwjgl3Launcher'
-  }
-
   jar {
-    dependsOn configurations.runtimeClasspath
+    archiveBaseName = 'ludo-client'
+    duplicatesStrategy(DuplicatesStrategy.EXCLUDE)
+
+    manifest {
+      attributes 'Main-Class': project.mainClassName
+    }
+
     from { configurations.runtimeClasspath.collect { it.isDirectory() ? it : zipTree(it) } }
-    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+
+    from(rootProject.file('assets')) {
+      into '.'
+    }
   }
 
   tasks.withType(JavaExec) {
@@ -113,7 +120,30 @@ project(":server") {
     implementation "ch.qos.logback:logback-classic:1.4.7"
   }
 
-  application {
-    mainClass = 'ludo.server.ServerLauncher'
-  }
+    jar {
+      archiveBaseName = 'ludo-server'
+      duplicatesStrategy(DuplicatesStrategy.EXCLUDE)
+
+      manifest {
+        attributes 'Main-Class': 'ludo.server.ServerLauncher'
+      }
+
+      from { configurations.runtimeClasspath.collect { it.isDirectory() ? it : zipTree(it) } }
+    }
+}
+
+
+task createRelease(type: Copy) {
+  group = "Distribution"
+  description = "Assembles the client and server JARs into a 'release' folder."
+
+  dependsOn project(':lwjgl3').jar
+  dependsOn project(':server').jar
+
+  delete "release"
+
+  into "release"
+
+  from project(':lwjgl3').jar
+  from project(':server').jar
 }
