@@ -27,7 +27,7 @@ import java.util.*;
 public class GameRenderer {
     private static final String TAG = "GameRenderer";
     private final float BOARD_SIZE = 15f;
-    private static final Vector3 POSITION_OFFSET = new Vector3(0.5f, 0, 0.5f);
+//    private static final Vector3 POSITION_OFFSET = new Vector3(0.5f, 0, 0.5f);
     private final float PAWN_SCALE = 7f;
     private final Vector3 intersection;
     private BoardCoordinates boardCoordinates;
@@ -106,7 +106,6 @@ public class GameRenderer {
     public void createPawns(List<Player> players) {
         pawnInstances.clear();
         pawnPositions.clear();
-
         for (int i = 0; i < 16; i++) {
             pawnInstances.add(null);
         }
@@ -117,43 +116,54 @@ public class GameRenderer {
             return;
         }
 
+        Map<Integer, List<Integer>> stacks = new HashMap<>();
+        for (Player player : players) {
+            for (int i = 0; i < player.getPawns().size(); i++) {
+                int boardPos = player.getPawns().get(i).getPosition();
+                if (boardPos != -1) {
+                    int globalPawnIndex = getGlobalPawnIndex(player.getColor(), i);
+                    stacks.computeIfAbsent(boardPos, k -> new ArrayList<>()).add(globalPawnIndex);
+                }
+            }
+        }
+
         for (Player player : players) {
             Color playerColor = getPlayerColor(player.getColor());
 
             Material pawnMaterial = new Material(
                 ColorAttribute.createDiffuse(playerColor),
-                ColorAttribute.createSpecular(1, 1, 1, 1),  // White specular highlights
-                ColorAttribute.createAmbient(playerColor.r * 0.5f,
-                    playerColor.g * 0.5f,
-                    playerColor.b * 0.5f,
-                    1f)
+                ColorAttribute.createSpecular(1, 1, 1, 1),
+                ColorAttribute.createAmbient(playerColor.r * 0.5f, playerColor.g * 0.5f, playerColor.b * 0.5f, 1f)
             );
 
             for (int i = 0; i < player.getPawns().size(); i++) {
                 Pawn pawn = player.getPawns().get(i);
                 ModelInstance pawnInstance = new ModelInstance(pawnModel);
 
+                // This more robust loop ensures all parts of the model get the color
                 for (Material mat : pawnInstance.materials) {
                     mat.clear();
                     mat.set(pawnMaterial);
                 }
 
-                int position = pawn.getPosition();
                 int globalPawnIndex = getGlobalPawnIndex(player.getColor(), i);
+                int boardPos = pawn.getPosition();
 
-                positionPawn(pawnInstance, position, globalPawnIndex, player.getColor());
+                List<Integer> stack = stacks.get(boardPos);
+                int stackIndex = (stack != null) ? stack.indexOf(globalPawnIndex) : 0;
+
+                positionPawn(pawnInstance, boardPos, globalPawnIndex, player.getColor(), stackIndex);
 
                 pawnInstances.set(globalPawnIndex, pawnInstance);
                 pawnInstance.userData = player.getColor();
             }
         }
-
-        Gdx.app.log(TAG, String.format("Finished creating pawns. Total pawnInstance: %d", pawnInstances.size));
+        Gdx.app.log(TAG, "Finished creating pawns with stacking and correct colors.");
     }
 
-    protected static Vector3 applyOffset(Vector3 position) {
-        return position.cpy().add(POSITION_OFFSET);
-    }
+//    protected static Vector3 applyOffset(Vector3 position) {
+//        return position.cpy().add(POSITION_OFFSET);
+//    }
 
     public boolean isAnimating() {
         return isAnyAnimationPlaying || !pawnAnimations.isEmpty();
@@ -271,24 +281,49 @@ public class GameRenderer {
         return color;
     }
 
-    private void positionPawn(ModelInstance pawnInstance, int boardPosition, int pawnIndex, String playerColor) {
-        Vector3 position;
+    private void positionPawn(ModelInstance pawnInstance, int boardPosition, int pawnIndex, String playerColor, int stackIndex) {
+        Vector3 position = calculateBasePosition(boardPosition, pawnIndex, playerColor);
 
-        if (boardPosition == -1) {
-            position = boardCoordinates.getHomeBasePosition(playerColor, pawnIndex % 4);
-        } else {
-            int[] gridCoords = BoardCoordinates.getGridCoordsForPosition(boardPosition);
-            if (gridCoords == null || gridCoords.length < 2) {
-                Gdx.app.error(TAG, "Invalid board position: " + boardPosition);
-                return;
-            }
-            position = boardCoordinates.gridToWorld(gridCoords[0], gridCoords[1]);
-            position = applyOffset(position);
+        position.y += stackIndex * VERTICAL_STACK_OFFSET;
+
+        if (boardPosition != -1) {
+            position.add(0.5f, 0, 0.5f);
         }
+
         pawnInstance.transform.setToTranslation(position);
         pawnInstance.transform.scale(PAWN_SCALE, PAWN_SCALE, PAWN_SCALE);
         pawnInstance.userData = playerColor;
         pawnPositions.put(pawnIndex, position);
+    }
+
+    private Vector3 calculateBasePosition(int boardPosition, int pawnIndex, String playerColor) {
+        try {
+            if (boardPosition == -1) {
+                return BoardCoordinates.getHomeBasePosition(playerColor, pawnIndex % 4);
+            }
+            if (boardPosition >= Constants.BOARD_SIZE) {
+                int homeColumnBase;
+                int targetBasePosition;
+                switch (playerColor.toUpperCase()) {
+                    case "YELLOW": homeColumnBase = 52; targetBasePosition = 57; break;
+                    case "BLUE":   homeColumnBase = 58; targetBasePosition = 63; break;
+                    case "RED":    homeColumnBase = 64; targetBasePosition = 69; break;
+                    case "GREEN":  homeColumnBase = 70; targetBasePosition = 75; break;
+                    default: throw new IllegalArgumentException("Invalid color: " + playerColor);
+                }
+
+                if (boardPosition == targetBasePosition) {
+                    return BoardCoordinates.getTargetBasePosition(playerColor);
+                } else {
+                    int homeStep = boardPosition - homeColumnBase;
+                    return BoardCoordinates.getHomeColumnPosition(playerColor, homeStep);
+                }
+            }
+            return BoardCoordinates.getMainPathPosition(boardPosition);
+        } catch (Exception e) {
+            Gdx.app.error(TAG, "Invalid board position: " + boardPosition + " for color " + playerColor);
+            return new Vector3(0, 5, 0); // Error position
+        }
     }
 
     public void dispose() {
@@ -373,6 +408,10 @@ public class GameRenderer {
         Vector3 targetPos = calculateTargetPosition(playerColor, newPosition);
 
         targetPos = applyStackingOffset(globalPawnIndex, targetPos, newPosition, playerColor);
+
+        if (newPosition != -1) {
+            targetPos.add(0.5f, 0, 0.5f);
+        }
 
         if (initialPos == null || !initialPos.equals(targetPos)) {
             PawnAnimation animation = new PawnAnimation(
