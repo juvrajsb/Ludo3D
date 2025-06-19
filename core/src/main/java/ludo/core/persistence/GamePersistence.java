@@ -93,7 +93,7 @@ public class GamePersistence {
         if (!saveDir.exists()) {
             LOGGER.warning("Save directory does not exist at the checked path.");
         }
-        File[] saveFiles = saveDir.listFiles((dir, name) -> name.startsWith("ludo_save_") && name.endsWith(".json"));
+        File[] saveFiles = saveDir.listFiles((dir, name) -> name.startsWith("ludo_") && name.endsWith(".json"));
 
         List<String> saveFileNames = new ArrayList<>();
         if (saveFiles != null) {
