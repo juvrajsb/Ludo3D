@@ -407,9 +407,8 @@ public class GameRenderer {
         Vector3 initialPos = pawnPositions.get(globalPawnIndex);
         Vector3 targetPos = calculateTargetPosition(playerColor, newPosition);
 
-        targetPos = applyStackingOffset(globalPawnIndex, targetPos, newPosition, playerColor);
-
         if (newPosition != -1) {
+            targetPos = applyStackingOffset(globalPawnIndex, targetPos, newPosition, playerColor);
             targetPos.add(0.5f, 0, 0.5f);
         }
 
