@@ -130,6 +130,7 @@ public class GameHUD extends Table {
         Label winnerLabel = new Label(winner + " Wins!", skin, "window");
         winnerLabel.setFontScale(1.5f);
         winnerLabel.setColor(getColorForName(winner));
+        winnerLabel.setAlignment(Align.center);
 
         TextButton okButton = new TextButton("OK", skin);
         okButton.addListener(new com.badlogic.gdx.scenes.scene2d.utils.ChangeListener() {
