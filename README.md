@@ -1,4 +1,4 @@
-# 🎲 Ludo 3D — Distributed Multiplayer Board Game
+# Ludo 3D — Distributed Multiplayer Board Game
 
 [![Java](https://img.shields.io/badge/Java-17+-ED8B00?style=for-the-badge&logo=openjdk&logoColor=white)]()
 [![LibGDX](https://img.shields.io/badge/LibGDX-1.12-E10098?style=for-the-badge&logo=libgdx&logoColor=white)](https://libgdx.com/)
@@ -10,7 +10,7 @@
 
 ---
 
-## 📽️ Gameplay Demo
+## Gameplay Demo
 
 ![Ludo 3D Gameplay Demo](docs/demo.gif)
 
@@ -18,7 +18,7 @@
 
 ---
 
-## ⚡ Technical Highlights
+## Technical Highlights
 
 - **Authoritative Client-Server Model**: Game state, turn progression, dice rolls, and victory conditions are strictly validated and managed server-side to guarantee integrity and prevent desynchronization.
 - **Custom Event-Driven TCP Protocol**: Engineered a modular event bus using polymorphic `Event` packets (`clientToServer` and `serverToClient`) transmitted over raw TCP sockets, complete with connection heartbeats (Ping/Pong) and reconnection handling.
@@ -29,7 +29,7 @@
 
 ---
 
-## 🏛️ System Architecture
+## System Architecture
 
 The game utilizes a decoupled, event-driven client-server architecture communicating over persistent TCP sockets:
 
@@ -58,7 +58,7 @@ sequenceDiagram
 
 ---
 
-## 📁 Project Structure
+## Project Structure
 
 This multi-module Gradle project enforces strict separation of concerns across runtime boundaries:
 
@@ -72,7 +72,7 @@ This multi-module Gradle project enforces strict separation of concerns across r
 
 ---
 
-## 🚀 Getting Started
+## Getting Started
 
 ### Prerequisites
 - **Java Development Kit (JDK)**: Version 17 or higher
@@ -110,7 +110,7 @@ Once launched:
 
 ---
 
-## 🛠️ Building Standalone JARs
+## Building Standalone JARs
 
 To assemble executable JAR files for distribution:
 ```bash
@@ -122,7 +122,7 @@ Compiled JARs will be generated in:
 
 ---
 
-## 🧪 Testing
+## Testing
 
 Execute the automated unit and integration test suite:
 ```bash
@@ -137,7 +137,7 @@ Test coverage includes:
 
 ---
 
-## 📜 Attributions & License
+## Attributions & License
 
 - **License**: Released under the [MIT License](LICENSE).
 - **Third-Party Assets**: All external libraries, textures, models, and UI skins are documented in [ATTRIBUTION.md](ATTRIBUTION.md).
