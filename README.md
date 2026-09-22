@@ -1,58 +1,143 @@
-# Ludo 3D
+# 🎲 Ludo 3D — Distributed Multiplayer Board Game
 
-## Overview
-Ludo 3D is a networked multiplayer implementation of the classic Ludo board game, built with LibGDX and featuring 3D graphics. The game supports 2-4 players across a network with a client-server architecture, allowing for both local and online gameplay.
+[![Java](https://img.shields.io/badge/Java-17+-ED8B00?style=for-the-badge&logo=openjdk&logoColor=white)]()
+[![LibGDX](https://img.shields.io/badge/LibGDX-1.12-E10098?style=for-the-badge&logo=libgdx&logoColor=white)](https://libgdx.com/)
+[![Architecture](https://img.shields.io/badge/Architecture-Authoritative%20Server-blue?style=for-the-badge)]()
+[![Build Tool](https://img.shields.io/badge/Gradle-02303A?style=for-the-badge&logo=gradle&logoColor=white)]()
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg?style=for-the-badge)](LICENSE)
 
-## Technology Stack
-- **Core Framework**: LibGDX
-- **Language**: Java
-- **3D Graphics**: LibGDX's 3D API
-- **Network Communication**: Custom TCP/IP socket implementation
-- **Persistence**: JSON-based save/load system
-- **Build Tool**: Gradle
+> A networked, authoritative client-server 3D board game built in Java with custom TCP/IP socket networking, event-driven state synchronization, autonomous AI bot players, and LibGDX 3D graphics.
 
-## Project Structure
-The project is divided into several modules:
-- **/core**: Contains the shared code for game logic, entities, and network events, used by both the client and server.
-- **/client**: Implements the client-side application, including screen management, rendering, and user interface.
-- **/server**: Contains the standalone server application that manages game state, player connections, and game logic.
-- **/lwjgl3**: The desktop launcher for the client application (Windows, macOS, Linux).
+---
 
-## How to Build
-This project uses Gradle to manage dependencies and builds. To build the necessary JAR files, run the following command from the root directory of the project:
+## 📽️ Gameplay Demo
 
+![Ludo 3D Gameplay Demo](docs/demo.gif)
+
+*Demonstration of real-time multiplayer synchronization across multiple client instances, featuring 3D pawn movement interpolation, dice rolls, and server-authoritative state resolution.*
+
+---
+
+## ⚡ Technical Highlights
+
+- **Authoritative Client-Server Model**: Game state, turn progression, dice rolls, and victory conditions are strictly validated and managed server-side to guarantee integrity and prevent desynchronization.
+- **Custom Event-Driven TCP Protocol**: Engineered a modular event bus using polymorphic `Event` packets (`clientToServer` and `serverToClient`) transmitted over raw TCP sockets, complete with connection heartbeats (Ping/Pong) and reconnection handling.
+- **3D Graphics & Rendering Pipeline**: Built using LibGDX's 3D API, featuring 3D mesh rendering (`g3db`), PBR-inspired material textures, cubemap skybox environment mapping, and smooth 3D pawn motion interpolation.
+- **Autonomous AI Bot Players**: Built-in intelligent `BotPlayer` agents that emulate player actions, evaluate board positions, and seamlessly fill unassigned lobby slots.
+- **State Persistence & Autosave**: Robust JSON-based persistence engine (`GamePersistence`) capable of automatic turn-by-turn state saves, on-demand manual saves, and mid-game recovery.
+- **Comprehensive Test Suite**: Over 10 dedicated unit and integration test suites covering concurrent socket interactions, board graph traversal, turn state machines, and win conditions.
+
+---
+
+## 🏛️ System Architecture
+
+The game utilizes a decoupled, event-driven client-server architecture communicating over persistent TCP sockets:
+
+```mermaid
+sequenceDiagram
+    autonumber
+    actor P1 as Player 1 (Client)
+    participant S as Authoritative Server
+    actor P2 as Player 2 / Bot (Client)
+
+    Note over P1,S: Turn Notification
+    S->>P1: FirstPlayerEvent / TurnNotification
+    P1->>S: DiceRollRequestEvent
+    Note over S: Server rolls dice & validates turn
+    S-->>P1: DiceRollResultEvent (value: 6)
+    S-->>P2: DiceRollResultEvent (value: 6)
+
+    P1->>S: MoveRequestEvent (pawnId: 2)
+    Note over S: Server validates move rules & collisions
+    S->>S: Update authoritative game state
+    S-->>P1: GameStateUpdateEvent (board state, active turn)
+    S-->>P2: GameStateUpdateEvent (board state, active turn)
+
+    Note over P1,P2: Client GameRenderer triggers 3D interpolation
+```
+
+---
+
+## 📁 Project Structure
+
+This multi-module Gradle project enforces strict separation of concerns across runtime boundaries:
+
+| Module | Description | Key Responsibilities |
+| :--- | :--- | :--- |
+| **`core/`** | Shared domain & networking contract | Game entities (`Board`, `Pawn`, `Dice`, `Player`), JSON persistence, and polymorphic network `Event` definitions. |
+| **`server/`** | Standalone authoritative game server | Socket listener, connection pool manager, event handlers (`IEventHandler`), heartbeat pingers, and state machine. |
+| **`client/`** | Client game logic & UI | Screen manager (`MenuScreen`, `LobbyScreen`, `GameScreen`), Scene2D HUD, input processors, and client event handlers. |
+| **`lwjgl3/`** | Desktop platform launcher | LWJGL3 desktop backend entry point, window configuration, and OpenGL canvas initialization. |
+| **`test/`** | Integration & unit test suite | Automated testing for network loops, state manager transitions, bot heuristics, and board mechanics. |
+
+---
+
+## 🚀 Getting Started
+
+### Prerequisites
+- **Java Development Kit (JDK)**: Version 17 or higher
+- **Gradle**: Included via the `./gradlew` wrapper
+
+### 1. Clone the Repository
+```bash
+git clone https://github.com/juvrajsb/Ludo3D.git
+cd Ludo3D
+```
+
+### 2. Run the Server
+Launch the authoritative server on port `12000` (default):
+```bash
+./gradlew :server:run
+```
+
+### 3. Run the Client(s)
+In separate terminal windows, start one or more client instances:
+
+**Linux / Windows:**
+```bash
+./gradlew :lwjgl3:run
+```
+
+**macOS** *(requires `-XstartOnFirstThread` for LWJGL/GLFW display)*:
+```bash
+./gradlew :lwjgl3:run -DjvmArgs="-XstartOnFirstThread"
+```
+
+Once launched:
+1. Choose a username.
+2. Connect to server (`localhost` and port `12000`).
+3. Create or join a lobby, configure AI bots if desired, and start the game!
+
+---
+
+## 🛠️ Building Standalone JARs
+
+To assemble executable JAR files for distribution:
 ```bash
 ./gradlew build
 ```
-This command will compile the code for all modules and create executable JAR files in the `build/libs` directory of the `server` and `lwjgl3` modules.
+Compiled JARs will be generated in:
+- Server: `server/build/libs/`
+- Client: `lwjgl3/build/libs/`
 
-## How to Run
+---
 
-### 1. Start the Server
-First, you need to run the server application. It will listen for client connections and manage the game. The server uses port `12000` by default.
+## 🧪 Testing
 
+Execute the automated unit and integration test suite:
 ```bash
-java -jar release/ludo-server-1.0.jar
+./gradlew test
 ```
 
-### 2. Run the Client
-Once the server is running, you can launch one or more client applications. Each client will connect to the server to join the game.
+Test coverage includes:
+- `BoardMovementTest` & `BoardTest`: Board path geometry, home stretches, and pawn capture mechanics.
+- `GameStateTest` & `GameStateIntegrationTest`: Turn rotations, extra rolls on 6, and game-over detection.
+- `NetworkIntegrationTest`: Socket event transmission, payload serialization, and connection lifecycles.
+- `BotPlayerTest`: Autonomous decision-making and valid move selection.
 
-```bash
-java -jar release/ludo-1.0.jar
-```
+---
 
-for macOS
-```bash
-java -XstartOnFirstThread -jar release/ludo-1.0.jar
-```
+## 📜 Attributions & License
 
-After launching, the client will present a menu where you can connect to the server by providing its IP address (use `localhost` if running on the same machine) and port (`12000` by default).
-
-## Game Features
-- **Networked Multiplayer**: Play with 2-4 players over a network.
-- **3D Graphics**: A fully 3D rendered board, pawns, and dice.
-- **Save/Load Game**: The game state can be saved and loaded, allowing games to be resumed later. This functionality is handled through JSON files.
-- **Bot Players**: The game supports AI-controlled bot players to fill empty slots.
-- **Client-Server Architecture**: A robust server manages the authoritative game state, while clients handle rendering and user input.
-- **Event-Driven Networking**: Communication between the client and server is handled through a system of events for actions like joining a game, rolling the dice, and moving pawns.
+- **License**: Released under the [MIT License](LICENSE).
+- **Third-Party Assets**: All external libraries, textures, models, and UI skins are documented in [ATTRIBUTION.md](ATTRIBUTION.md).

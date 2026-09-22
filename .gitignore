@@ -176,7 +176,10 @@ Thumbs.db
 *.idx
 /extra
 
-*.so
-/android/
 *.dylib
 client-1.0.jar
+
+## Project Specific:
+/release/
+/test/build/
+/client/build/
