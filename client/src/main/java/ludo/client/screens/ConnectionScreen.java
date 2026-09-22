@@ -5,9 +5,10 @@ import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.scenes.scene2d.Actor;
 import com.badlogic.gdx.scenes.scene2d.ui.*;
 import com.badlogic.gdx.scenes.scene2d.utils.ChangeListener;
+import com.badlogic.gdx.utils.Align;
 import com.badlogic.gdx.utils.Timer;
 import ludo.client.LudoGame;
-import com.badlogic.gdx.graphics.GL20;
+import ludo.client.ui.MenuUIHelper;
 
 public class ConnectionScreen extends BaseScreen {
     private final TextField ipField;
@@ -19,62 +20,105 @@ public class ConnectionScreen extends BaseScreen {
 
     public ConnectionScreen(final LudoGame game) {
         super(game);
-
         disconnectButton.remove();
 
-        Table mainTable = new Table(skin);
-        mainTable.setFillParent(true);
+        Table rootTable = new Table();
+        rootTable.setFillParent(true);
+        rootTable.center();
 
-        // Title
-        Label titleLabel = new Label("Connect to Server", skin, "default");
-        mainTable.add(titleLabel).colspan(2).padBottom(50).row();
+        // Modern Card Container
+        Table card = MenuUIHelper.createCard(skin, 24);
+        card.defaults().align(Align.center).padBottom(10);
 
-        // IP Address field
-        mainTable.add(new Label("IP Address:", skin)).padRight(20);
+        // 1. 4-Color Accent Stripe
+        card.add(MenuUIHelper.createColorStripe(skin, 4)).fillX().expandX().padBottom(16).row();
+
+        // 2. Header
+        Label.LabelStyle titleStyle = new Label.LabelStyle(skin.get("default", Label.LabelStyle.class));
+        titleStyle.font = skin.getFont("window");
+        titleStyle.fontColor = MenuUIHelper.TEXT_PRIMARY;
+
+        Label titleLabel = new Label("Connect to Server", titleStyle);
+        titleLabel.setFontScale(1.3f);
+        titleLabel.setAlignment(Align.center);
+        card.add(titleLabel).padBottom(4).row();
+
+        Label subtitleLabel = new Label("Join a local match or connect over network", skin);
+        subtitleLabel.setColor(MenuUIHelper.TEXT_MUTED);
+        subtitleLabel.setAlignment(Align.center);
+        card.add(subtitleLabel).padBottom(20).row();
+
+        // 3. Form Table
+        Table formTable = new Table();
+        formTable.defaults().pad(6);
+
+        Label ipLabel = new Label("Server IP:", skin);
+        ipLabel.setColor(MenuUIHelper.TEXT_MUTED);
+        formTable.add(ipLabel).right().padRight(12);
+
         ipField = new TextField("localhost", skin);
-        mainTable.add(ipField).width(200).row();
+        formTable.add(ipField).width(200).height(36).left().row();
 
-        // Port field
-        mainTable.add(new Label("Port:", skin)).padRight(20).padTop(20);
+        Label portLabel = new Label("Port:", skin);
+        portLabel.setColor(MenuUIHelper.TEXT_MUTED);
+        formTable.add(portLabel).right().padRight(12);
+
         portField = new TextField("12000", skin);
-        mainTable.add(portField).width(200).padTop(20).row();
+        formTable.add(portField).width(200).height(36).left().row();
 
-        // Status label
+        card.add(formTable).padBottom(10).row();
+
+        // 4. Quick Preset Button
+        TextButton presetButton = new TextButton("⚡ Reset to Localhost (12000)", skin);
+        presetButton.addListener(new ChangeListener() {
+            @Override
+            public void changed(ChangeEvent event, Actor actor) {
+                ipField.setText("localhost");
+                portField.setText("12000");
+                errorLabel.setText("");
+            }
+        });
+        card.add(presetButton).width(240).height(28).padBottom(16).row();
+
+        // 5. Status & Error Feedback
         statusLabel = new Label("", skin);
-        statusLabel.setColor(Color.WHITE);
-        mainTable.add(statusLabel).colspan(2).padTop(20).row();
+        statusLabel.setColor(MenuUIHelper.SUCCESS_GREEN);
+        statusLabel.setAlignment(Align.center);
+        card.add(statusLabel).padBottom(6).row();
 
-        // Error label
         errorLabel = new Label("", skin);
-        errorLabel.setColor(Color.RED);
-        mainTable.add(errorLabel).colspan(2).padTop(20).row();
+        errorLabel.setColor(MenuUIHelper.ERROR_RED);
+        errorLabel.setAlignment(Align.center);
+        errorLabel.setWrap(true);
+        card.add(errorLabel).width(360).padBottom(16).row();
 
-        // Connect button
-        connectButton = new TextButton("Connect", skin);
+        // 6. Action Buttons
+        connectButton = new TextButton("Connect to Server", skin);
         connectButton.addListener(new ChangeListener() {
             @Override
             public void changed(ChangeEvent event, Actor actor) {
                 tryConnect();
             }
         });
-        mainTable.add(connectButton).colspan(2).padTop(40).width(200).height(30).row();
+        card.add(connectButton).width(260).height(44).padBottom(10).row();
 
-        // Back button
-        TextButton backButton = new TextButton("Back", skin);
+        TextButton backButton = new TextButton("← Back to Menu", skin);
         backButton.addListener(new ChangeListener() {
             @Override
             public void changed(ChangeEvent event, Actor actor) {
                 game.setScreen(new MenuScreen(game));
             }
         });
-        mainTable.add(backButton).colspan(2).padTop(20).width(200).height(30).row();
+        card.add(backButton).width(260).height(36).row();
 
-        stage.addActor(mainTable);
+        rootTable.add(card).width(440);
+        stage.addActor(rootTable);
     }
 
     private void tryConnect() {
         errorLabel.setText("");
-        statusLabel.setText("Connecting...");
+        statusLabel.setText("Connecting to server...");
+        statusLabel.setColor(MenuUIHelper.ACCENT_GOLD);
         connectButton.setDisabled(true);
 
         String ip = ipField.getText().trim();
@@ -83,22 +127,20 @@ public class ConnectionScreen extends BaseScreen {
             new Thread(() -> {
                 try {
                     final boolean success = game.getGameStateManager().connect(ip, port);
-                    // Update UI on main thread
                     Gdx.app.postRunnable(() -> {
                         if (success) {
                             isConnected = true;
-                            statusLabel.setText("Connected!");
-                            statusLabel.setColor(Color.GREEN);
-                            // Move to username screen after short delay
+                            statusLabel.setText("✓ Connected! Entering setup...");
+                            statusLabel.setColor(MenuUIHelper.SUCCESS_GREEN);
                             Timer.schedule(new Timer.Task() {
                                 @Override
                                 public void run() {
                                     game.setScreen(new UsernameScreen(game));
                                 }
-                            }, 1);
+                            }, 0.8f);
                         } else {
                             connectButton.setDisabled(false);
-                            errorLabel.setText("Failed to connect to server");
+                            errorLabel.setText("Failed to connect to " + ip + ":" + port + "\nMake sure the game server is running.");
                             statusLabel.setText("");
                         }
                     });
@@ -113,17 +155,8 @@ public class ConnectionScreen extends BaseScreen {
 
         } catch (NumberFormatException e) {
             connectButton.setDisabled(false);
-            errorLabel.setText("Invalid port number");
+            errorLabel.setText("Please enter a valid numeric port (e.g. 12000)");
             statusLabel.setText("");
         }
-    }
-
-    @Override
-    public void render(float delta) {
-        Gdx.gl.glClearColor(0.2f, 0.2f, 0.2f, 1);
-        Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT);
-
-        stage.act(delta);
-        stage.draw();
     }
 }

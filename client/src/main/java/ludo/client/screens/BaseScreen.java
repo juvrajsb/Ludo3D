@@ -55,6 +55,9 @@ public abstract class BaseScreen implements Screen {
         viewport.update(width, height, true);
         stage.getViewport().update(width, height, true);
         disconnectButton.setPosition(width - 130, 10);
+        if (game.getMenuBackground() != null) {
+            game.getMenuBackground().resize(width, height);
+        }
     }
 
     @Override
@@ -71,8 +74,19 @@ public abstract class BaseScreen implements Screen {
     @Override
     public void hide() {}
 
+    protected boolean shouldRenderMenuBackground() {
+        return true;
+    }
+
     @Override
     public void render(float delta) {
+        Gdx.gl.glClearColor(0.10f, 0.12f, 0.16f, 1);
+        Gdx.gl.glClear(com.badlogic.gdx.graphics.GL20.GL_COLOR_BUFFER_BIT | com.badlogic.gdx.graphics.GL20.GL_DEPTH_BUFFER_BIT);
+
+        if (shouldRenderMenuBackground() && game.getMenuBackground() != null) {
+            game.getMenuBackground().render(delta);
+        }
+
         stage.act(delta);
         stage.draw();
     }

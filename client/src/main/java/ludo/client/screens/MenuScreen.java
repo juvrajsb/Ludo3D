@@ -2,52 +2,85 @@ package ludo.client.screens;
 
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.graphics.Color;
-import com.badlogic.gdx.graphics.GL20;
-//import com.badlogic.gdx.graphics.Texture;
+import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.scenes.scene2d.Actor;
 import com.badlogic.gdx.scenes.scene2d.ui.*;
 import com.badlogic.gdx.scenes.scene2d.utils.ChangeListener;
+import com.badlogic.gdx.utils.Align;
+import com.badlogic.gdx.utils.Scaling;
 import ludo.client.LudoGame;
+import ludo.client.ui.MenuUIHelper;
 
 public class MenuScreen extends BaseScreen {
-//    private Texture logoTexture;
-//    private Image logoImage;
+    private Texture logoTexture;
 
     public MenuScreen(final LudoGame game) {
         super(game);
+        disconnectButton.remove();
 
-//        logoTexture = new Texture(Gdx.files.internal("images/iconw.png"));
-//        logoImage = new Image(logoTexture);
+        try {
+            logoTexture = new Texture(Gdx.files.internal("images/iconw.png"));
+            logoTexture.setFilter(Texture.TextureFilter.Linear, Texture.TextureFilter.Linear);
+        } catch (Exception e) {
+            Gdx.app.error("MenuScreen", "Could not load logo: " + e.getMessage());
+            logoTexture = null;
+        }
 
         createUI();
     }
 
     private void createUI() {
-        Table mainTable = new Table();
-        mainTable.setFillParent(true);
-        mainTable.defaults().pad(10).width(200);
+        Table rootTable = new Table();
+        rootTable.setFillParent(true);
+        rootTable.center();
 
+        // Centered glassmorphic card
+        Table card = MenuUIHelper.createCard(skin, 24);
+        card.defaults().align(Align.center).padBottom(10);
+
+        // 1. Signature 4-Color Accent Stripe
+        card.add(MenuUIHelper.createColorStripe(skin, 4)).fillX().expandX().padBottom(18).row();
+
+        // 2. Logo Badge
+        if (logoTexture != null) {
+            Image logoImage = new Image(logoTexture);
+            logoImage.setScaling(Scaling.fit);
+            card.add(logoImage).size(96, 96).padBottom(12).row();
+        }
+
+        // 3. Hero Title
         Label.LabelStyle titleStyle = new Label.LabelStyle(skin.get("default", Label.LabelStyle.class));
-        titleStyle.font = skin.getFont("default");
-        titleStyle.fontColor = Color.WHITE;
+        titleStyle.font = skin.getFont("window");
+        titleStyle.fontColor = MenuUIHelper.TEXT_PRIMARY;
 
         Label titleLabel = new Label("LUDO 3D", titleStyle);
-        titleLabel.setFontScale(3.0f);
+        titleLabel.setFontScale(1.6f);
+        titleLabel.setAlignment(Align.center);
+        card.add(titleLabel).padBottom(4).row();
 
-        mainTable.add(titleLabel).pad(50).row();
+        // Subtitle
+        Label subtitleLabel = new Label("Classic Strategy - Real-Time 3D Multiplayer", skin);
+        subtitleLabel.setColor(MenuUIHelper.TEXT_MUTED);
+        subtitleLabel.setAlignment(Align.center);
+        card.add(subtitleLabel).padBottom(24).row();
 
-        // Add logo at the top
-//        mainTable.add(logoImage).width(400).height(200).padBottom(50).row();
+        // 4. Action Buttons
+        TextButton playButton = new TextButton("Play Multiplayer", skin);
+        TextButton rulesButton = new TextButton("Game Rules", skin);
+        TextButton exitButton = new TextButton("Exit Game", skin);
 
-        TextButton playButton = new TextButton("Play", skin);
-        TextButton rulesButton = new TextButton("Rules", skin);
-        TextButton exitButton = new TextButton("Exit", skin);
-        disconnectButton.remove();
+        card.add(playButton).width(260).height(46).padBottom(12).row();
+        card.add(rulesButton).width(260).height(40).padBottom(12).row();
+        card.add(exitButton).width(260).height(36).padBottom(16).row();
 
-        mainTable.add(playButton).width(200).height(30).row();
-        mainTable.add(rulesButton).width(200).height(30).row();
-        mainTable.add(exitButton).width(200).height(30).row();
+        // 5. Footer info
+        Label footerLabel = new Label("2-4 Players - Online Multiplayer & Bot Support", skin);
+        footerLabel.setColor(new Color(0.5f, 0.55f, 0.65f, 0.9f));
+        footerLabel.setFontScale(0.85f);
+        footerLabel.setAlignment(Align.center);
+        card.add(footerLabel).padTop(4).row();
 
+        // Button listeners
         playButton.addListener(new ChangeListener() {
             @Override
             public void changed(ChangeEvent event, Actor actor) {
@@ -69,83 +102,75 @@ public class MenuScreen extends BaseScreen {
             }
         });
 
-        stage.addActor(mainTable);
+        rootTable.add(card).width(420);
+        stage.addActor(rootTable);
     }
 
     private void showRulesDialog() {
-        Dialog dialog = new Dialog("Game Rules", skin, "dialog");
+        Dialog dialog = new Dialog("Game Rules & Guide", skin);
         dialog.setModal(true);
         dialog.setMovable(true);
 
-        String rulesText = "Board Layout:\n" +
-            "  - Board Structure: Square board with a cross-shaped path.\n" +
-            "  - Player Areas: Four colored sections (Y, R, B, G).\n" +
-            "  - Home Base: Each player has a base for four pawns.\n" +
-            "  - Main Track: 52 spaces around the perimeter.\n" +
-            "  - Home Column: Final 6 spaces leading to the finish.\n" +
-            "  - Safe Spots: Marked spaces where pawns cannot be captured.\n\n" +
+        Table content = new Table();
+        content.defaults().left().padBottom(6);
 
-            "Game Setup:\n" +
-            "  - Players: 2-4 players, each assigned a color.\n" +
-            "  - Pawns: Each player has 4 pawns.\n" +
-            "  - Starting: All pawns begin in their home bases.\n\n" +
+        addRuleSection(content, "1. OBJECTIVE",
+            "Be the first player to guide all 4 pawns from your Home Base around the perimeter track and into your center Target Finish.");
 
-            "Turn Sequence:\n" +
-            "  - Rolling: Player rolls a single six-sided die.\n" +
-            "  - Movement Options:\n" +
-            "      - Roll a 6 to bring a pawn from home to the start.\n" +
-            "      - Move an active pawn forward by the die value.\n" +
-            "      - If no move is possible, the turn passes.\n" +
-            "  - Extra Turn: Rolling a 6 gives an another turn.\n" +
+        addRuleSection(content, "2. STARTING & ROLLING",
+            "- Each player rolls a single 6-sided die on their turn.\n" +
+            "- You must roll a 6 to move a pawn out of Home Base onto the track.\n" +
+            "- Rolling a 6 grants you an EXTRA TURN!");
 
-            "Movement Rules:\n" +
-            "  - Leaving Home: A 6 must be rolled.\n" +
-            "  - Movement: Pawns move clockwise.\n" +
-            "  - Exact Count: Pawns need an exact roll to enter the Target Base.\n\n" +
+        addRuleSection(content, "3. MOVEMENT & TRACK",
+            "- Pawns move clockwise around the 52 perimeter track spaces by the exact die value.\n" +
+            "- After completing a lap, enter your colored Home Column leading to the center target.\n" +
+            "- An exact die roll is required to enter the Target Finish.");
 
-            "Capture Rules:\n" +
-            "  - Capture: Landing on an opponent's pawn sends it home.\n" +
-            "  - Safe Spots: Pawns on safe spots cannot be captured.\n" +
-            "  - Home Column: Pawns in the home column cannot be captured.\n\n" +
+        addRuleSection(content, "4. CAPTURING & SAFE SPOTS",
+            "- Landing on an opponent's pawn captures it and sends it back to their Home Base!\n" +
+            "- Star tiles (marked with an arrow or star) are Safe Spots where pawns cannot be captured.\n" +
+            "- Pawns inside your colored Home Column are completely safe from capture.");
 
-            "Winning Conditions:\n" +
-            "  - Objective: Be the first to move all four pawns to the finish.\n" +
-            "  - Game End: The game ends when a Player finishes.";
+        addRuleSection(content, "5. WINNING THE GAME",
+            "- The game ends when a player successfully moves all 4 pawns into their center home triangle!");
 
-        Label rulesLabel = new Label(rulesText, skin);
-        rulesLabel.setWrap(true);
-
-        ScrollPane scrollPane = new ScrollPane(rulesLabel, skin);
+        ScrollPane scrollPane = new ScrollPane(content, skin);
         scrollPane.setFadeScrollBars(false);
 
-        dialog.getContentTable().add(scrollPane).width(Gdx.graphics.getWidth() * 0.8f).height(Gdx.graphics.getHeight() * 0.7f);
+        float dialogWidth = Math.min(Gdx.graphics.getWidth() * 0.85f, 580);
+        float dialogHeight = Math.min(Gdx.graphics.getHeight() * 0.75f, 440);
 
-        TextButton closeButton = new TextButton("Close", skin);
+        dialog.getContentTable().pad(15);
+        dialog.getContentTable().add(scrollPane).width(dialogWidth).height(dialogHeight);
+
+        TextButton closeButton = new TextButton("Got It!", skin);
         closeButton.addListener(new ChangeListener() {
             @Override
             public void changed(ChangeEvent event, Actor actor) {
                 dialog.hide();
             }
         });
-        dialog.getButtonTable().add(closeButton).pad(10);
+        dialog.getButtonTable().add(closeButton).width(140).height(38).pad(10);
         dialog.show(stage);
     }
 
+    private void addRuleSection(Table table, String headerText, String bodyText) {
+        Label headerLabel = new Label(headerText, skin);
+        headerLabel.setColor(MenuUIHelper.ACCENT_GOLD);
+        table.add(headerLabel).padTop(10).padBottom(4).left().row();
 
-    @Override
-    public void render(float delta) {
-        Gdx.gl.glClearColor(0.2f, 0.2f, 0.2f, 1);
-        Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT);
-
-        stage.act(delta);
-        stage.draw();
+        Label bodyLabel = new Label(bodyText, skin);
+        bodyLabel.setWrap(true);
+        bodyLabel.setColor(MenuUIHelper.TEXT_PRIMARY);
+        table.add(bodyLabel).width(500).padBottom(8).left().row();
     }
 
     @Override
     public void dispose() {
         super.dispose();
-//        if (logoTexture != null) {
-//            logoTexture.dispose();
-//        }
+        if (logoTexture != null) {
+            logoTexture.dispose();
+        }
     }
 }

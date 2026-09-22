@@ -11,11 +11,17 @@ import ludo.client.screens.*;
 public class LudoGame extends Game {
     private GameStateManager gameStateManager;
     private GameScreen gameScreen; // Keep a reference to dispose it correctly
+    private ludo.client.render.MenuBackground menuBackground;
 
     @Override
     public void create() {
         gameStateManager = new GameStateManager(this);
+        menuBackground = new ludo.client.render.MenuBackground();
         setScreen(new MenuScreen(this));
+    }
+
+    public ludo.client.render.MenuBackground getMenuBackground() {
+        return menuBackground;
     }
 
     @Override
@@ -46,6 +52,9 @@ public class LudoGame extends Game {
         super.dispose();
         if (gameStateManager != null) {
             gameStateManager.dispose();
+        }
+        if (menuBackground != null) {
+            menuBackground.dispose();
         }
         if (screen != null) {
             screen.dispose();
